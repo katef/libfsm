@@ -638,6 +638,7 @@ ast_make_expr_alt(struct ast_expr_pool **poolp, enum re_flags re_flags)
 	res->re_flags = re_flags;
 	res->u.alt.alloc = 8; /* arbitrary initial value */
 	res->u.alt.count = 0;
+	res->u.alt.nullable_alt_inside_plus_repeat = 0;
 
 	res->u.alt.n = calloc(res->u.alt.alloc, sizeof *res->u.alt.n);
 	if (res->u.alt.n == NULL) {
