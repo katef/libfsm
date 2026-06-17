@@ -653,18 +653,18 @@ capvm_compile_iter(struct capvm_compile_env *env,
 		 * leading to generated code like:
 		 *
 		 * // note: trying each case in order, earlier cases are more greedy
-		 * - split_cont j1
-		 * - split_new j2
-		 * j1:
+		 * - split_greedy j_try_a
+		 * - split_nongreedy j_skip_a
+		 * j_try_a:
 		 * - <case a>
 		 * - jmp pos_after_all   // or split pos_after_all, PLUS_BACKPATCH, see below
-		 * j2:
-		 * - split_cont j3
-		 * - split_new j4
-		 * j3:
+		 * j_skip_a:
+		 * - split_greedy j_try_b
+		 * - split_nongreedy j_else_c
+		 * j_try_b:
 		 * - <case b>
 		 * - jmp pos_after_all
-		 * j4:
+		 * j_else_c:
 		 * //// DO NOT EMIT split instructions here, treat like a final else
 		 * - <case c>
 		 * // fall through to pos_after_all
@@ -788,6 +788,7 @@ capvm_compile_iter(struct capvm_compile_env *env,
 		}
 		const uint32_t pos_after_all = get_program_offset(p);
 
+		// backpatch the jmps to pos_after_all
 		for (size_t i = 0; i < expr->u.alt.count - 1; i++) {
 			const bool is_final_else_case = i == last_active;
 			assert(flow_info[i].backpatch < p->used);
@@ -938,7 +939,7 @@ capvm_compile_iter(struct capvm_compile_env *env,
 
 			if (max == AST_COUNT_UNBOUNDED) {
 				/* A repeat of {x,inf} should be treated like
-				 * (?:subtree){x} (?:subtree)* , where any numbered
+				 * (?:subtree){x,x} (?:subtree)* , where any numbered
 				 * capture groups inside have the same group ID in
 				 * both copies of the subtree. */
 				if (!compile_kleene_star(env, p, expr)) {
