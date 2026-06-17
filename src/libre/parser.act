@@ -77,14 +77,6 @@
 	#define TOK_CLASS__nspace  TOK_CLASS_NSPACE
 	#define TOK_CLASS__ndigit  TOK_CLASS_NDIGIT
 
-	/* This is a hack to work around the AST files not being able to include lexer.h. */
-	#define AST_POS_OF_LX_POS(AST_POS, LX_POS) \
-	    do {                                   \
-	        AST_POS.line = LX_POS.line;        \
-	        AST_POS.col = LX_POS.col;          \
-	        AST_POS.byte = LX_POS.byte;        \
-	    } while (0)
-
 	#include "parser.h"
 	#include "lexer.h"
 
@@ -141,91 +133,7 @@
 		/* TODO: use lx's generated conveniences for the pattern buffer */
 		char a[512];
 		char *p;
-#if PCRE_DIALECT
-		int extended_mode_comment;
-		enum re_flags *flags_ptr;
-#endif /* PCRE_DIALECT */
 	};
-
-	#define ERROR_TERMINAL   @$ERROR
-
-	#if PCRE_DIALECT
-	static void mark(struct re_pos *, const struct lx_pos *);
-
-	static void
-	pcre_advance_lexer(struct lex_state *lex_state, struct act_state *act_state)
-	{
-		mark(&act_state->synstart, &lex_state->lx.start);
-		mark(&act_state->synend,   &lex_state->lx.end);
-		act_state->lex_tok = LX_NEXT(&lex_state->lx);
-	}
-
-	static enum LX_TOKEN
-	pcre_current_token(struct lex_state *lex_state, struct act_state *act_state)
-	{
-		enum re_flags fl = (lex_state->flags_ptr != NULL) ? lex_state->flags_ptr[0] : 0;
-		enum LX_TOKEN tok;
-
-		if ((fl & RE_EXTENDED) == 0) {
-			tok = act_state->lex_tok;
-
-			switch (tok) {
-			case TOK_WHITESPACE:
-			case TOK_NEWLINE:
-			case TOK_MAYBE_COMMENT:
-				return TOK_CHAR;
-
-			default:
-				return tok;
-			}
-		} 
-
-	restart:
-		tok = act_state->lex_tok;
-		if (lex_state->extended_mode_comment) {
-			switch (tok) {
-			case TOK_EOF:
-			case TOK_ERROR:
-			case TOK_UNKNOWN:
-				/* don't eat EOF or errors */
-				return tok;
-
-			case TOK_NEWLINE:
-				lex_state->extended_mode_comment = 0;
-				/* fall through */
-			default:
-				pcre_advance_lexer(lex_state, act_state);
-				goto restart;
-			}
-		} else {
-			switch (tok) {
-			case TOK_MAYBE_COMMENT:
-				lex_state->extended_mode_comment = 1;
-				/*fall through */
-			case TOK_WHITESPACE:
-			case TOK_NEWLINE:
-				pcre_advance_lexer(lex_state, act_state);
-				goto restart;
-
-			default:
-				return tok;
-			}
-		}
-	}
-
-	#define CURRENT_TERMINAL (pcre_current_token(lex_state, act_state))
-	#define ADVANCE_LEXER    do { pcre_advance_lexer(lex_state,act_state); } while(0)
-	#else /* !PCRE_DIALECT */
-	#define CURRENT_TERMINAL (act_state->lex_tok)
-	#define ADVANCE_LEXER    do { mark(&act_state->synstart, &lex_state->lx.start); \
-	                              mark(&act_state->synend,   &lex_state->lx.end);   \
-	                              act_state->lex_tok = LX_NEXT(&lex_state->lx); \
-		} while (0)
-	#endif /* PCRE_DIALECT */
-
-	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
-	                              act_state->lex_tok = tok;                     } while (0)
-	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
 	static void
 	mark(struct re_pos *r, const struct lx_pos *pos)
@@ -296,6 +204,79 @@
 		sprintf(s, "%c", c);
 		return s;
 	}
+
+	static void
+	advance_lexer(struct lex_state *lex_state, struct act_state *act_state)
+	{
+		mark(&act_state->synstart, &lex_state->lx.start);
+		mark(&act_state->synend,   &lex_state->lx.end);
+		act_state->lex_tok = LX_NEXT(&lex_state->lx);
+	}
+
+	static enum LX_TOKEN
+	current_token(struct lex_state *lex_state, struct act_state *act_state,
+		enum re_flags *flags)
+	{
+#ifndef PCRE_DIALECT
+		(void) lex_state;
+		(void) flags;
+		return act_state->lex_tok;
+#else
+		if ((*flags & RE_EXTENDED) == 0) {
+			switch (act_state->lex_tok) {
+			case TOK_WHITESPACE:
+			case TOK_NEWLINE:
+			case TOK_MAYBE_COMMENT:
+				return TOK_CHAR;
+
+			default:
+				return act_state->lex_tok;
+			}
+		} 
+
+		int extended_mode_comment = 0;
+
+	restart:
+
+		if (extended_mode_comment) {
+			switch (act_state->lex_tok) {
+			case TOK_EOF:
+			case TOK_ERROR:
+			case TOK_UNKNOWN:
+				/* don't eat EOF or errors */
+				return act_state->lex_tok;
+
+			case TOK_NEWLINE:
+				extended_mode_comment = 0;
+				/* fall through */
+			default:
+				advance_lexer(lex_state, act_state);
+				goto restart;
+			}
+		} else {
+			switch (act_state->lex_tok) {
+			case TOK_MAYBE_COMMENT:
+				extended_mode_comment = 1;
+				/* fall through */
+			case TOK_WHITESPACE:
+			case TOK_NEWLINE:
+				advance_lexer(lex_state, act_state);
+				goto restart;
+
+			default:
+				return act_state->lex_tok;
+			}
+		}
+#endif
+	}
+
+	#define ADVANCE_LEXER    (advance_lexer(lex_state, act_state))
+	#define CURRENT_TERMINAL (current_token(lex_state, act_state, flags))
+	#define ERROR_TERMINAL   @$ERROR
+
+	#define SAVE_LEXER(tok)  do { act_state->lex_tok_save = act_state->lex_tok; \
+	                              act_state->lex_tok = tok;                     } while (0)
+	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
 @}, @{
 
@@ -465,16 +446,21 @@
 		assert(lex_state->buf.a[3] == '\0');
 
 		@c = lex_state->buf.a[2];
-		/* from http://www.pcre.org/current/doc/html/pcre2pattern.html#SEC5
+
+		/*
+		 * From http://www.pcre.org/current/doc/html/pcre2pattern.html#SEC5
 		 * 
-		 *  The precise effect of \cx on ASCII characters is as follows: if x is a lower case letter, it is converted to
-		 *  upper case. Then bit 6 of the character (hex 40) is inverted. Thus \cA to \cZ become hex 01 to hex 1A (A is
-		 *  41, Z is 5A), but \c{ becomes hex 3B ({ is 7B), and \c; becomes hex 7B (; is 3B). If the code unit following
-		 *  \c has a value less than 32 or greater than 126, a compile-time error occurs. 
+		 *  The precise effect of \cx on ASCII characters is as follows:
+		 *  if x is a lower case letter, it is converted to upper case.
+		 *  Then bit 6 of the character (hex 40) is inverted.
+		 *  Thus \cA to \cZ become hex 01 to hex 1A (A is 41, Z is 5A),
+		 *  but \c{ becomes hex 3B ({ is 7B), and \c; becomes hex 7B (; is 3B).
+		 *  If the code unit following \c has a value less than 32
+		 *  or greater than 126, a compile-time error occurs. 
 		 */
 
 		{
-			unsigned char cc = (unsigned char)@c;
+			unsigned char cc = (unsigned char) @c;
 			if (cc > 126 || cc < 32) {
 				@!;
 			}
@@ -793,21 +779,6 @@
 		mark(&act_state->countend,   &@end);
 	@};
 
-	<mark-expr>: (node :ast_expr, start :pos, end :pos) -> () = @{
-		struct ast_pos ast_start, ast_end;
-
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
-
-		mark(&act_state->groupstart, &@start);
-		mark(&act_state->groupend,   &@end);
-
-/* TODO: reinstate this, applies to an expr node in general
-		@node->u.class.start = ast_start;
-		@node->u.class.end   = ast_end;
-*/
-	@};
-
 	<class-any>: () -> (c :ast_class_id) = @{
 		/* TODO: or the unicode equivalent */
 		@c = (*flags & RE_SINGLE) ? &class_any : &class_notnl;
@@ -835,24 +806,22 @@
 	@};
 
 	<count-zero-or-more>: () -> (c :ast_count) = @{
-		@c = ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL);
+		@c = ast_make_count(0, AST_COUNT_UNBOUNDED);
 	@};
 
 	<count-one-or-more>: () -> (c :ast_count) = @{
-		@c = ast_make_count(1, NULL, AST_COUNT_UNBOUNDED, NULL);
+		@c = ast_make_count(1, AST_COUNT_UNBOUNDED);
 	@};
 
 	<count-zero-or-one>: () -> (c :ast_count) = @{
-		@c = ast_make_count(0, NULL, 1, NULL);
+		@c = ast_make_count(0, 1);
 	@};
 
 	<count-one>: () -> (c :ast_count) = @{
-		@c = ast_make_count(1, NULL, 1, NULL);
+		@c = ast_make_count(1, 1);
 	@};
 
 	<count-range>: (min :unsigned, start :pos, max :unsigned, end :pos) -> (c :ast_count) = @{
-		struct ast_pos ast_start, ast_end;
-
 		if (@max < @min) {
 			err->e = RE_ENEGCOUNT;
 			err->m = @min;
@@ -864,15 +833,12 @@
 			@!;
 		}
 
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
-
-		@c = ast_make_count(@min, &ast_start, @max, &ast_end);
+		@c = ast_make_count(@min, @max);
 	@};
 
 	<ast-range-endpoint-literal>: (c :char) -> (e :endpoint) = @{
 		@e.type = AST_ENDPOINT_LITERAL;
-		@e.u.literal.c = (unsigned char)@c;
+		@e.u.literal.c = (unsigned char) @c;
 	@};
 
 	<ast-range-endpoint-class>: (id :ast_class_id) -> (e :endpoint) = @{
@@ -1036,11 +1002,7 @@
 	@};
 
 	<ast-make-range>: (from :endpoint, start :pos, to :endpoint, end :pos) -> (node :ast_expr) = @{
-		struct ast_pos ast_start, ast_end;
 		unsigned char lower, upper;
-
-		AST_POS_OF_LX_POS(ast_start, @start);
-		AST_POS_OF_LX_POS(ast_end, @end);
 
 		if (@from.type != AST_ENDPOINT_LITERAL ||
 			@to.type != AST_ENDPOINT_LITERAL) {
@@ -1062,7 +1024,7 @@
 			@!;
 		}
 
-		@node = ast_make_expr_range(act_state->poolp, *flags, &@from, ast_start, &@to, ast_end);
+		@node = ast_make_expr_range(act_state->poolp, *flags, &@from, &@to);
 		if (@node == NULL) {
 			@!;
 		}
@@ -1106,9 +1068,8 @@
 
 	struct ast *
 	DIALECT_PARSE(re_getchar_fun *f, void *opaque,
-		const struct fsm_options *opt,
 		enum re_flags flags, int overlap,
-		struct re_err *err)
+		struct re_err *err, struct re_pos *end)
 	{
 		struct ast *ast;
 
@@ -1121,6 +1082,7 @@
 		struct LX_STATE *lx;
 
 		assert(f != NULL);
+		assert(end != NULL);
 
 		ast = ast_new();
 
@@ -1143,11 +1105,6 @@
 
 		lex_state->buf.a   = NULL;
 		lex_state->buf.len = 0;
-
-#if PCRE_DIALECT
-		lex_state->extended_mode_comment = 0;
-		lex_state->flags_ptr = &flags;
-#endif /* PCRE_DIALECT */
 
 		/* XXX: unneccessary since we're lexing from a string */
 		/* (except for pushing "[" and "]" around ::group-$dialect) */
@@ -1178,6 +1135,9 @@
 #endif
 
 		DIALECT_ENTRY(&flags, lex_state, act_state, err, &ast->expr);
+
+		/* we output this for reporting errors found through AST analysis */
+		mark(end, &lx->end);
 
 		lx->free(lx->buf_opaque);
 

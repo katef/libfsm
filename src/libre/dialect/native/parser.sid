@@ -106,8 +106,8 @@
 	!<ast-set-re-flags>:     (:re_flags)              -> ();
 	!<ast-mask-re-flags>:    (:re_flags, :re_flags)   -> ();
 	<ast-make-anchor-start>: ()                       -> (:ast_expr);
-	<ast-make-anchor-end>:   ()                       -> (:ast_expr);
-	!<ast-make-anchor-end-nl>:()                      -> (:ast_expr);
+	!<ast-make-anchor-end>:   ()                      -> (:ast_expr);
+	<ast-make-anchor-end-nl>:()                       -> (:ast_expr);
 	!<ast-make-subtract>:    (:ast_expr, :ast_expr)   -> (:ast_expr); 
 	<ast-make-invert>:       (:ast_expr)              -> (:ast_expr); 
 	<ast-make-range>:        (:endpoint, :pos, :endpoint, :pos) -> (:ast_expr);
@@ -134,7 +134,6 @@
 	<mark-group>: (:pos, :pos) -> ();
 	<mark-range>: (:pos, :pos) -> ();
 	<mark-count>: (:pos, :pos) -> ();
-	<mark-expr>: (:ast_expr, :pos, :pos) -> ();
 
 	<class-any>:  () -> (:ast_class_id);
 	!<class-bsr>: () -> (:ast_class_id);
@@ -350,10 +349,7 @@
 				<mark-group>(start, end);
 			##
 				<err-expected-closegroup>;
-				end = start; /* appease sid */
 			};
-
-			<mark-expr>(tmp, start, end);
 		};
 
 		piece: () -> (node :ast_expr) [
@@ -363,7 +359,7 @@
 				e = <ast-make-anchor-start>;
 			||
 				END;
-				e = <ast-make-anchor-end>;
+				e = <ast-make-anchor-end-nl>;
 			||
 				ANY;
 				a = <class-any>;
@@ -466,9 +462,9 @@
 	};
 
 	re_native: () -> (node :ast_expr) = {
-		{
-			node = expr;
-		};
+		id = <make-group-id>;
+		e = expr;
+		node = <ast-make-group>(e, id);
 
 		{
 			EOF;

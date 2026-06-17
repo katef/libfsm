@@ -22,6 +22,7 @@
 #include <fsm/options.h>
 
 #include "libfsm/internal.h"
+#include "libfsm/print.h"
 
 #include "ir.h"
 
@@ -52,18 +53,99 @@ ir_hasend(const struct ir *ir)
 	return 0;
 }
 
+// TODO: centralise vmc/c
 static int
-leaf(FILE *f, const struct fsm_end_ids *ids, const void *leaf_opaque)
+print_ids(FILE *f,
+	enum fsm_ambig ambig, const struct fsm_state_metadata *state_metadata)
+{
+	switch (ambig) {
+	case AMBIG_NONE:
+		// TODO: for C99 we'd return bool
+		fprintf(f, "return 1;");
+		break;
+
+	case AMBIG_ERROR:
+// TODO: decide if we deal with this ahead of the call to print or not
+		if (state_metadata->end_id_count > 1) {
+			errno = EINVAL;
+			return -1;
+		}
+
+		/* fallthrough */
+
+	case AMBIG_EARLIEST:
+		/*
+		 * The libfsm api guarentees these ids are unique,
+		 * and only appear once each, and are sorted.
+		 */
+		fprintf(f, "{\n");
+		fprintf(f, "\t\t*id = %u;\n", state_metadata->end_ids[0]);
+		fprintf(f, "\t\treturn 1;\n");
+		fprintf(f, "\t}");
+		break;
+
+	case AMBIG_MULTIPLE:
+		/*
+		 * Here I would like to emit (static unsigned []) { 1, 2, 3 }
+		 * but specifying a storage duration for compound literals
+		 * is a compiler extension.
+		 * So I'm emitting a static const variable declaration instead.
+		 */
+
+		fprintf(f, "{\n");
+		fprintf(f, "\t\tstatic const unsigned a[] = { ");
+		for (fsm_end_id_t i = 0; i < state_metadata->end_id_count; i++) {
+			fprintf(f, "%u", state_metadata->end_ids[i]);
+			if (i + 1 < state_metadata->end_id_count) {
+				fprintf(f, ", ");
+			}
+		}
+		fprintf(f, " };\n");
+		fprintf(f, "\t\t*ids = a;\n");
+		fprintf(f, "\t\t*count = %zu;\n", state_metadata->end_id_count);
+		fprintf(f, "\t\treturn 1;\n");
+		fprintf(f, "\t}");
+		break;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+
+	return 0;
+}
+
+static int
+default_accept(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *lang_opaque, void *hook_opaque)
 {
 	assert(f != NULL);
-	assert(leaf_opaque == NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
 
-	(void) ids;
-	(void) leaf_opaque;
+	(void) lang_opaque;
+	(void) hook_opaque;
 
-	/* XXX: this should be FSM_UNKNOWN or something non-EOF,
-	 * maybe user defined */
-	fprintf(f, "return -1; /* leaf */");
+	if (-1 == print_ids(f, opt->ambig, state_metadata)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+default_reject(FILE *f, const struct fsm_options *opt,
+	void *lang_opaque, void *hook_opaque)
+{
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(lang_opaque == NULL);
+
+	(void) lang_opaque;
+	(void) hook_opaque;
+
+	fprintf(f, "return 0;");
 
 	return 0;
 }
@@ -120,36 +202,44 @@ print_groups(FILE *f, const struct fsm_options *opt,
 
 		print_ranges(f, opt, groups[j].ranges, groups[j].n);
 
-		/* TODO: pad S%u out to maximum state width */
 		if (groups[j].to != csi) {
 			fprintf(f, " state = S%u;", groups[j].to);
 		}
 		fprintf(f, " break;\n");
-
-		/* TODO: if greedy, and fsm_isend(fsm, state->edges[i].sl->state) then:
-			fprintf(f, "         return %s%s;\n", prefix.tok, state->edges[i].sl->state's token);
-		 */
 	}
 }
 
 static int
-print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
+print_case(FILE *f, const struct ir *ir, fsm_state_t state_id,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
 	const char *cp,
-	struct ir_state *cs,
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
-	const void *leaf_opaque)
+	struct ir_state *cs)
 {
 	assert(ir != NULL);
 	assert(opt != NULL);
 	assert(cp != NULL);
 	assert(f != NULL);
 	assert(cs != NULL);
-	assert(leaf != NULL);
+
+	assert(state_id < ir->n);
+	const struct fsm_state_metadata state_metadata = {
+		.end_ids = ir->states[state_id].endids.ids,
+		.end_id_count = ir->states[state_id].endids.count,
+	};
+
+	if (cs->eager_outputs != NULL && opt->fragment) {
+		/* If .fragment is set and the state has eager outputs, then emit a call to a
+		 * macro (the caller is expected to define). This is a temporary interface. */
+		for (size_t i = 0; i < cs->eager_outputs->count; i++) {
+			fprintf(f, "\t\t\tFSM_SET_EAGER_OUTPUT(%u);\n", cs->eager_outputs->ids[i]);
+		}
+	}
 
 	switch (cs->strategy) {
 	case IR_NONE:
 		fprintf(f, "\t\t\t");
-		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -178,7 +268,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 		print_groups(f, opt, ir_indexof(ir, cs), cs->u.partial.groups, cs->u.partial.n);
 
 		fprintf(f, "\t\t\tdefault:  ");
-		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -209,7 +299,7 @@ print_singlecase(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 
 		print_ranges(f, opt, cs->u.error.error.ranges, cs->u.error.error.n);
 		fprintf(f, " ");
-		if (-1 == leaf(f, cs->end_ids, leaf_opaque)) {
+		if (-1 == print_hook_reject(f, opt, hooks, &state_metadata, default_reject, NULL)) {
 			return -1;
 		}
 		fprintf(f, "\n");
@@ -265,7 +355,10 @@ print_stateenum(FILE *f, size_t n)
 }
 
 static int
-endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
+print_endstates(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ir *ir)
 {
 	unsigned i;
 
@@ -275,12 +368,18 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 
 	/* no end states */
 	if (!ir_hasend(ir)) {
-		fprintf(f, "\treturn -1; /* unexpected EOT */\n");
+		fprintf(f, "\treturn 0;");
+		if (opt->comments) {
+			fprintf(f, " /* unexpected EOT */");
+		}
+		fprintf(f, "\n");
 		return 0;
 	}
 
 	/* usual case */
-	fprintf(f, "\t/* end states */\n");
+	if (opt->comments) {
+		fprintf(f, "\t/* end states */\n");
+	}
 	fprintf(f, "\tswitch (state) {\n");
 	for (i = 0; i < ir->n; i++) {
 		if (!ir->states[i].isend) {
@@ -288,26 +387,50 @@ endstates(FILE *f, const struct fsm_options *opt, const struct ir *ir)
 		}
 
 		fprintf(f, "\tcase S%u: ", i);
-		if (opt->endleaf != NULL) {
-			if (-1 == opt->endleaf(f, ir->states[i].end_ids, opt->endleaf_opaque)) {
-				return -1;
-			}
-		} else {
-			fprintf(f, "return %u;", i);
+
+		const struct fsm_state_metadata state_metadata = {
+			.end_ids = ir->states[i].endids.ids,
+			.end_id_count = ir->states[i].endids.count,
+
+			.eager_output_count = (ir->states[i].eager_outputs == NULL
+			    ? 0 : ir->states[i].eager_outputs->count),
+			.eager_output_ids = (ir->states[i].eager_outputs == NULL
+			    ? NULL : ir->states[i].eager_outputs->ids),
+		};
+
+		if (-1 == print_hook_accept(f, opt, hooks,
+			&state_metadata,
+			default_accept,
+			NULL))
+		{
+			return -1;
 		}
+
+		if (-1 == print_hook_comment(f, opt, hooks,
+			&state_metadata))
+		{
+			return -1;
+		}
+
 		fprintf(f, "\n");
 	}
-	fprintf(f, "\tdefault: return -1; /* unexpected EOT */\n");
+
+	/* unexpected EOT */
+	fprintf(f, "\tdefault: ");
+	if (-1 == print_hook_reject(f, opt, hooks, NULL, default_reject, NULL)) {
+		return -1;
+	}
+	fprintf(f, "\n");
 	fprintf(f, "\t}\n");
 
 	return 0;
 }
 
 int
-fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
-	const char *cp,
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids, const void *leaf_opaque),
-	const void *leaf_opaque)
+fsm_print_cfrag(FILE *f, const struct ir *ir,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const char *cp)
 {
 	unsigned i;
 
@@ -325,20 +448,24 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 				fprintf(f, " /* e.g. \"");
 				escputs(f, opt, c_escputc_str, ir->states[i].example);
 				fprintf(f, "\" */");
-			} else if (i == ir->start) {
+			} else if (i == ir->start && opt->comments) {
 				fprintf(f, " /* start */");
 			}
 		}
 		fprintf(f, "\n");
 
-		if (-1 == print_singlecase(f, ir, opt, cp, &ir->states[i], leaf, leaf_opaque)) {
+		if (-1 == print_case(f, ir, i, opt, hooks, cp, &ir->states[i])) {
 			return -1;
 		}
 
 		fprintf(f, "\n");
 	}
 	fprintf(f, "\t\tdefault:\n");
-	fprintf(f, "\t\t\t; /* unreached */\n");
+	fprintf(f, "\t\t\t;");
+	if (opt->comments) {
+		fprintf(f, " /* unreached */");
+	}
+	fprintf(f, "\n");
 	fprintf(f, "\t\t}\n");
 
 	if (ferror(f)) {
@@ -349,16 +476,19 @@ fsm_print_cfrag(FILE *f, const struct ir *ir, const struct fsm_options *opt,
 }
 
 static int
-fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
+fsm_print_c_body(FILE *f, const struct ir *ir,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks)
 {
 	const char *cp;
 
 	assert(f != NULL);
 	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
 
-	if (opt->cp != NULL) {
-		cp = opt->cp;
+	if (hooks->cp != NULL) {
+		cp = hooks->cp;
 	} else {
 		switch (opt->io) {
 		case FSM_IO_GETC: cp = "c";  break;
@@ -377,7 +507,7 @@ fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
-		fprintf(f, "\twhile (c = fsm_getc(opaque), c != EOF) {\n");
+		fprintf(f, "\twhile (c = fsm_getc(getc_opaque), c != EOF) {\n");
 		break;
 
 	case FSM_IO_STR:
@@ -389,9 +519,13 @@ fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 		break;
 	}
 
-	if (-1 == fsm_print_cfrag(f, ir, opt, cp,
-		opt->leaf != NULL ? opt->leaf : leaf, opt->leaf_opaque))
-	{
+	if (hooks->advance != NULL) {
+		if (-1 == hooks->advance(f, opt, cp, hooks->hook_opaque)) {
+			return -1;
+		}
+	}
+
+	if (-1 == fsm_print_cfrag(f, ir, opt, hooks, cp)) {
 		return -1;
 	}
 
@@ -399,34 +533,94 @@ fsm_print_c_body(FILE *f, const struct ir *ir, const struct fsm_options *opt)
 	fprintf(f, "\n");
 
 	/* end states */
-	if (-1 == endstates(f, opt, ir)) {
+	if (-1 == print_endstates(f, opt, hooks, ir)) {
 		return -1;
 	}
 
 	return 0;
 }
 
-static int
-fsm_print_c_complete(FILE *f, const struct ir *ir,
-	const struct fsm_options *opt, const char *prefix)
+int
+fsm_print_c(FILE *f,
+	const struct fsm_options *opt,
+	const struct fsm_hooks *hooks,
+	const struct ir *ir)
 {
+	const char *prefix;
+
 	assert(f != NULL);
-	assert(ir != NULL);
 	assert(opt != NULL);
+	assert(hooks != NULL);
+	assert(ir != NULL);
+
+	if (opt->prefix != NULL) {
+		prefix = opt->prefix;
+	} else {
+		prefix = "fsm_";
+	}
 
 	if (opt->fragment) {
-		if (-1 == fsm_print_c_body(f, ir, opt)) {
+		if (-1 == fsm_print_c_body(f, ir, opt, hooks)) {
 			return -1;
 		}
 	} else {
 		fprintf(f, "\n");
 
 		fprintf(f, "int\n%smain", prefix);
+		fprintf(f, "(");
 
 		switch (opt->io) {
 		case FSM_IO_GETC:
-			fprintf(f, "(int (*fsm_getc)(void *opaque), void *opaque)\n");
-			fprintf(f, "{\n");
+			fprintf(f, "int (*fsm_getc)(void *getc_opaque), void *getc_opaque");
+			break;
+
+		case FSM_IO_STR:
+			fprintf(f, "const char *s");
+			break;
+
+		case FSM_IO_PAIR:
+			fprintf(f, "const char *b, const char *e");
+			break;
+		}
+
+		/*
+		 * unsigned rather than fsm_end_id_t here, so the generated code
+		 * doesn't depend on fsm.h
+		 */
+		switch (opt->ambig) {
+		case AMBIG_NONE:
+			break;
+
+		case AMBIG_ERROR:
+		case AMBIG_EARLIEST:
+			fprintf(f, ",\n");
+			fprintf(f, "\tunsigned *id");
+			break;
+
+		case AMBIG_MULTIPLE:
+			fprintf(f, ",\n");
+			fprintf(f, "\tconst unsigned **ids, size_t *count");
+			break;
+
+		default:
+			assert(!"unreached");
+			abort();
+		}
+
+		if (hooks->args != NULL) {
+			fprintf(f, ",\n");
+			fprintf(f, "\t");
+
+			if (-1 == print_hook_args(f, opt, hooks, NULL, NULL)) {
+				return -1;
+			}
+		}
+
+		fprintf(f, ")\n");
+		fprintf(f, "{\n");
+
+		switch (opt->io) {
+		case FSM_IO_GETC:
 			if (ir->n > 0) {
 				fprintf(f, "\tint c;\n");
 				fprintf(f, "\n");
@@ -434,8 +628,6 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 			break;
 
 		case FSM_IO_STR:
-			fprintf(f, "(const char *s)\n");
-			fprintf(f, "{\n");
 			if (ir->n > 0) {
 				fprintf(f, "\tconst char *p;\n");
 				fprintf(f, "\n");
@@ -443,8 +635,6 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 			break;
 
 		case FSM_IO_PAIR:
-			fprintf(f, "(const char *b, const char *e)\n");
-			fprintf(f, "{\n");
 			if (ir->n > 0) {
 				fprintf(f, "\tconst char *p;\n");
 				fprintf(f, "\n");
@@ -453,9 +643,13 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 		}
 
 		if (ir->n == 0) {
-			fprintf(f, "\treturn -1; /* no matches */\n");
+			fprintf(f, "\treturn 0;");
+			if (opt->comments) {
+				fprintf(f, " /* no matches */");
+			}
+			fprintf(f, "\n");
 		} else {
-			if (-1 == fsm_print_c_body(f, ir, opt)) {
+			if (-1 == fsm_print_c_body(f, ir, opt, hooks)) {
 				return -1;
 			}
 		}
@@ -464,41 +658,6 @@ fsm_print_c_complete(FILE *f, const struct ir *ir,
 		fprintf(f, "\n");
 	}
 
-	if (ferror(f)) {
-		return -1;
-	}
-
 	return 0;
-}
-
-int
-fsm_print_c(FILE *f, const struct fsm *fsm)
-{
-	struct ir *ir;
-	const char *prefix;
-	int r;
-
-	assert(f != NULL);
-	assert(fsm != NULL);
-	assert(fsm->opt != NULL);
-
-	ir = make_ir(fsm);
-	if (ir == NULL) {
-		return -1;
-	}
-
-	/* henceforth, no function should be passed struct fsm *, only the ir and options */
-
-	if (fsm->opt->prefix != NULL) {
-		prefix = fsm->opt->prefix;
-	} else {
-		prefix = "fsm_";
-	}
-
-	r = fsm_print_c_complete(f, ir, fsm->opt, prefix);
-
-	free_ir(fsm, ir);
-
-	return r;
 }
 

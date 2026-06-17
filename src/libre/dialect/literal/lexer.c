@@ -10,11 +10,31 @@
 
 static enum lx_literal_token z0(struct lx_literal_lx *lx);
 
+static int
+lx_literal_advance_end(struct lx_literal_lx *lx, int c)
+{
+	lx->end.byte++;
+	lx->end.col++;
+	if (c == '\n') {
+		lx->end.line++;
+		lx->end.saved_col = lx->end.col - 1;
+		lx->end.col = 1;
+	}
+	if (lx->push != NULL) {
+		if (-1 == lx->push(lx->buf_opaque, (char)c)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/* This wrapper manages one character of lookahead/pushback
+ * and the line, column, and byte offsets. */
 #if __STDC_VERSION__ >= 199901L
 inline
 #endif
 static int
-lx_getc(struct lx_literal_lx *lx)
+lx_literal_getc(struct lx_literal_lx *lx)
 {
 	int c;
 
@@ -30,16 +50,17 @@ lx_getc(struct lx_literal_lx *lx)
 		}
 	}
 
-	lx->end.byte++;
-	lx->end.col++;
-
-	if (c == '\n') {
-		lx->end.line++;
-		lx->end.saved_col = lx->end.col - 1;
-		lx->end.col = 1;
-	}
+	if (!lx_literal_advance_end(lx, c)) { return EOF; }
 
 	return c;
+}
+
+/* This wrapper adapts calling lx_literal_getc to the interface
+ * in libfsm's generated code. */
+static int
+fsm_getc(void *getc_opaque)
+{
+	return lx_literal_getc((struct lx_literal_lx *)getc_opaque);
 }
 
 #if __STDC_VERSION__ >= 199901L
@@ -50,10 +71,7 @@ lx_literal_ungetc(struct lx_literal_lx *lx, int c)
 {
 	assert(lx != NULL);
 	assert(lx->c == EOF);
-
 	lx->c = c;
-
-
 	lx->end.byte--;
 	lx->end.col--;
 
@@ -105,6 +123,17 @@ lx_literal_dynpush(void *buf_opaque, char c)
 	return 0;
 }
 
+static void
+lx_literal_dynpop(void *buf_opaque)
+{
+	struct lx_dynbuf *t = buf_opaque;
+
+	assert(t != NULL);
+
+	assert(t->p != t->a);
+	t->p--;
+}
+
 int
 lx_literal_dynclear(void *buf_opaque)
 {
@@ -144,11 +173,8 @@ lx_literal_dynfree(void *buf_opaque)
 static enum lx_literal_token
 z0(struct lx_literal_lx *lx)
 {
+	int has_consumed_input = 0;
 	int c;
-
-	enum {
-		S0, S1, NONE
-	} state;
 
 	assert(lx != NULL);
 
@@ -156,40 +182,49 @@ z0(struct lx_literal_lx *lx)
 		lx->clear(lx->buf_opaque);
 	}
 
-	state = NONE;
-
 	lx->start = lx->end;
 
-	while (c = lx_getc(lx), c != EOF) {
-		if (state == NONE) {
-			state = S0;
-		}
+	void *getc_opaque = (void *)lx;
+	enum {
+		S0, S1
+	} state;
 
+	state = S0;
+
+	while (c = fsm_getc(getc_opaque), c != EOF) {
+		has_consumed_input = 1;
 		switch (state) {
-		case S0: /* start */
+		case S0: /* e.g. "" */
 			state = S1; break;
 
 		case S1: /* e.g. "" */
-			lx_literal_ungetc(lx, c); return TOK_CHAR;
+			lx_literal_ungetc(lx, c); lx_literal_dynpop(lx->buf_opaque); return TOK_CHAR;
 
 		default:
 			; /* unreached */
 		}
+	}
+
+	/* end states */
+	switch (state) {
+	case S1: return TOK_CHAR;
+	default: 
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_literal_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	}
 
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
 				return TOK_ERROR;
 			}
 		}
-	}
 
 	lx->lgetc = NULL;
 
-	switch (state) {
-	case NONE: return TOK_EOF;
-	case S1: return TOK_CHAR;
-	default: errno = EINVAL; return TOK_ERROR;
-	}
+	if (!has_consumed_input) {
+		return TOK_EOF;
+	} 
+	return TOK_ERROR;
 }
 
 const char *
@@ -237,6 +272,7 @@ lx_literal_init(struct lx_literal_lx *lx)
 	lx->end.byte = 0;
 	lx->end.line = 1;
 	lx->end.col  = 1;
+	(void)lx_literal_dynpop;
 }
 
 enum lx_literal_token

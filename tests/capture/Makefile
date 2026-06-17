@@ -7,18 +7,20 @@ TEST_OUTDIR.tests/capture = ${BUILD}/tests/capture
 .for n in ${TEST.tests/capture:T:R:C/^capture//}
 test:: ${TEST_OUTDIR.tests/capture}/res${n}
 SRC += ${TEST_SRCDIR.tests/capture}/capture${n}.c
-CFLAGS.${TEST_SRCDIR.tests/capture}/capture${n}.c = -UNDEBUG
+CFLAGS.${TEST_SRCDIR.tests/capture}/capture${n}.c = -UNDEBUG -std=c99
 
 ${TEST_OUTDIR.tests/capture}/run${n}: ${TEST_OUTDIR.tests/capture}/capture${n}.o ${TEST_OUTDIR.tests/capture}/captest.o
-	${CC} ${CFLAGS} -o ${TEST_OUTDIR.tests/capture}/run${n} ${TEST_OUTDIR.tests/capture}/capture${n}.o ${TEST_OUTDIR.tests/capture}/captest.o ${BUILD}/lib/libfsm.a
+	${CC} ${CFLAGS} -o ${TEST_OUTDIR.tests/capture}/run${n} ${TEST_OUTDIR.tests/capture}/capture${n}.o ${TEST_OUTDIR.tests/capture}/captest.o ${BUILD}/lib/libfsm.a ${BUILD}/lib/libre.a
 
 ${TEST_OUTDIR.tests/capture}/res${n}: ${TEST_OUTDIR.tests/capture}/run${n}
 	( ${TEST_OUTDIR.tests/capture}/run${n} 1>&2 && echo PASS || echo FAIL ) > ${TEST_OUTDIR.tests/capture}/res${n}
 
-.for lib in ${LIB:Mlibfsm}
+.for lib in ${LIB:Mlibfsm} ${LIB:Mlibre}
 ${TEST_OUTDIR.tests/capture}/run${n}: ${BUILD}/lib/${lib:R}.a
 .endfor
 .endfor
+
+CFLAGS.${TEST_SRCDIR.tests/capture}/captest.c += -std=c99
 
 ${TEST_OUTDIR.tests/capture}/captest.o: tests/capture/captest.c
 	${CC} ${CFLAGS} -c -o ${TEST_OUTDIR.tests/capture}/captest.o tests/capture/captest.c

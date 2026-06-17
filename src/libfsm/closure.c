@@ -9,10 +9,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fsm/alloc.h>
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/options.h>
 
 #include <adt/queue.h>
 #include <adt/set.h>
@@ -32,7 +32,7 @@ epsilon_closure_single(const struct fsm *fsm, struct state_set **closures, fsm_s
 	assert(closures != NULL);
 	assert(s < fsm->statecount);
 
-	q = queue_new(fsm->opt->alloc, fsm->statecount);
+	q = queue_new(fsm->alloc, fsm->statecount);
 	if (q == NULL) {
 		return 1;
 	}
@@ -72,7 +72,7 @@ start:
 		 * TODO: use partially-constructed (i.e. not readable) sets, and finalize later
 		 */
 		if (p != s && closures[p] != NULL) {
-			if (!state_set_copy(&closures[s], fsm->opt->alloc, closures[p])) {
+			if (!state_set_copy(&closures[s], fsm->alloc, closures[p])) {
 				goto error;
 			}
 		}
@@ -89,7 +89,7 @@ start:
 		 * multiple threads repeating some of the same work here.
 		 */
 
-		if (!state_set_add(&closures[s], fsm->opt->alloc, p)) {
+		if (!state_set_add(&closures[s], fsm->alloc, p)) {
 			goto error;
 		}
 
@@ -128,7 +128,7 @@ error:
 }
 
 struct state_set **
-epsilon_closure(struct fsm *fsm)
+fsm_epsilon_closure(const struct fsm *fsm)
 {
 	struct state_set **closures;
 	fsm_state_t s;
@@ -136,7 +136,7 @@ epsilon_closure(struct fsm *fsm)
 	assert(fsm != NULL);
 	assert(fsm->statecount > 0);
 
-	closures = f_malloc(fsm->opt->alloc, fsm->statecount * sizeof *closures);
+	closures = f_malloc(fsm->alloc, fsm->statecount * sizeof *closures);
 	if (closures == NULL) {
 		return NULL;
 	}
@@ -153,7 +153,7 @@ epsilon_closure(struct fsm *fsm)
 		 * avoid the bookkeeping overhead needed for general case.
 		 */
 		if (fsm->states[s].epsilons == NULL) {
-			if (!state_set_add(&closures[s], fsm->opt->alloc, s)) {
+			if (!state_set_add(&closures[s], fsm->alloc, s)) {
 				goto error;
 			}
 		}
@@ -184,13 +184,13 @@ error:
 		state_set_free(closures[s]);
 	}
 
-	f_free(fsm->opt->alloc, closures);
+	f_free(fsm->alloc, closures);
 
 	return NULL;
 }
 
 void
-closure_free(struct state_set **closures, size_t n)
+fsm_closure_free(const struct fsm *fsm, struct state_set **closures, size_t n)
 {
 	fsm_state_t s;
 
@@ -198,6 +198,6 @@ closure_free(struct state_set **closures, size_t n)
 		state_set_free(closures[s]);
 	}
 
-	free(closures);
+	f_free(fsm->alloc, closures);
 }
 

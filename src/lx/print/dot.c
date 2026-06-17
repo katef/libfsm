@@ -65,46 +65,48 @@ mapping(FILE *f, const struct ast_mapping *m, const struct ast *ast)
 }
 
 static int
-endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
+accept_dot(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *lang_opaque, void *hook_opaque)
 {
 	const struct ast_mapping *m;
 	const struct ast *ast;
+	fsm_state_t s;
 
 	assert(f != NULL);
-	assert(endleaf_opaque != NULL);
+	assert(opt != NULL);
+	assert(state_metadata->end_ids != NULL);
+	assert(state_metadata->end_id_count > 0);
+	assert(lang_opaque != NULL);
+	assert(hook_opaque != NULL);
 
-	(void)end_ids;		/* TODO */
-	assert(end_ids->count > 0);
-	m = ast_getendmappingbyendid(end_ids->ids[0]);
-
-	ast = endleaf_opaque;
+	ast = hook_opaque;
+	s = * (fsm_state_t *) lang_opaque;
 
 	fprintf(f, "label = <");
 
-/* TODO: would need the fsm for indexing here */
-#if 0
 	if (!anonymous_states) {
 		fprintf(f, "%u<br/>", s);
 	}
-#endif
 
-	if (m->conflict != NULL) {
-		const struct mapping_set *p;
+	if (state_metadata->end_id_count == 1) {
+		m = ast_getendmappingbyendid(state_metadata->end_ids[0]);
+		mapping(f, m, ast);
+	} else {
+		size_t i;
 
 		fprintf(f, "<font color=\"red\">");
 
-		for (p = m->conflict; p != NULL; p = p->next) {
-			mapping(f, p->m, ast);
+		for (i = 0; i < state_metadata->end_id_count; i++) {
+			m = ast_getendmappingbyendid(state_metadata->end_ids[i]);
+			mapping(f, m, ast);
 
-			if (p->next != NULL) {
+			if (i + 1 < state_metadata->end_id_count) {
 				fprintf(f, "<br/>");
 			}
 		}
 
 		fprintf(f, "</font>");
-	} else {
-		mapping(f, m, ast);
 	}
 
 	fprintf(f, ">");
@@ -134,35 +136,21 @@ singlestate(FILE *f, const struct fsm *fsm, const struct ast *ast,
 	}
 	assert(m != NULL);
 
-	if (m->conflict != NULL) {
-		const struct mapping_set *p;
+	if (m->to != NULL) {
+		fsm_state_t start;
 
-		for (p = m->conflict; p != NULL; p = p->next) {
-			if (p->m->to != NULL) {
-				fsm_state_t start;
+		(void) fsm_getstart(m->to->fsm, &start);
 
-				(void) fsm_getstart(p->m->to->fsm, &start);
-
-				fprintf(f, "\tz%uS%u -> z%uS%u [ color = red, style = dashed ];\n",
-					zindexof(ast, z), s,
-					zindexof(ast, p->m->to), start);
-			}
-		}
-	} else {
-		if (m->to != NULL) {
-			fsm_state_t start;
-
-			(void) fsm_getstart(m->to->fsm, &start);
-
-			fprintf(f, "\tz%uS%u -> z%uS%u [ color = cornflowerblue, style = dashed ];\n",
-				zindexof(ast, z), s,
-				zindexof(ast, m->to), start);
-		}
+		fprintf(f, "\tz%uS%u -> z%uS%u [ color = %s, style = dashed ];\n",
+			zindexof(ast, z), s,
+			zindexof(ast, m->to), start,
+			fsm_endid_count(fsm, s) > 1 ? "red" : "cornflowerblue");
 	}
 }
 
 static void
-print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
+print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
+	const struct fsm_options *opt)
 {
 	fsm_state_t start, i;
 
@@ -170,6 +158,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	assert(ast != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
+	assert(opt != NULL);
 
 	(void) fsm_getstart(z->fsm, &start);
 
@@ -186,28 +175,21 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 	fprintf(f, "\t\n");
 
 	{
-		const struct fsm_options *tmp;
-		static const struct fsm_options defaults;
-		struct fsm_options opt = defaults;
-		char p[128];
+		static const struct fsm_hooks defaults;
+		struct fsm_hooks hooks = defaults;
+		struct fsm_options o = *opt;
 
-		tmp = z->fsm->opt;
+		char p[128];
 
 		(void) sprintf(p, "z%u", zindexof(ast, z));
 
-		opt.anonymous_states  = anonymous_states;
-		opt.fragment          = 1; /* XXX */
-		opt.consolidate_edges = z->fsm->opt->consolidate_edges;
-		opt.comments          = z->fsm->opt->comments;
-		opt.prefix            = p;
- 		opt.endleaf           = endleaf_dot;
-		opt.endleaf_opaque    = (void *) ast;
+		o.prefix = p;
+		o.fragment = 1;
 
-		z->fsm->opt = &opt;
+ 		hooks.accept      = accept_dot;
+		hooks.hook_opaque = (void *) ast;
 
-		fsm_print_dot(f, z->fsm);
-
-		z->fsm->opt = tmp;
+		fsm_print(f, z->fsm, &o, &hooks, FSM_PRINT_DOT);
 	}
 
 	for (i = 0; i < z->fsm->statecount; i++) {
@@ -222,13 +204,14 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z)
 }
 
 void
-lx_print_dot(FILE *f, const struct ast *ast)
+lx_print_dot(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 {
 	const struct ast_zone *z;
 	unsigned int zn;
 	fsm_state_t start;
 
 	assert(f != NULL);
+	assert(opt != NULL);
 
 	(void) fsm_getstart(ast->global->fsm, &start);
 
@@ -293,7 +276,7 @@ lx_print_dot(FILE *f, const struct ast *ast)
 			zn++;
 		}
 
-		print_zone(f, ast, z);
+		print_zone(f, ast, z, opt);
 	}
 
 	fprintf(f, "}\n");

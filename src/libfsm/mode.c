@@ -28,6 +28,7 @@ fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq)
 	} mode;
 
 	mode.freq = 1;
+	mode.state = (fsm_state_t)-1;
 
 	edge_set_group_iter_reset(fsm->states[state].edges, EDGE_GROUP_ITER_ALL, &iter);
 	while (edge_set_group_iter_next(&iter, &info)) {
@@ -45,6 +46,9 @@ fsm_findmode(const struct fsm *fsm, fsm_state_t state, unsigned int *freq)
 	if (freq != NULL) {
 		*freq = mode.freq;
 	}
+
+	/* It's not meaningful to call this on a state without edges. */
+	assert(mode.state != (fsm_state_t)-1);
 
 	assert(mode.freq >= 1);
 	return mode.state;

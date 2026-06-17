@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
@@ -17,24 +18,39 @@
 #include <adt/set.h>
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
+#include <adt/u64bitset.h>
 
 #include "capture.h"
+#include "capture_vm.h"
 #include "internal.h"
 #include "endids.h"
+#include "eager_output.h"
 
 #define LOG_MERGE_ENDIDS 0
 
+#define LOG_COPY_CAPTURE_PROGRAMS 0
+
 struct copy_capture_env {
+#ifndef NDEBUG
 	char tag;
+#endif
+	bool ok;
 	struct fsm *dst;
-	int ok;
 };
 
 static int
-copy_capture_actions(struct fsm *dst, struct fsm *src);
+copy_end_metadata(struct fsm *dst, struct fsm *src,
+    fsm_state_t base_src, unsigned capture_base_src);
 
 static int
 copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src);
+
+static int
+copy_active_capture_ids(struct fsm *dst, struct fsm *src,
+    fsm_state_t base_src, unsigned capture_base_src);
+
+static int
+copy_eager_output_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src);
 
 static struct fsm *
 merge(struct fsm *dst, struct fsm *src,
@@ -53,7 +69,7 @@ merge(struct fsm *dst, struct fsm *src,
 
 		/* TODO: round up to next power of two here?
 		 * or let realloc do that internally */
-		tmp = f_realloc(dst->opt->alloc, dst->states, newalloc * sizeof *dst->states);
+		tmp = f_realloc(dst->alloc, dst->states, newalloc * sizeof *dst->states);
 		if (tmp == NULL) {
 			return NULL;
 		}
@@ -72,17 +88,12 @@ merge(struct fsm *dst, struct fsm *src,
 		*base_dst = 0;
 		*base_src = dst->statecount;
 		*capture_base_dst = 0;
-		*capture_base_src = fsm_countcaptures(dst);
+		*capture_base_src = fsm_capture_ceiling(dst);
 
 		for (i = 0; i < src->statecount; i++) {
 			state_set_rebase(&src->states[i].epsilons, *base_src);
 			edge_set_rebase(&src->states[i].edges, *base_src);
 		}
-
-		/* FIXME: instead of rebasing these here, they could
-		 * also be updated in copy_capture_actions below. */
-		fsm_capture_rebase_capture_id(src, *capture_base_src);
-		fsm_capture_rebase_capture_action_states(src, *base_src);
 	}
 
 	memcpy(dst->states + dst->statecount, src->states,
@@ -90,27 +101,20 @@ merge(struct fsm *dst, struct fsm *src,
 	dst->statecount += src->statecount;
 	dst->endcount   += src->endcount;
 
-	/* We need to explicitly copy over the capture actions and end
-	 * ID info here because they're stored on the FSMs as a whole,
-	 * rather than individual states; `memcpy`ing the states alone
-	 * won't transfer them.
-	 *
-	 * They're stored separately because they are likely to only
-	 * be on a small portion of the states, and adding two extra
-	 * NULL pointers to `struct fsm_state` increases memory usage
-	 * significantly. */
-
-	if (!copy_capture_actions(dst, src)) {
+	/* We need to explicitly copy over end metadata here. They're
+	 * stored separately because they are likely to only be on a
+	 * small portion of the states. */
+	if (!copy_end_metadata(dst, src, *base_src, *capture_base_src)) {
 		/* non-recoverable -- destructive operation */
 		return NULL;
 	}
 
-	if (!copy_end_ids(dst, src, *base_src)) {
+	if (!copy_eager_output_ids(dst, src, *base_src)) {
 		/* non-recoverable -- destructive operation */
 		return NULL;
 	}
 
-	f_free(src->opt->alloc, src->states);
+	f_free(src->alloc, src->states);
 	src->states = NULL;
 	src->statealloc = 0;
 	src->statecount = 0;
@@ -123,16 +127,91 @@ merge(struct fsm *dst, struct fsm *src,
 	return dst;
 }
 
+struct copy_capture_programs_env {
+	const struct fsm_alloc *alloc;
+	const struct fsm *src;
+	struct fsm *dst;
+	int ok;
+	fsm_state_t state_base_src;
+	unsigned capture_base_src;
+
+#define DEF_MAPPING_CEIL 1
+	size_t mapping_used;
+	size_t mapping_ceil;
+	/* TODO: could cache last_map to check first if this becomes expensive */
+	struct prog_mapping {
+		unsigned src_prog_id;
+		unsigned dst_prog_id;
+	} *mappings;
+};
+
 static int
-copy_capture_cb(fsm_state_t state,
-    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
+copy_capture_programs_cb(fsm_state_t src_state, unsigned src_prog_id,
     void *opaque)
 {
-	struct copy_capture_env *env = opaque;
-	assert(env->tag == 'C');
+	struct copy_capture_programs_env *env = opaque;
 
-	if (!fsm_capture_add_action(env->dst, state, type,
-		capture_id, to)) {
+	const fsm_state_t dst_state = src_state + env->state_base_src;
+	assert(dst_state < fsm_countstates(env->dst));
+
+#if LOG_COPY_CAPTURE_PROGRAMS
+	fprintf(stderr, "%s: src %p, dst %p, src_prog_id %u, src_state %d, dst_state %d, capture_base_src %u\n",
+	    __func__, (void *)env->src, (void *)env->dst,
+	    src_prog_id, src_state, dst_state, env->capture_base_src);
+#endif
+	int found = 0;
+	uint32_t dst_prog_id;
+
+	for (size_t i = 0; i < env->mapping_used; i++) {
+		const struct prog_mapping *m = &env->mappings[i];
+		if (m->src_prog_id == src_prog_id) {
+			dst_prog_id = m->dst_prog_id;
+			found = 1;
+		}
+	}
+
+	if (!found) {
+		if (env->mapping_used == env->mapping_ceil) { /* grow */
+			const size_t nceil = 2*env->mapping_ceil;
+			struct prog_mapping *nmappings = f_realloc(env->alloc,
+			    env->mappings, nceil * sizeof(nmappings[0]));
+			if (nmappings == NULL) {
+				env->ok = 0;
+				return 0;
+			}
+
+			env->mapping_ceil = nceil;
+			env->mappings = nmappings;
+		}
+
+		const struct capvm_program *p = fsm_capture_get_program_by_id(env->src,
+		    src_prog_id);
+		assert(p != NULL);
+
+		struct capvm_program *cp = capvm_program_copy(env->alloc, p);
+		if (cp == NULL) {
+			env->ok = 0;
+			return 0;
+		}
+		capvm_program_rebase(cp, env->capture_base_src);
+
+		/* add program, if not present */
+		if (!fsm_capture_add_program(env->dst,
+			cp, &dst_prog_id)) {
+			f_free(env->alloc, cp);
+			env->ok = 0;
+			return 0;
+		}
+
+		struct prog_mapping *m = &env->mappings[env->mapping_used];
+		m->src_prog_id = src_prog_id;
+		m->dst_prog_id = dst_prog_id;
+		env->mapping_used++;
+	}
+
+	/* associate with end states */
+	if (!fsm_capture_associate_program_with_end_state(env->dst,
+		dst_prog_id, dst_state)) {
 		env->ok = 0;
 		return 0;
 	}
@@ -141,16 +220,53 @@ copy_capture_cb(fsm_state_t state,
 }
 
 static int
-copy_capture_actions(struct fsm *dst, struct fsm *src)
+copy_capture_programs(struct fsm *dst, const struct fsm *src,
+	fsm_state_t state_base_src, unsigned capture_base_src)
 {
-	struct copy_capture_env env;
-	env.tag = 'C';
-	env.dst = dst;
-	env.ok = 1;
+	const struct fsm_alloc *alloc = src->alloc;
+	struct prog_mapping *mappings = f_malloc(alloc,
+	    DEF_MAPPING_CEIL * sizeof(mappings[0]));
+	if (mappings == NULL) {
+		return 0;
+	}
 
-	fsm_capture_action_iter(src, copy_capture_cb, &env);
+	struct copy_capture_programs_env env = {
+		.alloc = alloc,
+		.src = src,
+		.dst = dst,
+		.ok = 1,
+		.state_base_src = state_base_src,
+		.capture_base_src = capture_base_src,
+		.mapping_ceil = DEF_MAPPING_CEIL,
+		.mappings = mappings,
+	};
+	fsm_capture_iter_program_ids_for_all_end_states(src,
+	    copy_capture_programs_cb, &env);
+
+	f_free(alloc, env.mappings);
 
 	return env.ok;
+}
+
+static int
+copy_end_metadata(struct fsm *dst, struct fsm *src,
+    fsm_state_t base_src, unsigned capture_base_src)
+{
+	/* TODO: inline */
+
+	if (!copy_end_ids(dst, src, base_src)) {
+		return 0;
+	}
+
+	if (!copy_active_capture_ids(dst, src, base_src, capture_base_src)) {
+		return 0;
+	}
+
+	if (!copy_capture_programs(dst, src, base_src, capture_base_src)) {
+		return 0;
+	}
+
+	return 1;
 }
 
 struct copy_end_ids_env {
@@ -163,7 +279,6 @@ struct copy_end_ids_env {
 static int
 copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void *opaque)
 {
-	enum fsm_endid_set_res sres;
 	struct copy_end_ids_env *env = opaque;
 	assert(env->tag == 'M');
 
@@ -172,24 +287,93 @@ copy_end_ids_cb(fsm_state_t state, const fsm_end_id_t *ids, size_t num_ids, void
 	    state + env->base_src, id);
 #endif
 
-	sres = fsm_endid_set_bulk(env->dst, state + env->base_src, num_ids, ids, FSM_ENDID_BULK_REPLACE);
-	if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-		return 0;
-	}
-
-	return 1;
+	return fsm_endid_set_bulk(env->dst, state + env->base_src,
+		num_ids, ids, FSM_ENDID_BULK_REPLACE);
 }
 
 static int
 copy_end_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src)
 {
 	struct copy_end_ids_env env;
+#ifndef NDEBUG
 	env.tag = 'M';		/* for Merge */
+#endif
 	env.dst = dst;
-	env.src = src;
 	env.base_src = base_src;
 
 	return fsm_endid_iter_bulk(src, copy_end_ids_cb, &env);
+}
+
+struct copy_active_capture_ids_env {
+	char tag;
+	struct fsm *dst;
+	fsm_state_t base_src;
+	unsigned capture_base_src;
+	int ok;
+};
+
+static int
+copy_active_capture_ids_cb(fsm_state_t state, unsigned capture_id, void *opaque)
+{
+	struct copy_active_capture_ids_env *env = opaque;
+	assert(env->tag == 'A');
+
+	if (!fsm_capture_set_active_for_end(env->dst,
+		capture_id + env->capture_base_src,
+		state + env->base_src)) {
+		env->ok = 0;
+		return 0;
+	}
+	return 1;
+}
+
+static int
+copy_active_capture_ids(struct fsm *dst, struct fsm *src,
+    fsm_state_t base_src, unsigned capture_base_src)
+{
+	struct copy_active_capture_ids_env env;
+	env.tag = 'A';
+	env.dst = dst;
+	env.base_src = base_src;
+	env.capture_base_src = capture_base_src;
+	env.ok = 1;
+
+	fsm_capture_iter_active_for_all_end_states(src,
+	    copy_active_capture_ids_cb, &env);
+	return env.ok;
+}
+
+struct copy_eager_output_ids_env {
+	bool ok;
+	struct fsm *dst;
+	struct fsm *src;
+	fsm_state_t base_src;
+};
+
+static int
+copy_eager_output_ids_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	struct copy_eager_output_ids_env *env = opaque;
+	if (!fsm_eager_output_set(env->dst, state + env->base_src, id)) {
+		env->ok = false;
+		return 0;
+	}
+
+	return 1;
+
+}
+
+static int
+copy_eager_output_ids(struct fsm *dst, struct fsm *src, fsm_state_t base_src)
+{
+	struct copy_eager_output_ids_env env = {
+		.ok = true,
+		.dst = dst,
+		.src = src,
+		.base_src = base_src,
+	};
+	fsm_eager_output_iter_all(src, copy_eager_output_ids_cb, &env);
+	return env.ok;
 }
 
 struct fsm *
@@ -204,7 +388,7 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
 	assert(b != NULL);
 	assert(base_b != NULL);
 
-	if (a->opt != b->opt) {
+	if (a->alloc != b->alloc) {
 		errno = EINVAL;
 		return NULL;
 	}
@@ -231,11 +415,6 @@ fsm_merge(struct fsm *a, struct fsm *b,
 	assert(a != NULL);
 	assert(b != NULL);
 	assert(combine_info != NULL);
-
-	if (a->opt != b->opt) {
-		errno = EINVAL;
-		return NULL;
-	}
 
 	/*
 	 * We merge the smaller FSM into the larger FSM.

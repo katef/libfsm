@@ -25,6 +25,7 @@
 #include <fsm/parser.h>
 
 #include <adt/stateset.h> /* XXX */
+#include <adt/u64bitset.h>
 
 #include "libfsm/internal.h" /* XXX */
 
@@ -60,8 +61,6 @@ static int clock_gettime(int clk_id, struct timespec *ts)
 extern int optind;
 extern char *optarg;
 
-static struct fsm_options opt;
-
 #define OP_ARITY 0x1
 
 enum op {
@@ -95,6 +94,16 @@ query_countstates(const struct fsm *fsm, fsm_state_t state)
 
 static int
 query_epsilonclosure(const struct fsm *fsm, fsm_state_t state)
+{
+	(void) fsm;
+	(void) state;
+
+	/* never called */
+	abort();
+}
+
+static int
+query_required_chars(const struct fsm *fsm, fsm_state_t state)
 {
 	(void) fsm;
 	(void) state;
@@ -148,39 +157,40 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
-static fsm_print *
-print_name(const char *name)
+static enum fsm_print_lang
+lang_name(const char *name)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		fsm_print *f;
+		enum fsm_print_lang lang;
 	} a[] = {
-		{ "api",   fsm_print_api   },
-		{ "awk",   fsm_print_awk   },
-		{ "c",     fsm_print_c     },
-		{ "dot",   fsm_print_dot   },
-		{ "fsm",   fsm_print_fsm   },
-		{ "ir",    fsm_print_ir    },
-		{ "json",  fsm_print_json  },
-		{ "vmc",   fsm_print_vmc   },
-		{ "vmdot", fsm_print_vmdot },
-		{ "rust",  fsm_print_rust  },
-		{ "sh",    fsm_print_sh    },
-		{ "go",    fsm_print_go    },
+		{ "api",        FSM_PRINT_API        },
+		{ "awk",        FSM_PRINT_AWK        },
+		{ "c",          FSM_PRINT_C          },
+		{ "dot",        FSM_PRINT_DOT        },
+		{ "fsm",        FSM_PRINT_FSM        },
+		{ "ir",         FSM_PRINT_IR         },
+		{ "json",       FSM_PRINT_JSON       },
+		{ "vmc",        FSM_PRINT_VMC        },
+		{ "vmdot",      FSM_PRINT_VMDOT      },
+		{ "rust",       FSM_PRINT_RUST       },
+		{ "llvm",       FSM_PRINT_LLVM       },
+		{ "sh",         FSM_PRINT_SH         },
+		{ "go",         FSM_PRINT_GO         },
 
-		{ "amd64",      fsm_print_vmasm            },
-		{ "amd64_att",  fsm_print_vmasm_amd64_att  },
-		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm },
-		{ "amd64_go",   fsm_print_vmasm_amd64_go   }
+		{ "amd64",      FSM_PRINT_AMD64_NASM },
+		{ "amd64_att",  FSM_PRINT_AMD64_ATT  },
+		{ "amd64_nasm", FSM_PRINT_AMD64_NASM },
+		{ "amd64_go",   FSM_PRINT_AMD64_GO   }
 	};
 
 	assert(name != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			return a[i].f;
+			return a[i].lang;
 		}
 	}
 
@@ -228,7 +238,9 @@ static int
 		{ "hasambiguity",      fsm_has, fsm_hasnondeterminism },
 		{ "hasnondeterminism", fsm_has, fsm_hasnondeterminism },
 		{ "hasepsilons",       fsm_has, fsm_hasepsilons       },
-		{ "epsilons",          fsm_has, fsm_hasepsilons       }
+		{ "epsilons",          fsm_has, fsm_hasepsilons       },
+		{ "requiredchars",     NULL,    query_required_chars  },
+		{ "chars",             NULL,    query_required_chars  },
 	};
 
 	assert(name != NULL);
@@ -364,14 +376,22 @@ do_fsm_cleanup(void)
 int
 main(int argc, char *argv[])
 {
+	static const struct fsm_options zero_options;
+
+	/* TODO: use alloc hooks for -Q accounting */
+	struct fsm_alloc *alloc = NULL;
+
 	unsigned iterations, i;
-	double elapsed;
-	fsm_print *print;
+	enum fsm_print_lang lang;
 	enum op op;
+	const char *charset;
+	struct fsm_options opt;
 	struct fsm *fsm;
+	double elapsed;
 	int xfiles;
 	int r;
 	size_t generate_bounds = 0;
+	size_t step_limit = 0;
 
 	int (*query)(const struct fsm *, fsm_state_t);
 	int (*walk )(const struct fsm *,
@@ -379,23 +399,26 @@ main(int argc, char *argv[])
 
 	atexit(do_fsm_cleanup);
 
+	opt = zero_options;
+	opt.ambig    = AMBIG_MULTIPLE;
 	opt.comments = 1;
 	opt.io       = FSM_IO_GETC;
 
 	xfiles = 0;
-	print  = NULL;
+	lang   = FSM_PRINT_NONE;
 	query  = NULL;
 	walk   = NULL;
 	op     = OP_IDENTITY;
 
 	iterations = 1;
 	fsm = NULL;
+	charset = NULL;
 	r = 0;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dG:mrt:EW:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dG:mrt:ES:U:W:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
@@ -412,8 +435,8 @@ main(int argc, char *argv[])
 				break;
 
 			case 'x': xfiles = 1;                         break;
-			case 'l': print  = print_name(optarg);        break;
-			case 'p': print  = fsm_print_fsm;             break;
+			case 'l': lang   = lang_name(optarg);         break;
+			case 'p': lang   = FSM_PRINT_FSM;             break;
 			case 'q': query  = query_name(optarg, &walk); break;
 
 			case 'd': op = op_name("determinise");        break;
@@ -421,6 +444,11 @@ main(int argc, char *argv[])
 			case 'r': op = op_name("reverse");            break;
 			case 't': op = op_name(optarg);               break;
 			case 'E': op = op_name("remove_epsilons");    break;
+
+			case 'U':
+				charset = optarg;
+				break;
+
 			case 'W':
 				/* print = gen_words; */
 				/* num_words = strtoul(optarg, NULL, 10); */
@@ -428,6 +456,7 @@ main(int argc, char *argv[])
 				fprintf(stderr, "not yet implemented.\n");
 				exit(EXIT_FAILURE);
 				break;
+
 			case 'G':
 				generate_bounds = strtoul(optarg, NULL, 10);
 				if (generate_bounds == 0) {
@@ -435,6 +464,10 @@ main(int argc, char *argv[])
 					exit(EXIT_FAILURE);
 				}
 				break;
+
+			case 'S':
+				step_limit = strtoul(optarg, NULL, 10);
+				break; /* can be 0 */
 
 			case 'h':
 				usage();
@@ -456,7 +489,7 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if ((op == OP_EQUAL) + !!print > 1) {
+	if ((op == OP_EQUAL) + (lang != FSM_PRINT_NONE) > 1) {
 		fprintf(stderr, "-t equal and -p are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
@@ -469,27 +502,24 @@ main(int argc, char *argv[])
 		struct fsm *q;
 
 		if ((op & OP_ARITY) == 1) {
-			if (argc > 1) {
-				usage();
-				exit(EXIT_FAILURE);
-			}
+			/* argc < 1 is okay */
 
-			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), &opt);
+			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), alloc);
 			if (q == NULL) {
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			if (argc != 2) {
+			if (argc < 2) {
 				usage();
 				exit(EXIT_FAILURE);
 			}
 
-			a = fsm_parse(xopen(argv[0]), &opt);
+			a = fsm_parse(xopen(argv[0]), alloc);
 			if (a == NULL) {
 				exit(EXIT_FAILURE);
 			}
 
-			b = fsm_parse(xopen(argv[1]), &opt);
+			b = fsm_parse(xopen(argv[1]), alloc);
 			if (b == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -548,6 +578,29 @@ main(int argc, char *argv[])
 			q = NULL;
 		}
 
+		/*
+		 * It might be more efficient to intersect the character set for each
+		 * operand, but that gives a different result for some operations
+		 * (complement especially). So since we'd also need to intersect the
+		 * result here too, I'm just doing it in the one place for simplicity.
+		 *
+		 * Passing a NULL charset is a no-op, so the default charset is a byte.
+		 * We can't include \0 here because optarg is a string, and I don't
+		 * want to invent a syntax for character sets.
+		 */
+		if (charset != NULL) {
+			if (!fsm_determinise(q)) {
+				perror("fsm_determinise");
+				exit(EXIT_FAILURE);
+			}
+
+			q = fsm_intersect_charset(q, strlen(charset), charset);
+			if (q == NULL) {
+				perror("fsm_intersect_charset");
+				exit(EXIT_FAILURE);
+			}
+		}
+
 		fsm_to_cleanup = q;
 
 		if (-1 == clock_gettime(CLOCK_MONOTONIC, &post)) {
@@ -579,6 +632,17 @@ main(int argc, char *argv[])
 		printf("=> total %g ms (avg %g ms)\n", elapsed, elapsed / iterations);
 	}
 
+	/* we're done consuming filenames, remaining argv is text to match */
+	if ((op & OP_ARITY) == 1) {
+		if (argc > 0) {
+			argc -= 1;
+			argv += 1;
+		}
+	} else {
+		argc -= 2;
+		argv += 2;
+	}
+
 	/* henceforth, r is $?-convention (0 for success) */
 
 	if (fsm == NULL) {
@@ -599,7 +663,7 @@ main(int argc, char *argv[])
 			size_t n;
 			struct state_iter it;
 
-			closures = epsilon_closure(fsm);
+			closures = fsm_epsilon_closure(fsm);
 			if (closures == NULL) {
 				return -1;
 			}
@@ -620,9 +684,37 @@ main(int argc, char *argv[])
 				printf("\n");
 			}
 
-			closure_free(closures, fsm->statecount);
+			fsm_closure_free(fsm, closures, fsm->statecount);
 
 			return 0;
+		} else if (query == query_required_chars) {
+			assert(walk == NULL);
+			uint64_t charmap[4];
+			size_t count;
+			enum fsm_detect_required_characters_res res;
+			res = fsm_detect_required_characters(fsm, step_limit, charmap, &count);
+			if (res == FSM_DETECT_REQUIRED_CHARACTERS_STEP_LIMIT_REACHED) {
+				fprintf(stderr, "fsm_detect_required_characters: step limit reached (%zd)\n", step_limit);
+				exit(EXIT_FAILURE);
+			} else {
+				assert(res == FSM_DETECT_REQUIRED_CHARACTERS_WRITTEN);
+				char buf[257] = {0};
+				size_t used = 0;
+				for (size_t i = 0; i < 256; i++) {
+					if (u64bitset_get(charmap, i)) {
+						buf[used++] = (char)i;
+					}
+				}
+				printf("%zd ", count);
+				for (size_t i = 0; i < used; i++) {
+					c_escputc_str(stdout, &opt, buf[i]);
+				}
+				printf("\n");
+
+				fsm_free(fsm);
+				fsm_to_cleanup = NULL;
+				return EXIT_SUCCESS;
+			}
 		} else {
 			assert(walk != NULL);
 			r |= !walk(fsm, query);
@@ -630,14 +722,15 @@ main(int argc, char *argv[])
 		}
 	}
 
-	/* TODO: optional -- to delimit texts as opposed to .fsm filenames */
-	if (op == OP_IDENTITY && argc > 0) {
+	/* match text */
+	if (argc > 0) {
 		int i;
 
 		/* TODO: option to print input texts which match. like grep(1) does.
 		 * This is not the same as printing patterns which match (by associating
 		 * a pattern to the end state), like lx(1) does */
 
+		/* TODO: optional -- to delimit texts as opposed to .fsm filenames */
 		for (i = 0; i < argc; i++) {
 			fsm_state_t state;
 			int e;
@@ -647,7 +740,7 @@ main(int argc, char *argv[])
 
 				f = xopen(argv[0]);
 
-				e = fsm_exec(fsm, fsm_fgetc, f, &state, NULL);
+				e = fsm_exec(fsm, fsm_fgetc, f, &state);
 
 				fclose(f);
 			} else {
@@ -655,7 +748,7 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				e = fsm_exec(fsm, fsm_sgetc, &s, &state, NULL);
+				e = fsm_exec(fsm, fsm_sgetc, &s, &state);
 			}
 
 			if (e != 1) {
@@ -663,23 +756,21 @@ main(int argc, char *argv[])
 				continue;
 			}
 
-			/* TODO: option to print state number? */
+			/* TODO: option to print matching end-ids */
 		}
 	}
 
-	if (print != NULL) {
-		if (-1 == print(stdout, fsm)) {
-			if (errno == ENOTSUP) {
-				fprintf(stderr, "unsupported IO API\n");
-			} else {
-				perror("print_fsm");
-			}
-			exit(EXIT_FAILURE);
+	if (-1 == fsm_print(stdout, fsm, &opt, NULL, lang)) {
+		if (errno == ENOTSUP) {
+			fprintf(stderr, "unsupported IO API\n");
+		} else {
+			perror("fsm_print");
 		}
+		exit(EXIT_FAILURE);
 	}
 
 	if (generate_bounds > 0) {
-		r = fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf_escaped, &opt);
+		r = fsm_generate_matches(fsm, generate_bounds, 0, fsm_generate_cb_printf_escaped, &opt);
 	}
 
 	fsm_free(fsm);

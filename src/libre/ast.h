@@ -7,6 +7,11 @@
 #ifndef RE_AST_H
 #define RE_AST_H
 
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <re/re.h>
+
 /*
  * This is a duplicate of struct lx_pos, but since we're linking to
  * code with several distinct lexers, there isn't a clear lexer.h
@@ -40,9 +45,7 @@ enum ast_expr_type {
 #define AST_COUNT_UNBOUNDED ((unsigned)-1)
 struct ast_count {
 	unsigned min;
-	struct ast_pos start;
 	unsigned max;
-	struct ast_pos end;
 };
 
 enum ast_anchor_type {
@@ -62,7 +65,9 @@ enum ast_anchor_type {
  *   followed by nullable nodes.
  *
  * - AST_FLAG_UNSATISFIABLE
- *   The node caused the regex to become unsatisfiable.
+ *   The node is unsatisfiable (can never match anything).
+ *   This can cause AST subtrees to be pruned, or for the
+ *   entire regex to become unsatisfiable.
  *
  * - AST_FLAG_NULLABLE
  *   The node is not always evaluated, such as nodes that
@@ -86,6 +91,13 @@ enum ast_anchor_type {
  *   ends with the PCRE end anchor that implicitly matches a single
  *   trailing newline.
  *
+ * - AST_FLAG_CONSTRAINED_AT_START
+ *   The anchor needs more restrictive linkage on its start side,
+ *   see ast_analysis's "pincer_anchors" analysis for details.
+ *
+ * - AST_FLAG_CONSTRAINED_AT_END
+ *   End counterpart to AST_FLAG_CONSTRAINED_AT_START.
+ *
  * Not all are valid for all node types.
  */
 enum ast_flags {
@@ -98,6 +110,9 @@ enum ast_flags {
 	AST_FLAG_ANCHORED_START  = 1 << 6,
 	AST_FLAG_ANCHORED_END    = 1 << 7,
 	AST_FLAG_END_NL          = 1 << 8,
+	AST_FLAG_MATCHES_1NEWLINE= 1 << 9,
+	AST_FLAG_CONSTRAINED_AT_START	 = 1 << 10,
+	AST_FLAG_CONSTRAINED_AT_END	 = 1 << 11,
 
 	AST_FLAG_NONE = 0x00
 };
@@ -159,6 +174,8 @@ struct ast_expr {
 			size_t count; /* used */
 			size_t alloc; /* allocated */
 			struct ast_expr **n;
+			int contains_empty_groups;
+			int nullable_alt_inside_plus_repeat;
 		} alt;
 
 		struct {
@@ -172,12 +189,14 @@ struct ast_expr {
 		struct ast_expr_repeat {
 			struct ast_expr *e;
 			unsigned min;
-			unsigned max;
+			unsigned max; /* can be AST_COUNT_UNBOUNDED */
+			int contains_empty_groups;
 		} repeat;
 
 		struct {
 			struct ast_expr *e;
 			unsigned id;
+			int repeated; /* set during analysis */
 		} group;
 
 		struct {
@@ -192,9 +211,7 @@ struct ast_expr {
 
 		struct {
 			struct ast_endpoint from;
-			struct ast_pos start;
 			struct ast_endpoint to;
-			struct ast_pos end;
 		} range;
 
 		struct {
@@ -235,9 +252,12 @@ ast_pool_free(struct ast_expr_pool *pool);
 struct ast_expr_pool *
 ast_expr_pool_save(void);
 
+#define AST_NO_MAX_CAPTURE_ID ((long)-1)
+
 struct ast {
 	struct ast_expr_pool *pool;
 	struct ast_expr *expr;
+	long max_capture_id;
 	int has_unanchored_start;
 	int has_unanchored_end;
 };
@@ -251,8 +271,7 @@ void
 ast_free(struct ast *ast);
 
 struct ast_count
-ast_make_count(unsigned min, const struct ast_pos *start,
-	unsigned max, const struct ast_pos *end);
+ast_make_count(unsigned min, unsigned max);
 
 /*
  * Expressions
@@ -308,18 +327,15 @@ ast_add_expr_concat(struct ast_expr *cat, struct ast_expr *node);
 
 struct ast_expr *
 ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
-	const struct ast_endpoint *from, struct ast_pos start,
-	const struct ast_endpoint *to, struct ast_pos end);
+	const struct ast_endpoint *from, const struct ast_endpoint *to);
 
 struct ast_expr *
 ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const struct class *class);
 
 /* XXX: exposed for sake of re(1) printing an ast;
  * it's not part of the <re/re.h> API proper */
-struct fsm_options;
 struct ast *
 re_parse(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err, int *unsatisfiable);
 
 const char *

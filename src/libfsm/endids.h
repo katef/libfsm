@@ -1,20 +1,12 @@
 #ifndef ENDIDS_H
 #define ENDIDS_H
 
-#include <stdlib.h>
-#include <fsm/fsm.h>
-
 int
 fsm_endid_init(struct fsm *fsm);
 
 void
 fsm_endid_free(struct fsm *fsm);
 
-enum fsm_endid_set_res {
-	FSM_ENDID_SET_ADDED,
-	FSM_ENDID_SET_ALREADY_PRESENT,
-	FSM_ENDID_SET_ERROR_ALLOC_FAIL = -1
-};
 enum fsm_endid_set_res
 fsm_endid_set(struct fsm *fsm,
     fsm_state_t state, fsm_end_id_t id);
@@ -34,8 +26,7 @@ fsm_endid_set(struct fsm *fsm,
  *
  * The caller maintains ownership of ids, and must free it if needed.
  *
- * Only FSM_ENDID_SET_ADDED and FSM_ENDID_SET_ERROR_ALLOC_FAIL
- * are returned.
+ * Returns 1 on success, 0 on failure.
  */
 enum fsm_endid_bulk_op {
 	FSM_ENDID_BULK_REPLACE = 0,
@@ -49,19 +40,31 @@ size_t
 fsm_endid_count(const struct fsm *fsm,
     fsm_state_t state);
 
+/* Get the end IDs associated with an end state, if any.
+ * If id_buf has enough cells to store all the end IDs (according
+ * to id_buf_count) then they are written into id_buf[] and
+ * *ids_written is set to the number of IDs. The end IDs in the
+ * buffer may appear in any order, but should not have duplicates.
+ *
+ * Returns 0 if there is not enough space in id_buf for the
+ * end IDs, or 1 if zero or more end IDs were returned. */
 enum fsm_getendids_res
 fsm_endid_get(const struct fsm *fsm, fsm_state_t end_state,
-    size_t id_buf_count, fsm_end_id_t *id_buf,
-    size_t *ids_written);
+    size_t id_buf_count, fsm_end_id_t *id_buf);
 
 int
 fsm_endid_carry(const struct fsm *src_fsm, const struct state_set *src_set,
     struct fsm *dst_fsm, fsm_state_t dst_state);
 
+int
+fsm_endid_compact(struct fsm *fsm,
+    const fsm_state_t *mapping, size_t mapping_count);
+
 /* Callback when iterating over the endids.
  * Return 0 to halt, or non-zero to continue. */
 typedef int
-fsm_endid_iter_cb(fsm_state_t state, const fsm_end_id_t id, void *opaque);
+fsm_endid_iter_cb(const struct fsm *fsm, fsm_state_t state,
+    size_t nth, const fsm_end_id_t id, void *opaque);
 
 void
 fsm_endid_iter(const struct fsm *fsm,

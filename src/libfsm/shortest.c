@@ -72,7 +72,7 @@ fsm_shortest(const struct fsm *fsm,
 		}
 
 		for (i = 0; i < fsm->statecount; i++) {
-			u = priq_push(fsm->opt->alloc, &todo, i,
+			u = priq_push(fsm->alloc, &todo, i,
 				i == qs ? 0 : FSM_COST_INFINITY);
 			if (u == NULL) {
 				goto error;
@@ -149,13 +149,13 @@ fsm_shortest(const struct fsm *fsm,
 done:
 
 	for (u = priq_find(done, goal); u != NULL; u = u->prev) {
-		if (!path_push(fsm->opt->alloc, &path, u->state, u->c)) {
+		if (!path_push(fsm->alloc, &path, u->state, u->c)) {
 			goto error;
 		}
 	}
 
-	priq_free(fsm->opt->alloc, todo);
-	priq_free(fsm->opt->alloc, done);
+	priq_free(fsm->alloc, todo);
+	priq_free(fsm->alloc, done);
 
 	return path;
 
@@ -171,21 +171,21 @@ none:
 	 * (otherwise we would have been able to reach it).
 	 */
 
-	if (!path_push(fsm->opt->alloc, &path, u->state, u->c)) {
+	if (!path_push(fsm->alloc, &path, u->state, u->c)) {
 		goto error;
 	}
 
-	priq_free(fsm->opt->alloc, todo);
-	priq_free(fsm->opt->alloc, done);
+	priq_free(fsm->alloc, todo);
+	priq_free(fsm->alloc, done);
 
 	return path;
 
 error:
 
-	priq_free(fsm->opt->alloc, todo);
-	priq_free(fsm->opt->alloc, done);
+	priq_free(fsm->alloc, todo);
+	priq_free(fsm->alloc, done);
 
-	path_free(fsm->opt->alloc, path);
+	path_free(fsm->alloc, path);
 
 	return NULL;
 }

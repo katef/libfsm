@@ -22,6 +22,8 @@
 	<!ENTITY io.arg "<replaceable>io</replaceable>">
 	<!ENTITY iterations.arg "<replaceable>iterations</replaceable>">
 	<!ENTITY length.arg "<replaceable>length</replaceable>">
+	<!ENTITY limit.arg "<replaceable>limit</replaceable>">
+	<!ENTITY charset.arg "<replaceable>charset</replaceable>">
 
 	<!ENTITY a.opt "<option>-a</option>">
 	<!ENTITY w.opt "<option>-w</option>">
@@ -32,6 +34,8 @@
 	<!ENTITY G.opt "<option>-G</option>&nbsp;&length.arg;">
 	<!ENTITY k.opt "<option>-k</option>&nbsp;&io.arg;">
 	<!ENTITY i.opt "<option>-i</option>&nbsp;&iterations.arg;">
+	<!ENTITY S.opt "<option>-S</option>&nbsp;&limit.arg;">
+	<!ENTITY U.opt "<option>-U</option>&nbsp;&charset.arg;">
 	<!ENTITY X.opt "<option>-X</option>">
 
 	<!ENTITY d.opt "<option>-d</option>">
@@ -75,6 +79,7 @@
 			<command>fsm</command>
 
 			<arg choice="opt">&x.opt;</arg>
+			<arg choice="opt">&U.opt;</arg>
 
 			<arg choice="plain" rep="repeat">&str.arg;</arg>
 		</cmdsynopsis>
@@ -83,6 +88,7 @@
 			<command>fsm</command>
 
 			<arg choice="plain">&p.opt;</arg>
+			<arg choice="opt">&U.opt;</arg>
 
 			<arg choice="opt">&l.opt;</arg>
 			<arg choice="opt">&a.opt;</arg>
@@ -103,6 +109,7 @@
 				<arg choice="plain">&r.opt;</arg>
 				<arg choice="plain">&t.opt;</arg>
 			</group>
+			<arg choice="opt">&U.opt;</arg>
 
 			<arg choice="opt">&i.opt;</arg>
 		</cmdsynopsis>
@@ -111,6 +118,7 @@
 			<command>fsm</command>
 
 			<arg choice="req" rep="repeat">&q.opt;</arg>
+			<arg choice="opt">&U.opt;</arg>
 
 			<arg choice="plain" rep="repeat">&file.arg;</arg>
 		</cmdsynopsis>
@@ -187,6 +195,21 @@
 						per the <code>consolidate_edges</code> option for &fsm_print.3;.
 						The default is to output edges independently,
 						which is the opposite to the equivalent &c.opt; option for &re.1;.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&U.opt;</term>
+
+				<listitem>
+					<para>Intersect the resulting state machine down to a
+						given character set.
+						This is done after any transformations are applied
+						(e.g. by <option>t</option>).</para>
+
+					<para>The default character set is a byte.
+						It is not possible to specify a particular character set
+						that includes a literal <literal>\0</literal>.</para>
 				</listitem>
 			</varlistentry>
 
@@ -301,6 +324,14 @@
 
 				<listitem>
 					<para>Equivalent to <code>-t&nbsp;reverse</code>.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>&S.opt;</term>
+
+				<listitem>
+					<para>Set a step limit for long-running operations.</para>
 				</listitem>
 			</varlistentry>
 
@@ -465,6 +496,13 @@
 								<td rowspan="1">Compute the <newterm>epsilon closure</newterm>
 									of each state in the &fsm;.
 									Printed to &stdout.lit;; exit status is always true.</td>
+							</tr>
+							<tr>
+								<td><code>requiredchars</code></td>
+								<td rowspan="1" role="na">&ndash;</td>
+								<td rowspan="1">Determine characters that must appear in any
+									inputs that could match the &fsm;. Exit status is true
+									unless the step limit was reached.</td>
 							</tr>
 						</tbody>
 					</table>

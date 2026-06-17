@@ -7,6 +7,8 @@
 #ifndef FSM_WALK_H
 #define FSM_WALK_H
 
+#include <adt/bitmap.h>
+
 struct fsm;
 struct fsm_state;
 
@@ -88,6 +90,11 @@ fsm_walk_edges(const struct fsm *fsm, void *opaque,
  * functionally equivalent cases makes testing dramatically faster,
  * but exploring every edge could be added later.
  *
+ * If randomized is zero then it will generate the first label in the
+ * label set, otherwise a label from the set will be chosen using rand()
+ * (favoring printable characters). The caller can use srand()
+ * beforehand to set a PRNG seed.
+ *
  * Note: fsm is non-const because it calls fsm_trim on the FSM
  * internally. This records the shortest distance from each state to an
  * end state, which is used to prune branches that would not produce
@@ -112,7 +119,7 @@ fsm_generate_matches_cb(const struct fsm *fsm,
     const char *input, size_t input_length,
     fsm_state_t end_state, void *opaque);
 int
-fsm_generate_matches(struct fsm *fsm, size_t max_length,
+fsm_generate_matches(struct fsm *fsm, size_t max_length, int randomized,
     fsm_generate_matches_cb *cb, void *opaque);
 
 /* Callback provided for the most basic use case for
@@ -127,6 +134,35 @@ fsm_generate_matches_cb fsm_generate_cb_printf;
  * fsm_options *`, because c_escputc_str will use that to decide whether
  * to escape all characters or just nonprintable ones. */
 fsm_generate_matches_cb fsm_generate_cb_printf_escaped;
+
+/* Walk a DFA and detect which characters MUST appear in the input for a
+ * match to be possible. For example, if input for the DFA corresponding
+ * to /^(abc|dbe)$/ does not contain 'b' at all, there's no way it can
+ * ever match, so executing the regex is unnecessary. This does not detect
+ * which characters must appear before/after others or how many times, just
+ * which must be present.
+ *
+ * The input must be a DFA. When run with EXPENSIVE_CHECKS this will
+ * check and return ERROR_MISUSE if it is not, otherwise this is an
+ * unchecked error.
+ *
+ * The character map will be cleared before populating. If *count is
+ * non-NULL it will be updated with how many required characters were
+ * found.
+ *
+ * There is an optional step_limit -- if this is reached, then it will
+ * return FSM_DETECT_REQUIRED_CHARACTERS_STEP_LIMIT_REACHED and a
+ * cleared bitmap, because any partial information could still have been
+ * contradicted later. If the step_limit is 0 it will be ignored. */
+enum fsm_detect_required_characters_res {
+	FSM_DETECT_REQUIRED_CHARACTERS_WRITTEN,
+	FSM_DETECT_REQUIRED_CHARACTERS_STEP_LIMIT_REACHED,
+	FSM_DETECT_REQUIRED_CHARACTERS_ERROR_MISUSE = -1,
+	FSM_DETECT_REQUIRED_CHARACTERS_ERROR_ALLOC = -2,
+};
+enum fsm_detect_required_characters_res
+fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
+    uint64_t charmap[4], size_t *count);
 
 #endif
 

@@ -38,7 +38,6 @@
 	#include <fsm/fsm.h>
 	#include <fsm/bool.h>
 	#include <fsm/pred.h>
-	#include <fsm/options.h>
 
 	#include <re/re.h>
 
@@ -68,7 +67,7 @@
 		enum lx_token lex_tok;
 		enum lx_token lex_tok_save;
 		unsigned int zn;
-		const struct fsm_options *opt;
+		const struct fsm_alloc *alloc;
 	};
 
 	struct lex_state {
@@ -135,7 +134,7 @@
 	typedef struct act_state * act_state;
 	typedef struct ast *       ast;
 
-	struct ast *lx_parse(FILE *f, const struct fsm_options *opt);
+	struct ast *lx_parse(FILE *f, const struct fsm_alloc *alloc);
 
 @};
 
@@ -223,18 +222,10 @@
 	TOKEN: () -> (s :string) = @{
 		/* TODO: submatch addressing */
 		@s = xstrdup(lex_state->buf.a + 1); /* +1 for '$' prefix */
-		if (@s == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
 	@};
 
 	IDENT: () -> (s :string) = @{
 		@s = xstrdup(lex_state->buf.a);
-		if (@s == NULL) {
-			perror("xstrdup");
-			exit(EXIT_FAILURE);
-		}
 	@};
 
 	RE: () -> (f :flags) = @{
@@ -317,7 +308,7 @@
 		assert(@t != NULL);
 		assert(@t != NULL);
 
-		@r = fsm_new(act_state->opt);
+		@r = fsm_new(act_state->alloc);
 		if (@r == NULL) {
 			perror("fsm_new");
 			@!;
@@ -373,7 +364,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_LITERAL, act_agetc, @a, act_state->opt, 0, &err);
+		@r = re_comp(RE_LITERAL, act_agetc, @a, act_state->alloc, 0, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -388,7 +379,7 @@
 		assert(@a != NULL);
 		assert(@a->p != NULL);
 
-		@r = re_comp(RE_NATIVE, act_agetc, @a, act_state->opt, @f, &err);
+		@r = re_comp(RE_NATIVE, act_agetc, @a, act_state->alloc, @f | RE_NOCAPTURE, &err);
 		if (@r == NULL) {
 			assert(err.e != RE_EBADDIALECT);
 			/* TODO: pass filename for .lx source */
@@ -401,7 +392,7 @@
 	<regex-any>: () -> (r :fsm) = @{
 		fsm_state_t start, end;
 
-		@r = fsm_new(act_state->opt);
+		@r = fsm_new(act_state->alloc);
 		if (@r == NULL) {
 			perror("fsm_new");
 			@!;
@@ -826,7 +817,7 @@
 
 %trailer% @{
 
-	struct ast *lx_parse(FILE *f, const struct fsm_options *opt) {
+	struct ast *lx_parse(FILE *f, const struct fsm_alloc *alloc) {
 		struct act_state act_state_s;
 		struct act_state *act_state;
 		struct lex_state lex_state_s;
@@ -858,7 +849,7 @@
 		/* This is a workaround for ADVANCE_LEXER assuming a pointer */
 		act_state = &act_state_s;
 
-		act_state->opt = opt;
+		act_state->alloc = alloc;
 
 		if (print_progress) {
 			act_state->zn = 0;
@@ -869,7 +860,19 @@
 
 		lx->free(lx->buf_opaque);
 
-		assert(ast != NULL);
+		/*
+		 * This can happen when the first token is TOK_UNKNOWN.
+		 * SID's generated parser bails out immediately.
+		 * So we never reach <make-ast>, and never <err-syntax> about it.
+		 *
+		 * Really I wanted this handled along with the usual syntax error
+		 * case, from ## alts inside parser.sid, instead of reproducing
+		 * the same error here.
+		 */
+		if (ast == NULL) {
+			err(lex_state, "Syntax error");
+			exit(EXIT_FAILURE);
+		}
 
 		return ast;
 	}

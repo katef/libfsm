@@ -6,67 +6,150 @@
 
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include <errno.h>
+#include <string.h>
 
 #include <fsm/fsm.h>
 #include <fsm/pred.h>
+#include <fsm/print.h>
 
 #include <adt/alloc.h>
+#include <adt/queue.h>
 #include <adt/set.h>
 #include <adt/edgeset.h>
 #include <adt/stateset.h>
+#include <adt/u64bitset.h>
 
 #include "internal.h"
 #include "capture.h"
 #include "endids.h"
+#include "eager_output.h"
 
 #define DUMP_EPSILON_CLOSURES 0
-#define DEF_PENDING_CAPTURE_ACTIONS_CEIL 2
 #define LOG_RM_EPSILONS_CAPTURES 0
-#define DEF_CARRY_ENDIDS_COUNT 2
+#define LOG_COPYING 0
+#define LOG_RESULT 0
 
-struct remap_env {
-	char tag;
+/* #define DEF_CARRY_ENDIDS_COUNT 2 */
+/* #define DEF_CARRY_CAPTUREIDS_COUNT 2 */
+
+#if LOG_RESULT
+#include <fsm/print.h>
+#endif
+
+#define DEF_END_METADATA_ENDIDS_CEIL 4
+#define DEF_END_METADATA_CAPTUREIDS_CEIL 4
+#define DEF_END_METADATA_PROGRAMIDS_CEIL 4
+struct carry_end_metadata_env {
+	struct fsm *fsm;
 	const struct fsm_alloc *alloc;
-	struct state_set **rmap;
-	int ok;
 
-	size_t count;
-	size_t ceil;
-	struct remap_action {
-		fsm_state_t state;
-		enum capture_action_type type;
-		unsigned capture_id;
-		fsm_state_t to;
-	} *actions;
+	struct {
+		size_t ceil;
+		fsm_end_id_t *ids;
+	} end;
+	struct {
+		int ok;
+		size_t count;
+		size_t ceil;
+		unsigned *ids;
+	} capture;
+	struct {
+		int ok;
+		size_t count;
+		size_t ceil;
+		uint32_t *ids;
+	} program;
 };
 
 static int
-remap_capture_actions(struct fsm *nfa, struct state_set **eclosures);
+carry_end_metadata(struct carry_end_metadata_env *env,
+    fsm_state_t end_state, fsm_state_t dst_state);
+
+static void
+mark_states_reachable_by_label(const struct fsm *nfa, uint64_t *reachable_by_label);
+
+struct eager_output_buf {
+#define DEF_EAGER_OUTPUT_BUF_CEIL 8
+	bool ok;
+	const struct fsm_alloc *alloc;
+	size_t ceil;
+	size_t used;
+	fsm_output_id_t *ids;
+};
+
+static bool
+append_eager_output_id(struct eager_output_buf *buf, fsm_output_id_t id)
+{
+	if (buf->used == buf->ceil) {
+		const size_t nceil = buf->ceil == 0 ? DEF_EAGER_OUTPUT_BUF_CEIL : 2*buf->ceil;
+		fsm_output_id_t *nids = f_realloc(buf->alloc, buf->ids, nceil * sizeof(nids[0]));
+		if (nids == NULL) {
+			buf->ok = false;
+			return false;
+		}
+		buf->ids = nids;
+		buf->ceil = nceil;
+	}
+
+	for (size_t i = 0; i < buf->used; i++) {
+		/* avoid duplicates */
+		if (buf->ids[i] == id) { return true; }
+	}
+
+	buf->ids[buf->used++] = id;
+	return true;
+}
 
 static int
-remap_capture_action_cb(fsm_state_t state,
-    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
-    void *opaque);
-
-static int
-carry_endids(struct fsm *fsm, struct state_set *states,
-    fsm_state_t s);
+collect_eager_output_ids_cb(fsm_state_t state, fsm_output_id_t id, void *opaque)
+{
+	(void)state;
+	struct eager_output_buf *buf = opaque;
+	return append_eager_output_id(buf, id) ? 1 : 0;
+}
 
 int
 fsm_remove_epsilons(struct fsm *nfa)
 {
+#if LOG_RESULT
+	fprintf(stderr, "==== before\n");
+	fsm_print_fsm(stderr, nfa);
+	fsm_capture_dump(stderr, "#### before_remove_epsilons", nfa);
+	fprintf(stderr, "====\n");
+#endif
+
 	const size_t state_count = fsm_countstates(nfa);
 	int res = 0;
 	struct state_set **eclosures = NULL;
-	fsm_state_t s;
+	fsm_state_t s, start_id;
+	const struct fsm_alloc *alloc = nfa->alloc;
 
 	INIT_TIMERS();
 
+	struct carry_end_metadata_env em_env = { 0 };
+	em_env.fsm = nfa;
+	em_env.alloc = alloc;
+
+	struct eager_output_buf eager_output_buf = {
+		.ok = true,
+		.alloc = nfa->alloc,
+	};
+	uint64_t *reachable_by_label = NULL;
+
 	assert(nfa != NULL);
 
+	if (!fsm_getstart(nfa, &start_id)) {
+		goto cleanup;
+	}
+
+	/* TODO: This could successfully exit early if none of the
+	 * states have epsilon edges. */
+
 	TIME(&pre);
-	eclosures = epsilon_closure(nfa);
+	eclosures = fsm_epsilon_closure(nfa);
 	TIME(&post);
 	DIFF_MSEC("epsilon_closure", pre, post, NULL);
 
@@ -90,12 +173,29 @@ fsm_remove_epsilons(struct fsm *nfa)
 	}
 #endif
 
+	const size_t state_words = u64bitset_words(state_count);
+	reachable_by_label = f_calloc(nfa->alloc, state_words, sizeof(reachable_by_label[0]));
+	if (reachable_by_label == NULL) { goto cleanup; }
+
+	mark_states_reachable_by_label(nfa, reachable_by_label);
+
+	fsm_state_t start;
+	if (!fsm_getstart(nfa, &start)) {
+		goto cleanup;	/* no start state */
+	}
+
 	for (s = 0; s < state_count; s++) {
 		struct state_iter si;
 		fsm_state_t es_id;
 
 		struct edge_group_iter egi;
 		struct edge_group_iter_info info;
+
+		/* If the state isn't reachable by a label and isn't the start state,
+		 * skip processing -- it will soon become garbage. */
+		if (!u64bitset_get(reachable_by_label, s) && s != start) {
+			continue;
+		}
 
 		/* Process the epsilon closure. */
 		state_set_reset(eclosures[s], &si);
@@ -107,21 +207,26 @@ fsm_remove_epsilons(struct fsm *nfa)
 			 * end states.
 			 *
 			 * Similarly, any end state metadata on states
-			 * in its epsilon-closure is copied to it.
-			 *
-			 * Capture actions are copied in a later pass. */
+			 * in its epsilon-closure is copied to it. */
 			if (fsm_isend(nfa, es_id)) {
 #if LOG_COPYING
 				fprintf(stderr, "remove_epsilons: setting end on %d (due to %d)\n", s, es_id);
 #endif
 				fsm_setend(nfa, s, 1);
 
-				/*
-				 * Carry through end IDs, if present. This isn't anything to do
-				 * with the NFA conversion; it's meaningful only to the caller.
-				 */
-				if (!carry_endids(nfa, eclosures[s], s)) {
+				if (!carry_end_metadata(&em_env, es_id, s)) {
 					goto cleanup;
+				}
+			}
+
+			/* Collect every eager output ID from any state
+			 * in the current state's epsilon closure to the
+			 * current state. These will be added at the end. */
+			{
+				const size_t count = fsm_eager_output_count(nfa, es_id);
+				if (count > 0) {
+					fsm_eager_output_iter_state(nfa, es_id, collect_eager_output_ids_cb, &eager_output_buf);
+					if (!eager_output_buf.ok) { goto cleanup; }
 				}
 			}
 
@@ -134,12 +239,19 @@ fsm_remove_epsilons(struct fsm *nfa)
 				fprintf(stderr, "%s: bulk-copying edges leading to state %d onto state %d (from state %d)\n",
 				    __func__, info.to, s, es_id);
 #endif
-				if (!edge_set_add_bulk(&nfa->states[s].edges, nfa->opt->alloc,
+				if (!edge_set_add_bulk(&nfa->states[s].edges, nfa->alloc,
 					info.symbols, info.to)) {
 					goto cleanup;
 				}
 			}
 		}
+
+		for (size_t i = 0; i < eager_output_buf.used; i++) {
+			if (!fsm_eager_output_set(nfa, s, eager_output_buf.ids[i])) {
+				goto cleanup;
+			}
+		}
+		eager_output_buf.used = 0; /* clear */
 	}
 
 	/* Remove the epsilon-edge state sets from everything.
@@ -150,272 +262,188 @@ fsm_remove_epsilons(struct fsm *nfa)
 		state->epsilons = NULL;
 	}
 
-#if LOG_RESULT
-	fprintf(stderr, "=== %s: about to update capture actions\n", __func__);
-	fsm_print_fsm(stderr, nfa);
-#endif
-
-	if (!remap_capture_actions(nfa, eclosures)) {
-		goto cleanup;
-	}
+	fsm_capture_integrity_check(nfa);
 
 #if LOG_RESULT
-	fsm_print_fsm(stderr, nfa);
+	fsm_dump(stderr, nfa);
 	fsm_capture_dump(stderr, "#### post_remove_epsilons", nfa);
 #endif
 
 	res = 1;
 cleanup:
 	if (eclosures != NULL) {
-		closure_free(eclosures, state_count);
+		fsm_closure_free(nfa, eclosures, state_count);
 	}
+	if (em_env.end.ids != NULL) {
+		f_free(alloc, em_env.end.ids);
+	}
+	if (em_env.program.ids != NULL) {
+		f_free(alloc, em_env.program.ids);
+	}
+	if (em_env.capture.ids != NULL) {
+		f_free(alloc, em_env.capture.ids);
+	}
+	f_free(nfa->alloc, reachable_by_label);
+	f_free(nfa->alloc, eager_output_buf.ids);
 
 	return res;
 }
 
-static int
-remap_capture_actions(struct fsm *nfa, struct state_set **eclosures)
+/* For every state, mark every state reached by a labeled edge as
+ * reachable. This doesn't check that the FROM state is reachable from
+ * the start state (trim will do that soon enough), it's just used to
+ * check which states will become unreachable once epsilon edges are
+ * removed. We don't need to add eager outputs for them, because they
+ * will soon be disconnected from the epsilon-free NFA. */
+static void
+mark_states_reachable_by_label(const struct fsm *nfa, uint64_t *reachable_by_label)
 {
-	int res = 0;
-	fsm_state_t s, i;
-	struct state_set **rmap;
-	struct state_iter si;
-	fsm_state_t si_s;
-	struct remap_env env = { 'R', NULL, NULL, 1, 0, 0, NULL };
-	env.alloc = nfa->opt->alloc;
-
-	/* build a reverse mapping */
-	rmap = f_calloc(nfa->opt->alloc, nfa->statecount, sizeof(rmap[0]));
-	if (rmap == NULL) {
-		goto cleanup;
+	fsm_state_t start;
+	if (!fsm_getstart(nfa, &start)) {
+		return;		/* nothing reachable */
 	}
+	u64bitset_set(reachable_by_label, start);
 
-	for (s = 0; s < nfa->statecount; s++) {
-		if (eclosures[s] == NULL) { continue; }
-		for (state_set_reset(eclosures[s], &si); state_set_next(&si, &si_s); ) {
-			if (si_s == s) {
-				continue; /* ignore identical states */
-			}
-#if LOG_RM_EPSILONS_CAPTURES
-			fprintf(stderr, "remap_capture_actions: %u <- %u\n",
-			    s, si_s);
-#endif
-			if (!state_set_add(&rmap[si_s], nfa->opt->alloc, s)) {
-				goto cleanup;
-			}
+	const fsm_state_t state_count = fsm_countstates(nfa);
+
+	for (size_t s_i = 0; s_i < state_count; s_i++) {
+		struct edge_group_iter egi;
+		struct edge_group_iter_info info;
+
+		struct fsm_state *s = &nfa->states[s_i];
+
+		/* Clear the visited flag, it will be used to avoid cycles. */
+		assert(s->visited == 0); /* stale */
+		s->visited = 0;
+
+		edge_set_group_iter_reset(s->edges, EDGE_GROUP_ITER_ALL, &egi);
+		while (edge_set_group_iter_next(&egi, &info)) {
+			u64bitset_set(reachable_by_label, info.to);
 		}
 	}
-	env.rmap = rmap;
-
-	/* Iterate over the current set of actions with the reverse
-	 * mapping (containing only states which will be skipped,
-	 * collecting info about every new capture action that will need
-	 * to be added.
-	 *
-	 * It can't be added during the iteration, because that would
-	 * modify the hash table as it's being iterated over. */
-	fsm_capture_action_iter(nfa, remap_capture_action_cb, &env);
-
-	/* Now that we're done iterating, add those actions. */
-	for (i = 0; i < env.count; i++) {
-		const struct remap_action *a = &env.actions[i];
-		if (!fsm_capture_add_action(nfa, a->state, a->type,
-			a->capture_id, a->to)) {
-			goto cleanup;
-		}
-	}
-
-	res = 1;
-
-cleanup:
-	if (env.actions != NULL) {
-		f_free(nfa->opt->alloc, env.actions);
-	}
-
-	if (rmap != NULL) {
-		for (i = 0; i < nfa->statecount; i++) {
-			state_set_free(rmap[i]);
-		}
-		f_free(nfa->opt->alloc, rmap);
-	}
-	return res;
-
 }
 
 static int
-add_pending_capture_action(struct remap_env *env,
-    fsm_state_t state, enum capture_action_type type,
-    unsigned capture_id, fsm_state_t to)
+collect_captureid_cb(fsm_state_t state, unsigned id, void *opaque)
 {
-	struct remap_action *a;
-	if (env->count == env->ceil) {
-		struct remap_action *nactions;
-		const size_t nceil = (env->ceil == 0
-		    ? DEF_PENDING_CAPTURE_ACTIONS_CEIL : 2*env->ceil);
-		assert(nceil > 0);
-		nactions = f_realloc(env->alloc,
-		    env->actions,
-		    nceil * sizeof(nactions[0]));
-		if (nactions == NULL) {
-			return 0;
-		}
-
-		env->ceil = nceil;
-		env->actions = nactions;
-	}
-
-	a = &env->actions[env->count];
-#if LOG_RM_EPSILONS_CAPTURES
-	fprintf(stderr, "add_pending_capture_action: state %d, type %s, capture_id %u, to %d\n",
-	    state, fsm_capture_action_type_name[type], capture_id, to);
-#endif
-
-	a->state = state;
-	a->type = type;
-	a->capture_id = capture_id;
-	a->to = to;
-	env->count++;
-	return 1;
-}
-
-static int
-remap_capture_action_cb(fsm_state_t state,
-    enum capture_action_type type, unsigned capture_id, fsm_state_t to,
-    void *opaque)
-{
-	struct state_iter si;
-	fsm_state_t si_s;
-	struct remap_env *env = opaque;
-	assert(env->tag == 'R');
-
-#if LOG_RM_EPSILONS_CAPTURES
-	fprintf(stderr, "remap_capture_action_cb: state %d, type %s, capture_id %u, to %d\n",
-	    state, fsm_capture_action_type_name[type], capture_id, to);
-#endif
-
-	for (state_set_reset(env->rmap[state], &si); state_set_next(&si, &si_s); ) {
-		struct state_iter si_to;
-		fsm_state_t si_tos;
-
-#if LOG_RM_EPSILONS_CAPTURES
-		fprintf(stderr, " -- rcac: state %d -> %d\n", state, si_s);
-#endif
-
-		if (!add_pending_capture_action(env, si_s, type, capture_id, to)) {
-			goto fail;
-		}
-
-		if (to == CAPTURE_NO_STATE) {
-			continue;
-		}
-
-		for (state_set_reset(env->rmap[to], &si_to); state_set_next(&si, &si_tos); ) {
-#if LOG_RM_EPSILONS_CAPTURES
-			fprintf(stderr, " -- rcac:     to %d -> %d\n", to, si_tos);
-#endif
-
-			if (!add_pending_capture_action(env, si_tos, type, capture_id, to)) {
-				goto fail;
-			}
-
-		}
-	}
-
-	return 1;
-
-fail:
-	env->ok = 0;
-	return 0;
-}
-
-struct collect_env {
-	char tag;
-	const struct fsm_alloc *alloc;
-	size_t count;
-	size_t ceil;
-	fsm_end_id_t *ids;
-	int ok;
-};
-
-static int
-collect_cb(fsm_state_t state, fsm_end_id_t id, void *opaque)
-{
-	struct collect_env *env = opaque;
-	assert(env->tag == 'E');
-
+	struct carry_end_metadata_env *env = opaque;
 	(void)state;
 
-	if (env->count == env->ceil) {
-		const size_t nceil = 2 * env->ceil;
-		fsm_end_id_t *nids;
-		assert(nceil > env->ceil);
-		nids = f_realloc(env->alloc, env->ids,
-		    nceil * sizeof(*env->ids));
+	if (env->capture.count == env->capture.ceil) {
+		const size_t nceil = (env->capture.ceil == 0)
+		    ? DEF_END_METADATA_CAPTUREIDS_CEIL
+		    : 2 * env->capture.ceil;
+		unsigned *nids;
+		assert(nceil > env->capture.ceil);
+		nids = f_realloc(env->alloc, env->capture.ids,
+		    nceil * sizeof(env->capture.ids[0]));
 		if (nids == NULL) {
-			env->ok = 0;
+			env->capture.ok = 0;
 			return 0;
-		}
-		env->ceil = nceil;
-		env->ids = nids;
-	}
+ 		}
+		env->capture.ceil = nceil;
+		env->capture.ids = nids;
+ 	}
 
-	env->ids[env->count] = id;
-	env->count++;
-
+	env->capture.ids[env->capture.count] = id;
+	env->capture.count++;
 	return 1;
 }
 
-/* fsm_remove_epsilons can't use fsm_endid_carry directly, because the src
- * and dst FSMs are the same -- that would lead to adding entries to a
- * hash table, possibly causing it to resize, while iterating over it.
- *
- * Instead, collect entries that need to be added (if not already
- * present), and then add them in a second pass. */
 static int
-carry_endids(struct fsm *fsm, struct state_set *states,
-    fsm_state_t dst_state)
+collect_progid_cb(fsm_state_t state, unsigned id, void *opaque)
 {
-	struct state_iter it;
-	fsm_state_t s;
-	size_t i;
+	struct carry_end_metadata_env *env = opaque;
+	uint32_t prog_id = (uint32_t)id;
+ 	(void)state;
 
-	struct collect_env env;
-	env.tag = 'E';		/* for fsm_remove_epsilons */
-	env.alloc = fsm->opt->alloc;
-	env.count = 0;
-	env.ceil = DEF_CARRY_ENDIDS_COUNT;
-	env.ids = f_malloc(fsm->opt->alloc,
-	    env.ceil * sizeof(*env.ids));
-	if (env.ids == NULL) {
-		return 0;
-	}
-	env.ok = 1;
+	if (env->program.count == env->program.ceil) {
+		const size_t nceil = (env->program.ceil == 0)
+		    ? DEF_END_METADATA_PROGRAMIDS_CEIL
+		    : 2 * env->program.ceil;
+		unsigned *nids;
+		assert(nceil > env->program.ceil);
+		nids = f_realloc(env->alloc, env->program.ids,
+		    nceil * sizeof(env->program.ids[0]));
+ 		if (nids == NULL) {
+			env->program.ok = 0;
+			return 0;
+ 		}
+		env->program.ceil = nceil;
+		env->program.ids = nids;
+ 	}
 
-	/* collect from states */
-	for (state_set_reset(states, &it); state_set_next(&it, &s); ) {
-		if (!fsm_isend(fsm, s)) {
-			continue;
-		}
-
-		fsm_endid_iter_state(fsm, s, collect_cb, &env);
-		if (!env.ok) {
-			goto cleanup;
-		}
-	}
-
-	/* add them */
-	for (i = 0; i < env.count; i++) {
-		enum fsm_endid_set_res sres;
-		sres = fsm_endid_set(fsm, dst_state, env.ids[i]);
-		if (sres == FSM_ENDID_SET_ERROR_ALLOC_FAIL) {
-			env.ok = 0;
-			goto cleanup;
-		}
-	}
-
-cleanup:
-	f_free(fsm->opt->alloc, env.ids);
-
-	return env.ok;
+	env->program.ids[env->program.count] = prog_id;
+	env->program.count++;
+	return 1;
 }
 
+/* Because we're modifying the FSM in place, we can't iterate and add
+ * new entries -- it could lead to the underlying hash table resizing.
+ * Instead, collect, then add in a second pass. */
+static int
+carry_end_metadata(struct carry_end_metadata_env *env,
+    fsm_state_t end_state, fsm_state_t dst_state)
+{
+	size_t i;
+	const size_t id_count = fsm_endid_count(env->fsm, end_state);
+	if (id_count > 0) { /* copy end IDs */
+		enum fsm_getendids_res id_res;
+		if (id_count > env->end.ceil) { /* grow buffer */
+			size_t nceil = (env->end.ceil == 0)
+			    ? DEF_END_METADATA_ENDIDS_CEIL
+			    : 2*env->end.ceil;
+			while (nceil < id_count) {
+				nceil *= 2;
+			}
+			assert(nceil > 0);
+			fsm_end_id_t *nids = f_realloc(env->alloc,
+			    env->end.ids, nceil * sizeof(env->end.ids[0]));
+			if (nids == NULL) {
+				return 0;
+			}
+			env->end.ids = nids;
+			env->end.ceil = nceil;
+		}
+
+		id_res = fsm_endid_get(env->fsm, end_state,
+		    id_count, env->end.ids);
+		assert(id_res == FSM_GETENDIDS_FOUND);
+
+		for (i = 0; i < id_count; i++) {
+#if LOG_COPYING
+			fprintf(stderr, "carry_end_metadata: setting end ID %u on %d (due to %d)\n",
+			    env->end.ids[i], dst_state, end_state);
+#endif
+			if (!fsm_setendid_state(env->fsm, dst_state, env->end.ids[i])) {
+				return 0;
+			}
+ 		}
+	}
+
+	env->capture.ok = 1;
+	env->capture.count = 0;
+	fsm_capture_iter_active_for_end_state(env->fsm, end_state,
+	    collect_captureid_cb, env);
+	if (!env->capture.ok) {
+		return 0;
+	}
+	for (i = 0; i < env->capture.count; i++) {
+		if (!fsm_capture_set_active_for_end(env->fsm,
+			env->capture.ids[i], dst_state)) {
+			return 0;
+		}
+	}
+
+	env->program.count = 0;
+	fsm_capture_iter_program_ids_for_end_state(env->fsm, end_state,
+	    collect_progid_cb, env);
+	for (i = 0; i < env->program.count; i++) {
+		if (!fsm_capture_associate_program_with_end_state(env->fsm,
+			env->program.ids[i], dst_state)) {
+			return 0;
+		}
+	}
+
+	return 1;
+}

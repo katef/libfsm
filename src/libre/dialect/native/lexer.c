@@ -12,11 +12,31 @@ static enum lx_native_token z0(struct lx_native_lx *lx);
 static enum lx_native_token z1(struct lx_native_lx *lx);
 static enum lx_native_token z2(struct lx_native_lx *lx);
 
+static int
+lx_native_advance_end(struct lx_native_lx *lx, int c)
+{
+	lx->end.byte++;
+	lx->end.col++;
+	if (c == '\n') {
+		lx->end.line++;
+		lx->end.saved_col = lx->end.col - 1;
+		lx->end.col = 1;
+	}
+	if (lx->push != NULL) {
+		if (-1 == lx->push(lx->buf_opaque, (char)c)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/* This wrapper manages one character of lookahead/pushback
+ * and the line, column, and byte offsets. */
 #if __STDC_VERSION__ >= 199901L
 inline
 #endif
 static int
-lx_getc(struct lx_native_lx *lx)
+lx_native_getc(struct lx_native_lx *lx)
 {
 	int c;
 
@@ -32,16 +52,17 @@ lx_getc(struct lx_native_lx *lx)
 		}
 	}
 
-	lx->end.byte++;
-	lx->end.col++;
-
-	if (c == '\n') {
-		lx->end.line++;
-		lx->end.saved_col = lx->end.col - 1;
-		lx->end.col = 1;
-	}
+	if (!lx_native_advance_end(lx, c)) { return EOF; }
 
 	return c;
+}
+
+/* This wrapper adapts calling lx_native_getc to the interface
+ * in libfsm's generated code. */
+static int
+fsm_getc(void *getc_opaque)
+{
+	return lx_native_getc((struct lx_native_lx *)getc_opaque);
 }
 
 #if __STDC_VERSION__ >= 199901L
@@ -52,10 +73,7 @@ lx_native_ungetc(struct lx_native_lx *lx, int c)
 {
 	assert(lx != NULL);
 	assert(lx->c == EOF);
-
 	lx->c = c;
-
-
 	lx->end.byte--;
 	lx->end.col--;
 
@@ -107,6 +125,17 @@ lx_native_dynpush(void *buf_opaque, char c)
 	return 0;
 }
 
+static void
+lx_native_dynpop(void *buf_opaque)
+{
+	struct lx_dynbuf *t = buf_opaque;
+
+	assert(t != NULL);
+
+	assert(t->p != t->a);
+	t->p--;
+}
+
 int
 lx_native_dynclear(void *buf_opaque)
 {
@@ -146,11 +175,8 @@ lx_native_dynfree(void *buf_opaque)
 static enum lx_native_token
 z0(struct lx_native_lx *lx)
 {
+	int has_consumed_input = 0;
 	int c;
-
-	enum {
-		S0, S1, S2, S3, NONE
-	} state;
 
 	assert(lx != NULL);
 
@@ -158,17 +184,19 @@ z0(struct lx_native_lx *lx)
 		lx->clear(lx->buf_opaque);
 	}
 
-	state = NONE;
-
 	lx->start = lx->end;
 
-	while (c = lx_getc(lx), c != EOF) {
-		if (state == NONE) {
-			state = S0;
-		}
+	void *getc_opaque = (void *)lx;
+	enum {
+		S0, S1, S2, S3
+	} state;
 
+	state = S0;
+
+	while (c = fsm_getc(getc_opaque), c != EOF) {
+		has_consumed_input = 1;
 		switch (state) {
-		case S0: /* start */
+		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -182,7 +210,9 @@ z0(struct lx_native_lx *lx)
 			case '9': state = S1; break;
 			case ',': state = S2; break;
 			case '}': state = S3; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -198,51 +228,50 @@ z0(struct lx_native_lx *lx)
 			case '7':
 			case '8':
 			case '9': break;
-			default:  lx_native_ungetc(lx, c); return TOK_COUNT;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_COUNT;
 			}
 			break;
 
 		case S2: /* e.g. "," */
-			lx_native_ungetc(lx, c); return TOK_SEP;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_SEP;
 
 		case S3: /* e.g. "}" */
-			lx_native_ungetc(lx, c); return lx->z = z2, TOK_CLOSECOUNT;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return lx->z = z2, TOK_CLOSECOUNT;
 
 		default:
 			; /* unreached */
 		}
+	}
+
+	/* end states */
+	switch (state) {
+	case S1: return TOK_COUNT;
+	case S2: return TOK_SEP;
+	case S3: return lx->z = z2, TOK_CLOSECOUNT;
+	default: 
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	}
 
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
 				return TOK_ERROR;
 			}
 		}
-	}
 
 	lx->lgetc = NULL;
 
-	switch (state) {
-	case NONE: return TOK_EOF;
-	case S1: return TOK_COUNT;
-	case S2: return TOK_SEP;
-	case S3: return TOK_CLOSECOUNT;
-	default: errno = EINVAL; return TOK_ERROR;
-	}
+	if (!has_consumed_input) {
+		return TOK_EOF;
+	} 
+	return TOK_ERROR;
 }
 
 static enum lx_native_token
 z1(struct lx_native_lx *lx)
 {
+	int has_consumed_input = 0;
 	int c;
-
-	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
-		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
-		S20, S21, S22, S23, S24, S25, S26, S27, S28, S29, 
-		S30, S31, S32, S33, S34, S35, S36, S37, S38, S39, 
-		S40, S41, S42, S43, S44, S45, S46, S47, S48, S49, 
-		S50, S51, S52, S53, S54, S55, S56, NONE
-	} state;
 
 	assert(lx != NULL);
 
@@ -250,17 +279,24 @@ z1(struct lx_native_lx *lx)
 		lx->clear(lx->buf_opaque);
 	}
 
-	state = NONE;
-
 	lx->start = lx->end;
 
-	while (c = lx_getc(lx), c != EOF) {
-		if (state == NONE) {
-			state = S0;
-		}
+	void *getc_opaque = (void *)lx;
+	enum {
+		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
+		S20, S21, S22, S23, S24, S25, S26, S27, S28, S29, 
+		S30, S31, S32, S33, S34, S35, S36, S37, S38, S39, 
+		S40, S41, S42, S43, S44, S45, S46, S47, S48, S49, 
+		S50, S51, S52, S53, S54, S55, S56
+	} state;
 
+	state = S0;
+
+	while (c = fsm_getc(getc_opaque), c != EOF) {
+		has_consumed_input = 1;
 		switch (state) {
-		case S0: /* start */
+		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
 			case '[': state = S1; break;
 			case '\\': state = S3; break;
@@ -273,12 +309,12 @@ z1(struct lx_native_lx *lx)
 		case S1: /* e.g. "[" */
 			switch ((unsigned char) c) {
 			case ':': state = S12; break;
-			default:  lx_native_ungetc(lx, c); return TOK_CHAR;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_CHAR;
 			}
 			break;
 
 		case S2: /* e.g. "\\x00" */
-			lx_native_ungetc(lx, c); return TOK_CHAR;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_CHAR;
 
 		case S3: /* e.g. "\\" */
 			switch ((unsigned char) c) {
@@ -301,25 +337,27 @@ z1(struct lx_native_lx *lx)
 			case '5':
 			case '6':
 			case '7': state = S9; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S4: /* e.g. "-" */
 			switch ((unsigned char) c) {
 			case ']': state = S6; break;
-			default:  lx_native_ungetc(lx, c); return TOK_RANGE;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_RANGE;
 			}
 			break;
 
 		case S5: /* e.g. "]" */
-			lx_native_ungetc(lx, c); return lx->z = z2, TOK_CLOSEGROUP;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return lx->z = z2, TOK_CLOSEGROUP;
 
 		case S6: /* e.g. "-]" */
-			lx_native_ungetc(lx, c); return lx->z = z2, TOK_CLOSEGROUPRANGE;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return lx->z = z2, TOK_CLOSEGROUPRANGE;
 
 		case S7: /* e.g. "\\-" */
-			lx_native_ungetc(lx, c); return TOK_ESC;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_ESC;
 
 		case S8: /* e.g. "\\x" */
 			switch ((unsigned char) c) {
@@ -345,7 +383,9 @@ z1(struct lx_native_lx *lx)
 			case 'd':
 			case 'e':
 			case 'f': state = S10; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -359,7 +399,7 @@ z1(struct lx_native_lx *lx)
 			case '5':
 			case '6':
 			case '7': break;
-			default:  lx_native_ungetc(lx, c); return TOK_OCT;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_OCT;
 			}
 			break;
 
@@ -387,12 +427,14 @@ z1(struct lx_native_lx *lx)
 			case 'd':
 			case 'e':
 			case 'f': state = S11; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S11: /* e.g. "\\x00" */
-			lx_native_ungetc(lx, c); return TOK_HEX;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_HEX;
 
 		case S12: /* e.g. "[:" */
 			switch ((unsigned char) c) {
@@ -408,35 +450,45 @@ z1(struct lx_native_lx *lx)
 			case 'w': state = S21; break;
 			case 'u': state = S22; break;
 			case 'p': state = S23; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S13: /* e.g. "[:d" */
 			switch ((unsigned char) c) {
 			case 'i': state = S55; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S14: /* e.g. "[:s" */
 			switch ((unsigned char) c) {
 			case 'p': state = S52; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S15: /* e.g. "[:h" */
 			switch ((unsigned char) c) {
 			case 's': state = S14; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S16: /* e.g. "[:g" */
 			switch ((unsigned char) c) {
 			case 'r': state = S49; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -444,42 +496,54 @@ z1(struct lx_native_lx *lx)
 			switch ((unsigned char) c) {
 			case 's': state = S41; break;
 			case 'l': state = S42; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S18: /* e.g. "[:c" */
 			switch ((unsigned char) c) {
 			case 'n': state = S38; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S19: /* e.g. "[:l" */
 			switch ((unsigned char) c) {
 			case 'o': state = S37; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S20: /* e.g. "[:x" */
 			switch ((unsigned char) c) {
 			case 'd': state = S13; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S21: /* e.g. "[:w" */
 			switch ((unsigned char) c) {
 			case 'o': state = S35; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S22: /* e.g. "[:u" */
 			switch ((unsigned char) c) {
 			case 'p': state = S32; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -487,129 +551,165 @@ z1(struct lx_native_lx *lx)
 			switch ((unsigned char) c) {
 			case 'r': state = S24; break;
 			case 'u': state = S25; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S24: /* e.g. "[:pr" */
 			switch ((unsigned char) c) {
 			case 'i': state = S31; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S25: /* e.g. "[:pu" */
 			switch ((unsigned char) c) {
 			case 'n': state = S26; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S26: /* e.g. "[:pun" */
 			switch ((unsigned char) c) {
 			case 'c': state = S27; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S27: /* e.g. "[:digi" */
 			switch ((unsigned char) c) {
 			case 't': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S28: /* e.g. "[:word" */
 			switch ((unsigned char) c) {
 			case ':': state = S29; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S29: /* e.g. "[:word:" */
 			switch ((unsigned char) c) {
 			case ']': state = S30; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S30: /* e.g. "[:word:]" */
-			lx_native_ungetc(lx, c); return TOK_NAMED__CLASS;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_NAMED__CLASS;
 
 		case S31: /* e.g. "[:pri" */
 			switch ((unsigned char) c) {
 			case 'n': state = S27; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S32: /* e.g. "[:up" */
 			switch ((unsigned char) c) {
 			case 'p': state = S33; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S33: /* e.g. "[:low" */
 			switch ((unsigned char) c) {
 			case 'e': state = S34; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S34: /* e.g. "[:lowe" */
 			switch ((unsigned char) c) {
 			case 'r': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S35: /* e.g. "[:wo" */
 			switch ((unsigned char) c) {
 			case 'r': state = S36; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S36: /* e.g. "[:wor" */
 			switch ((unsigned char) c) {
 			case 'd': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S37: /* e.g. "[:lo" */
 			switch ((unsigned char) c) {
 			case 'w': state = S33; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S38: /* e.g. "[:cn" */
 			switch ((unsigned char) c) {
 			case 't': state = S39; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S39: /* e.g. "[:cnt" */
 			switch ((unsigned char) c) {
 			case 'r': state = S40; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S40: /* e.g. "[:cntr" */
 			switch ((unsigned char) c) {
 			case 'l': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S41: /* e.g. "[:as" */
 			switch ((unsigned char) c) {
 			case 'c': state = S47; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -617,146 +717,178 @@ z1(struct lx_native_lx *lx)
 			switch ((unsigned char) c) {
 			case 'p': state = S43; break;
 			case 'n': state = S44; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S43: /* e.g. "[:alp" */
 			switch ((unsigned char) c) {
 			case 'h': state = S46; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S44: /* e.g. "[:aln" */
 			switch ((unsigned char) c) {
 			case 'u': state = S45; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S45: /* e.g. "[:alnu" */
 			switch ((unsigned char) c) {
 			case 'm': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S46: /* e.g. "[:alph" */
 			switch ((unsigned char) c) {
 			case 'a': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S47: /* e.g. "[:asc" */
 			switch ((unsigned char) c) {
 			case 'i': state = S48; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S48: /* e.g. "[:asci" */
 			switch ((unsigned char) c) {
 			case 'i': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S49: /* e.g. "[:gr" */
 			switch ((unsigned char) c) {
 			case 'a': state = S50; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S50: /* e.g. "[:gra" */
 			switch ((unsigned char) c) {
 			case 'p': state = S51; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S51: /* e.g. "[:grap" */
 			switch ((unsigned char) c) {
 			case 'h': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S52: /* e.g. "[:sp" */
 			switch ((unsigned char) c) {
 			case 'a': state = S53; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S53: /* e.g. "[:spa" */
 			switch ((unsigned char) c) {
 			case 'c': state = S54; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S54: /* e.g. "[:spac" */
 			switch ((unsigned char) c) {
 			case 'e': state = S28; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S55: /* e.g. "[:di" */
 			switch ((unsigned char) c) {
 			case 'g': state = S56; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S56: /* e.g. "[:dig" */
 			switch ((unsigned char) c) {
 			case 'i': state = S27; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		default:
 			; /* unreached */
 		}
+	}
+
+	/* end states */
+	switch (state) {
+	case S1: return TOK_CHAR;
+	case S2: return TOK_CHAR;
+	case S4: return TOK_RANGE;
+	case S5: return lx->z = z2, TOK_CLOSEGROUP;
+	case S6: return lx->z = z2, TOK_CLOSEGROUPRANGE;
+	case S7: return TOK_ESC;
+	case S9: return TOK_OCT;
+	case S11: return TOK_HEX;
+	case S30: return TOK_NAMED__CLASS;
+	default: 
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	}
 
 		if (lx->push != NULL) {
 			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
 				return TOK_ERROR;
 			}
 		}
-	}
 
 	lx->lgetc = NULL;
 
-	switch (state) {
-	case NONE: return TOK_EOF;
-	case S1: return TOK_CHAR;
-	case S2: return TOK_CHAR;
-	case S4: return TOK_RANGE;
-	case S5: return TOK_CLOSEGROUP;
-	case S6: return TOK_CLOSEGROUPRANGE;
-	case S7: return TOK_ESC;
-	case S9: return TOK_OCT;
-	case S11: return TOK_HEX;
-	case S30: return TOK_NAMED__CLASS;
-	default: errno = EINVAL; return TOK_ERROR;
-	}
+	if (!has_consumed_input) {
+		return TOK_EOF;
+	} 
+	return TOK_ERROR;
 }
 
 static enum lx_native_token
 z2(struct lx_native_lx *lx)
 {
+	int has_consumed_input = 0;
 	int c;
-
-	enum {
-		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
-		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
-		S20, S21, S22, S23, NONE
-	} state;
 
 	assert(lx != NULL);
 
@@ -764,17 +896,21 @@ z2(struct lx_native_lx *lx)
 		lx->clear(lx->buf_opaque);
 	}
 
-	state = NONE;
-
 	lx->start = lx->end;
 
-	while (c = lx_getc(lx), c != EOF) {
-		if (state == NONE) {
-			state = S0;
-		}
+	void *getc_opaque = (void *)lx;
+	enum {
+		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
+		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
+		S20, S21, S22, S23
+	} state;
 
+	state = S0;
+
+	while (c = fsm_getc(getc_opaque), c != EOF) {
+		has_consumed_input = 1;
 		switch (state) {
-		case S0: /* start */
+		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
 			case '\\': state = S1; break;
 			case '{': state = S3; break;
@@ -820,63 +956,63 @@ z2(struct lx_native_lx *lx)
 			case 'v':
 			case '{':
 			case '|': state = S19; break;
-			default:  lx_native_ungetc(lx, c); return TOK_CHAR;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_CHAR;
 			}
 			break;
 
 		case S2: /* e.g. "\\x00" */
-			lx_native_ungetc(lx, c); return TOK_CHAR;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_CHAR;
 
 		case S3: /* e.g. "{" */
-			lx_native_ungetc(lx, c); return lx->z = z0, TOK_OPENCOUNT;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return lx->z = z0, TOK_OPENCOUNT;
 
 		case S4: /* e.g. "[" */
 			switch ((unsigned char) c) {
 			case '^': state = S14; break;
 			case ']': state = S15; break;
-			default:  lx_native_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUP;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return lx->z = z1, TOK_OPENGROUP;
 			}
 			break;
 
 		case S5: /* e.g. "|" */
-			lx_native_ungetc(lx, c); return TOK_ALT;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_ALT;
 
 		case S6: /* e.g. "." */
-			lx_native_ungetc(lx, c); return TOK_ANY;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_ANY;
 
 		case S7: /* e.g. "+" */
-			lx_native_ungetc(lx, c); return TOK_PLUS;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_PLUS;
 
 		case S8: /* e.g. "*" */
-			lx_native_ungetc(lx, c); return TOK_STAR;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_STAR;
 
-		case S9: /* e.g. "?" */
-			lx_native_ungetc(lx, c); return TOK_OPT;
+		case S9: /* e.g. "\077" */
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_OPT;
 
 		case S10: /* e.g. "$" */
-			lx_native_ungetc(lx, c); return TOK_END;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_END;
 
 		case S11: /* e.g. "^" */
-			lx_native_ungetc(lx, c); return TOK_START;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_START;
 
 		case S12: /* e.g. ")" */
-			lx_native_ungetc(lx, c); return TOK_CLOSESUB;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_CLOSESUB;
 
 		case S13: /* e.g. "(" */
-			lx_native_ungetc(lx, c); return TOK_OPENSUB;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_OPENSUB;
 
 		case S14: /* e.g. "[^" */
 			switch ((unsigned char) c) {
 			case ']': state = S16; break;
-			default:  lx_native_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUPINV;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return lx->z = z1, TOK_OPENGROUPINV;
 			}
 			break;
 
 		case S15: /* e.g. "[]" */
-			lx_native_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUPCB;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return lx->z = z1, TOK_OPENGROUPCB;
 
 		case S16: /* e.g. "[^]" */
-			lx_native_ungetc(lx, c); return lx->z = z1, TOK_OPENGROUPINVCB;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return lx->z = z1, TOK_OPENGROUPINVCB;
 
 		case S17: /* e.g. "\\x" */
 			switch ((unsigned char) c) {
@@ -902,7 +1038,9 @@ z2(struct lx_native_lx *lx)
 			case 'd':
 			case 'e':
 			case 'f': state = S22; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -916,12 +1054,12 @@ z2(struct lx_native_lx *lx)
 			case '5':
 			case '6':
 			case '7': state = S20; break;
-			default:  lx_native_ungetc(lx, c); return TOK_OCT;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_OCT;
 			}
 			break;
 
 		case S19: /* e.g. "\\$" */
-			lx_native_ungetc(lx, c); return TOK_ESC;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_ESC;
 
 		case S20: /* e.g. "\\00" */
 			switch ((unsigned char) c) {
@@ -933,12 +1071,12 @@ z2(struct lx_native_lx *lx)
 			case '5':
 			case '6':
 			case '7': state = S21; break;
-			default:  lx_native_ungetc(lx, c); return TOK_OCT;
+			default:  lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_OCT;
 			}
 			break;
 
 		case S21: /* e.g. "\\000" */
-			lx_native_ungetc(lx, c); return TOK_OCT;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_OCT;
 
 		case S22: /* e.g. "\\x0" */
 			switch ((unsigned char) c) {
@@ -964,32 +1102,26 @@ z2(struct lx_native_lx *lx)
 			case 'd':
 			case 'e':
 			case 'f': state = S23; break;
-			default:  lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
 		case S23: /* e.g. "\\x00" */
-			lx_native_ungetc(lx, c); return TOK_HEX;
+			lx_native_ungetc(lx, c); lx_native_dynpop(lx->buf_opaque); return TOK_HEX;
 
 		default:
 			; /* unreached */
 		}
-
-		if (lx->push != NULL) {
-			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
-				return TOK_ERROR;
-			}
-		}
 	}
 
-	lx->lgetc = NULL;
-
+	/* end states */
 	switch (state) {
-	case NONE: return TOK_EOF;
 	case S1: return TOK_CHAR;
 	case S2: return TOK_CHAR;
-	case S3: return TOK_OPENCOUNT;
-	case S4: return TOK_OPENGROUP;
+	case S3: return lx->z = z0, TOK_OPENCOUNT;
+	case S4: return lx->z = z1, TOK_OPENGROUP;
 	case S5: return TOK_ALT;
 	case S6: return TOK_ANY;
 	case S7: return TOK_PLUS;
@@ -999,16 +1131,31 @@ z2(struct lx_native_lx *lx)
 	case S11: return TOK_START;
 	case S12: return TOK_CLOSESUB;
 	case S13: return TOK_OPENSUB;
-	case S14: return TOK_OPENGROUPINV;
-	case S15: return TOK_OPENGROUPCB;
-	case S16: return TOK_OPENGROUPINVCB;
+	case S14: return lx->z = z1, TOK_OPENGROUPINV;
+	case S15: return lx->z = z1, TOK_OPENGROUPCB;
+	case S16: return lx->z = z1, TOK_OPENGROUPINVCB;
 	case S18: return TOK_OCT;
 	case S19: return TOK_ESC;
 	case S20: return TOK_OCT;
 	case S21: return TOK_OCT;
 	case S23: return TOK_HEX;
-	default: errno = EINVAL; return TOK_ERROR;
+	default: 
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_native_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 	}
+
+		if (lx->push != NULL) {
+			if (-1 == lx->push(lx->buf_opaque, (char)c)) {
+				return TOK_ERROR;
+			}
+		}
+
+	lx->lgetc = NULL;
+
+	if (!has_consumed_input) {
+		return TOK_EOF;
+	} 
+	return TOK_ERROR;
 }
 
 const char *
@@ -1164,6 +1311,7 @@ lx_native_init(struct lx_native_lx *lx)
 	lx->end.byte = 0;
 	lx->end.line = 1;
 	lx->end.col  = 1;
+	(void)lx_native_dynpop;
 }
 
 enum lx_native_token

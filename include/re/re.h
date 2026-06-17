@@ -8,7 +8,7 @@
 #define RE_H
 
 struct fsm;
-struct fsm_options;
+struct fsm_alloc;
 
 enum re_dialect {
 	RE_LIKE,
@@ -20,16 +20,21 @@ enum re_dialect {
 };
 
 enum re_flags {
-	RE_ICASE   = 1 << 0,
-	RE_TEXT    = 1 << 1,
-	RE_MULTI   = 1 << 2,
-	RE_REVERSE = 1 << 3,
-	RE_SINGLE  = 1 << 4, /* aka PCRE_DOTALL */
-	RE_ZONE    = 1 << 5,
-	RE_ANCHORED = 1 << 6,
-	RE_EXTENDED = 1 << 7,  /* PCRE extended mode */
-	RE_END_NL  = 1 << 8, /* end anchor matches '\n' */
-	RE_FLAGS_NONE = 0
+	RE_ICASE          = 1 << 0,
+	RE_TEXT           = 1 << 1,
+	RE_MULTI          = 1 << 2,
+	RE_REVERSE        = 1 << 3,
+	RE_SINGLE         = 1 << 4,  /* aka PCRE_DOTALL */
+	RE_ZONE           = 1 << 5,
+	RE_ANCHORED       = 1 << 6,
+	RE_EXTENDED       = 1 << 7,  /* PCRE extended mode */
+	RE_NOCAPTURE      = 1 << 8,  /* disable captures */
+	RE_END_NL         = 1 << 9,  /* end anchor matches '\n' */
+	RE_END_NL_DISABLE = 1 << 10, /* disable end anchor matching '\n' */
+	/* save info about linkage at construction time, to inform
+	 * later operations -- see fsm_union_repeated_pattern_group */
+	RE_SAVE_LINKAGE_INFO = 1 << 11,
+	RE_FLAGS_NONE     = 0
 };
 
 #define RE_ANCHOR (RE_TEXT | RE_MULTI | RE_ZONE)
@@ -133,7 +138,23 @@ re_getchar_fun(void *opaque);
 struct fsm *
 re_comp(enum re_dialect dialect,
 	re_getchar_fun *f, void *opaque,
-	const struct fsm_options *opt,
+	const struct fsm_alloc *alloc,
+	enum re_flags flags, struct re_err *err);
+
+/* Parse and analyze the regex enough to determine whether it is
+ * anchored at the start and/or end.
+ *
+ * As long as the result is checked for RE_IS_ANCHORED_ERROR first,
+ * the result can be used like a bitset. */
+enum re_is_anchored_res {
+	RE_IS_ANCHORED_NONE = 0x00,
+	RE_IS_ANCHORED_START = 0x01,
+	RE_IS_ANCHORED_END = 0x02,
+	RE_IS_ANCHORED_BOTH = 0x03,
+	RE_IS_ANCHORED_ERROR = 0xFFFF,
+};
+enum re_is_anchored_res
+re_is_anchored(enum re_dialect dialect, re_getchar_fun *f, void *opaque,
 	enum re_flags flags, struct re_err *err);
 
 /*

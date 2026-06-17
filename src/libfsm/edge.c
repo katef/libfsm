@@ -24,7 +24,7 @@ fsm_addedge_epsilon(struct fsm *fsm,
 	assert(from < fsm->statecount);
 	assert(to < fsm->statecount);
 
-	if (!state_set_add(&fsm->states[from].epsilons, fsm->opt->alloc, to)) {
+	if (!state_set_add(&fsm->states[from].epsilons, fsm->alloc, to)) {
 		return 0;
 	}
 
@@ -60,7 +60,7 @@ fsm_addedge_literal(struct fsm *fsm,
 	assert(from < fsm->statecount);
 	assert(to < fsm->statecount);
 
-	if (!edge_set_add(&fsm->states[from].edges, fsm->opt->alloc, (unsigned char)c, to)) {
+	if (!edge_set_add(&fsm->states[from].edges, fsm->alloc, (unsigned char)c, to)) {
 		return 0;
 	}
 

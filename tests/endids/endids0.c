@@ -43,23 +43,14 @@ int main(void)
 	// memset(all_endids, 0, sizeof all_endids);
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
-			fsm_end_id_t endid = 0;
-			size_t nwritten;
-			enum fsm_getendids_res ret;
+			fsm_end_id_t id = 0;
+			int ret;
 
-			assert( fsm_getendidcount(fsm, state_ind) == 1);
+			assert( fsm_endid_count(fsm, state_ind) == 1);
 
-                        nwritten = 0;
-			ret = fsm_getendids(
-				fsm,
-				state_ind,
-				1,
-				&endid,
-				&nwritten);
-
-			assert(ret == FSM_GETENDIDS_FOUND);
-                        assert(nwritten == 1);
-                        assert( endid == 1 );
+			ret = fsm_endid_get(fsm, state_ind, 1, &id);
+			assert(ret == 1);
+			assert(id == 1);
 
 			nend++;
 		}
@@ -88,26 +79,26 @@ int main(void)
             };
 
             for (i=0; i < sizeof matches / sizeof matches[0]; i++) {
-		fsm_end_id_t *end_ids;
-		size_t num_end_ids;
+		fsm_end_id_t *ids;
+		size_t count;
 
-		end_ids = NULL;
-		num_end_ids = 0;
-		ret = match_string(fsm, matches[i].s, NULL, &end_ids, &num_end_ids);
+		ids = NULL;
+		count = 0;
+		ret = match_string(fsm, matches[i].s, NULL, &ids, &count);
 
                 if (matches[i].should_match) {
                     assert( ret == 1 );
-                    assert( end_ids != NULL );
-                    assert( end_ids[0] = 1 );
-                    assert( num_end_ids == 1 );
-                    assert( end_ids[0] = matches[i].endid );
+                    assert( ids != NULL );
+                    assert( ids[0] = 1 );
+                    assert( count == 1 );
+                    assert( ids[0] = matches[i].endid );
                 } else {
                     assert( ret == 0 );
-                    assert( end_ids == NULL );
-                    assert( num_end_ids == 0 );
+                    assert( ids == NULL );
+                    assert( count == 0 );
                 }
 
-		free(end_ids);
+		free(ids);
             }
         }
 

@@ -22,12 +22,16 @@ escputc json_escputc;
 escputc pcre_escputc;
 escputc rust_escputc_char;
 escputc rust_escputc_str;
+escputc llvm_escputc_char;
 
 int
 awk_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
 
 int
 c_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
+
+void
+llvm_escputcharlit(FILE *f, const struct fsm_options *opt, char c);
 
 void
 rust_escputcharlit(FILE *f, const struct fsm_options *opt, char c);

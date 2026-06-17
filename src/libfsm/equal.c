@@ -55,7 +55,7 @@ subtract(const struct fsm *a, const struct fsm *b)
 
 	assert(a != NULL);
 	assert(b != NULL);
-	assert(a->opt == b->opt);
+	assert(a->alloc == b->alloc);
 
 	if (!ensure_dfa(a, &pa)) {
 		return NULL;
@@ -121,7 +121,7 @@ fsm_equal(const struct fsm *a, const struct fsm *b)
 	assert(a != NULL);
 	assert(b != NULL);
 
-	if (a->opt != b->opt) {
+	if (a->alloc != b->alloc) {
 		errno = EINVAL;
 		return -1;
 	}

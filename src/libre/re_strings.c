@@ -19,7 +19,8 @@
 #include "ac.h"
 
 struct fsm *
-re_strings(const struct fsm_options *opt, const char *a[], size_t n,
+re_strings(const struct fsm_alloc *alloc,
+	const char *a[], size_t n,
 	enum re_strings_flags flags)
 {
 	struct re_strings *g;
@@ -32,12 +33,12 @@ re_strings(const struct fsm_options *opt, const char *a[], size_t n,
 	}
 
 	for (i = 0; i < n; i++) {
-		if (!re_strings_add_str(g, a[i])) {
+		if (!re_strings_add_str(g, a[i], NULL)) {
 			goto error;
 		}
 	}
 
-	fsm = re_strings_build(g, opt, flags);
+	fsm = re_strings_build(g, alloc, flags);
 	re_strings_free(g);
 
 	return fsm;
@@ -64,25 +65,25 @@ re_strings_free(struct re_strings *g)
 }
 
 int
-re_strings_add_raw(struct re_strings *g, const void *p, size_t n)
+re_strings_add_raw(struct re_strings *g, const void *p, size_t n, const fsm_end_id_t *endid)
 {
 	assert(p != NULL);
-	assert(n > 0);
 
-	return trie_add_word((struct trie_graph *) g, p, n) != NULL;
+	return trie_add_word((struct trie_graph *) g, p, n, endid) != NULL;
 }
 
 int
-re_strings_add_str(struct re_strings *g, const char *s)
+re_strings_add_str(struct re_strings *g, const char *s, const fsm_end_id_t *endid)
 {
 	assert(s != NULL);
 
-	return re_strings_add_raw(g, s, strlen(s));
+	return re_strings_add_raw(g, s, strlen(s), endid);
 }
 
 struct fsm *
 re_strings_build(struct re_strings *g,
-	const struct fsm_options *opt, enum re_strings_flags flags)
+	const struct fsm_alloc *alloc,
+	enum re_strings_flags flags)
 {
 	struct fsm *fsm;
 	fsm_state_t end;
@@ -96,7 +97,8 @@ re_strings_build(struct re_strings *g,
 		}
 	}
 
-	fsm = fsm_new(opt);
+	/* TODO: count trie nodes and fsm_new_statealloc() */
+	fsm = fsm_new(alloc);
 	if (fsm == NULL) {
 		goto error;
 	}

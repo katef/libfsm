@@ -19,41 +19,41 @@
 
 struct state_info {
 	fsm_state_t state;
-	unsigned num_endids;
-	fsm_end_id_t endids[2];
+	unsigned count;
+	fsm_end_id_t ids[2];
 };
 
 /* remap 1 -> 7, 2 -> 9, both 1&2 -> 3 */
 static int
-endid_remap_func(fsm_state_t state, size_t num_ids, fsm_end_id_t *endids, size_t *num_written, void *opaque)
+endid_remap_func(fsm_state_t state, size_t num_ids, fsm_end_id_t *ids, size_t *num_written, void *opaque)
 {
 	(void)state;
 	(void)opaque;
 
-	assert(endids != NULL);
+	assert(ids != NULL);
 	assert(num_ids > 0 && num_ids <= 2);
 
 	if (num_ids > 1) {
-		endids[0] = 3;
+		ids[0] = 3;
 		*num_written = 1;
 
 		printf("remap: state %u with %zu endids, set to one endid, value %u\n",
-			(unsigned)state, num_ids, (unsigned)endids[0]);
+			(unsigned)state, num_ids, (unsigned)ids[0]);
 
 		return 1;
 	}
 
 	if (num_ids == 1) {
-		fsm_end_id_t orig = endids[0];
+		fsm_end_id_t orig = ids[0];
 
-		switch (endids[0]) {
-		case 1: endids[0] = 7; break;
-		case 2: endids[0] = 9; break;
+		switch (ids[0]) {
+		case 1: ids[0] = 7; break;
+		case 2: ids[0] = 9; break;
 		default: break;
 		}
 
 		printf("remap: state %u id %u -> %u\n",
-			(unsigned)state, (unsigned)orig, (unsigned)endids[0]);
+			(unsigned)state, (unsigned)orig, (unsigned)ids[0]);
 	}
 
 	*num_written = num_ids;
@@ -103,37 +103,26 @@ int main(void)
 
 	for (state_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
-			fsm_end_id_t endids[2] = {0,0};
-			size_t nwritten;
-			size_t num_endids;
-			enum fsm_getendids_res ret;
+			fsm_end_id_t ids[2] = {0,0};
+			size_t count;
+			int ret;
 
-			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
+			assert( count > 0 && count <= 2);
 
-			assert( num_endids > 0 && num_endids <= 2);
-
-			ret = fsm_getendids(
-				fsm,
-				state_ind,
-				sizeof endids / sizeof endids[0],
-				&endids[0],
-				&nwritten);
-
-			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
+			ret = fsm_endid_get(fsm, state_ind, count, &ids[0]);
+			assert(ret == 1);
 
 			info[ninfo].state = state_ind;
-			info[ninfo].num_endids = nwritten;
+			info[ninfo].count = count;
 
-			if (nwritten == 1) {
-				assert(endids[0] == 1 || endids[0] == 2);
-				info[ninfo].endids[0] = endids[0];
-			} else if (nwritten == 2) {
-				qsort(&endids[0], nwritten, sizeof endids[0], cmp_endids);
-				assert(endids[0] == 1 && endids[1] == 2);
-				info[ninfo].endids[0] = endids[0];
-				info[ninfo].endids[1] = endids[1];
+			if (count == 1) {
+				assert(ids[0] == 1 || ids[0] == 2);
+				info[ninfo].ids[0] = ids[0];
+			} else if (count == 2) {
+				assert(ids[0] == 1 && ids[1] == 2);
+				info[ninfo].ids[0] = ids[0];
+				info[ninfo].ids[1] = ids[1];
 			}
 
 			ninfo++;
@@ -148,39 +137,31 @@ int main(void)
 
 	for (state_ind = 0, info_ind = 0; state_ind < nstates; state_ind++) {
 		if (fsm_isend(fsm, state_ind)) {
-			fsm_end_id_t endid = 0;
+			fsm_end_id_t id = 0;
 			fsm_end_id_t expected;
-			size_t nwritten, num_endids;
-			enum fsm_getendids_res ret;
+			size_t count;
+			int ret;
 
 			assert( state_ind == info[info_ind].state );
 
-			nwritten = 0;
-			num_endids = fsm_getendidcount(fsm, state_ind);
+			count = fsm_endid_count(fsm, state_ind);
+			assert(count == 1);
 
-			assert(num_endids == 1);
-			ret = fsm_getendids(
-				fsm,
-				state_ind,
-				1,
-				&endid,
-				&nwritten);
+			ret = fsm_endid_get(fsm, state_ind, 1, &id);
+			assert(ret == 1);
 
-			assert(ret == FSM_GETENDIDS_FOUND);
-			assert(nwritten == num_endids);
-
-			if (info[info_ind].num_endids == 2) {
+			if (info[info_ind].count == 2) {
 				expected = 3;
-			} else if (info[info_ind].endids[0] == 1) {
+			} else if (info[info_ind].ids[0] == 1) {
 				expected = 7;
-			} else if (info[info_ind].endids[0] == 2) {
+			} else if (info[info_ind].ids[0] == 2) {
 				expected = 9;
 			} else {
 				assert( ! "unexpected value" );
 			}
 
-			printf("state %u, id %u, expected %u\n", (unsigned)state_ind, endid, expected);
-			assert(endid == expected);;
+			printf("state %u, id %u, expected %u\n", (unsigned)state_ind, id, expected);
+			assert(id == expected);;
 
 			info_ind++;
 		}

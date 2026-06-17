@@ -18,6 +18,7 @@
 
 #include "libfsm/internal.h"
 
+#include "retlist.h"
 #include "vm.h"
 
 #include "print/ir.h"
@@ -277,11 +278,11 @@ opasm_free_list(struct dfavm_assembler_ir *a, struct dfavm_op_ir *op)
 }
 
 static struct dfavm_op_ir *
-opasm_new(struct dfavm_assembler_ir *a, enum dfavm_op_instr instr, enum dfavm_op_cmp cmp, unsigned char arg,
+opasm_new(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	enum dfavm_op_instr instr, enum dfavm_op_cmp cmp, unsigned char arg,
 	const struct ir_state *ir_state)
 {
 	static const struct dfavm_op_ir zero;
-
 	struct dfavm_op_ir *op;
 
 	if (a->freelist != NULL) {
@@ -291,65 +292,81 @@ opasm_new(struct dfavm_assembler_ir *a, enum dfavm_op_instr instr, enum dfavm_op
 		op = pool_newop(&a->pool);
 	}
 
-	if (op != NULL) {
-		*op = zero;
+	if (op == NULL) {
+		return NULL;
+	}
 
-		op->asm_index = a->count++;
-		op->index = 0;
+	*op = zero;
 
-		op->cmp   = cmp;
-		op->instr = instr;
+	op->asm_index = a->count++;
+	op->index = 0;
 
-		op->cmp_arg = arg;
+	op->cmp   = cmp;
+	op->instr = instr;
 
-		op->ir_state = ir_state;
+	op->cmp_arg = arg;
+
+	if (ir_state != NULL) {
+		op->example = ir_state->example;
+		op->ret = ir_state->isend
+			? find_ret(retlist, ir_state->endids.ids, ir_state->endids.count)
+			: NULL;
 	}
 
 	return op;
 }
 
 static struct dfavm_op_ir *
-opasm_new_fetch(struct dfavm_assembler_ir *a, unsigned state, enum dfavm_op_end end,
+opasm_new_fetch(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	unsigned state, enum dfavm_op_end end,
 	const struct ir_state *ir_state)
 {
 	struct dfavm_op_ir *op;
 
-	op = opasm_new(a, VM_OP_FETCH, VM_CMP_ALWAYS, 0, ir_state);
-	if (op != NULL) {
-		op->u.fetch.state    = state;
-		op->u.fetch.end_bits = end;
+	op = opasm_new(a, retlist, VM_OP_FETCH, VM_CMP_ALWAYS, 0, ir_state);
+	if (op == NULL) {
+		return NULL;
 	}
+
+	op->u.fetch.state    = state;
+	op->u.fetch.end_bits = end;
 
 	return op;
 }
 
 static struct dfavm_op_ir *
-opasm_new_stop(struct dfavm_assembler_ir *a, enum dfavm_op_cmp cmp, unsigned char arg, enum dfavm_op_end end,
+opasm_new_stop(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	enum dfavm_op_cmp cmp, unsigned char arg, enum dfavm_op_end end,
 	const struct ir_state *ir_state)
 {
 	struct dfavm_op_ir *op;
 
-	op = opasm_new(a, VM_OP_STOP, cmp, arg, ir_state);
-	if (op != NULL) {
-		op->u.stop.end_bits = end;
+	op = opasm_new(a, retlist, VM_OP_STOP, cmp, arg, ir_state);
+	if (op == NULL) {
+		return NULL;
 	}
+
+	op->u.stop.end_bits = end;
 
 	return op;
 }
 
 static struct dfavm_op_ir *
-opasm_new_branch(struct dfavm_assembler_ir *a, enum dfavm_op_cmp cmp, unsigned char arg, uint32_t dest_state,
+opasm_new_branch(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	enum dfavm_op_cmp cmp, unsigned char arg, uint32_t dest_state,
 	const struct ir_state *ir_state)
 {
 	struct dfavm_op_ir *op;
 
 	assert(dest_state < a->nstates);
 
-	op = opasm_new(a, VM_OP_BRANCH, cmp, arg, ir_state);
-	if (op != NULL) {
-		// op->u.br.dest  = VM_DEST_FAR;  // start with all branches as 'far'
-		op->u.br.dest_state = dest_state;
+	op = opasm_new(a, retlist, VM_OP_BRANCH, cmp, arg, ir_state);
+	if (op == NULL) {
+		return NULL;
 	}
+
+	// op->u.br.dest  = VM_DEST_FAR;  // start with all branches as 'far'
+	op->u.br.dest_state = dest_state;
 
 	return op;
 }
@@ -372,7 +389,8 @@ dfavm_opasm_finalize_op(struct dfavm_assembler_ir *a)
 }
 
 static int
-cmp_mode_dests(const void *a, const void *b) {
+cmp_mode_dests(const void *a, const void *b)
+{
 	const long *va = a;
 	const long *vb = b;
 
@@ -476,7 +494,8 @@ analyze_table(struct dfa_table *table)
 }
 
 static int
-xlate_table_ranges(struct dfavm_assembler_ir *a, struct dfa_table *table, struct dfavm_op_ir **opp)
+xlate_table_ranges(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int i,lo;
 	int count = 0;
@@ -496,8 +515,8 @@ xlate_table_ranges(struct dfavm_assembler_ir *a, struct dfa_table *table, struct
 			enum dfavm_op_cmp cmp = (i > lo+1) ? VM_CMP_LE : VM_CMP_EQ;
 
 			op = (dst < 0)
-				? opasm_new_stop(a, cmp, arg, VM_END_FAIL, table->ir_state)
-				: opasm_new_branch(a, cmp, arg, dst, table->ir_state);
+				? opasm_new_stop(a, retlist, cmp, arg, VM_END_FAIL, table->ir_state)
+				: opasm_new_branch(a, retlist, cmp, arg, dst, table->ir_state);
 
 			if (op == NULL) {
 				return -1;
@@ -514,8 +533,8 @@ xlate_table_ranges(struct dfavm_assembler_ir *a, struct dfa_table *table, struct
 	if (lo < FSM_SIGMA_COUNT) {
 		int64_t dst = table->tbl[lo];
 		*opp = (dst < 0)
-			? opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL, table->ir_state)
-			: opasm_new_branch(a, VM_CMP_ALWAYS, 0, dst, table->ir_state);
+			? opasm_new_stop(a, retlist, VM_CMP_ALWAYS, 0, VM_END_FAIL, table->ir_state)
+			: opasm_new_branch(a, retlist, VM_CMP_ALWAYS, 0, dst, table->ir_state);
 		if (*opp == NULL) {
 			return -1;
 		}
@@ -527,7 +546,8 @@ xlate_table_ranges(struct dfavm_assembler_ir *a, struct dfa_table *table, struct
 }
 
 static int
-xlate_table_cases(struct dfavm_assembler_ir *a, struct dfa_table *table, struct dfavm_op_ir **opp)
+xlate_table_cases(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int i, count = 0;
 	int64_t mdst = table->mode.to;
@@ -542,8 +562,8 @@ xlate_table_cases(struct dfavm_assembler_ir *a, struct dfa_table *table, struct 
 		}
 
 		*opp = (dst < 0)
-			? opasm_new_stop(a, VM_CMP_EQ, i, VM_END_FAIL, table->ir_state)
-			: opasm_new_branch(a, VM_CMP_EQ, i, dst, table->ir_state);
+			? opasm_new_stop(a, retlist, VM_CMP_EQ, i, VM_END_FAIL, table->ir_state)
+			: opasm_new_branch(a, retlist, VM_CMP_EQ, i, dst, table->ir_state);
 		if (*opp == NULL) {
 			return -1;
 		}
@@ -552,8 +572,8 @@ xlate_table_cases(struct dfavm_assembler_ir *a, struct dfa_table *table, struct 
 	}
 
 	*opp = (mdst < 0)
-		? opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL, table->ir_state)
-		: opasm_new_branch(a, VM_CMP_ALWAYS, 0, mdst, table->ir_state);
+		? opasm_new_stop(a, retlist, VM_CMP_ALWAYS, 0, VM_END_FAIL, table->ir_state)
+		: opasm_new_branch(a, retlist, VM_CMP_ALWAYS, 0, mdst, table->ir_state);
 	if (*opp == NULL) {
 		return -1;
 	}
@@ -564,7 +584,8 @@ xlate_table_cases(struct dfavm_assembler_ir *a, struct dfa_table *table, struct 
 }
 
 static int
-initial_translate_table(struct dfavm_assembler_ir *a, struct dfa_table *table, struct dfavm_op_ir **opp)
+initial_translate_table(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	struct dfa_table *table, struct dfavm_op_ir **opp)
 {
 	int count, best_count;
 	struct dfavm_op_ir *op, *best_op;
@@ -592,13 +613,13 @@ initial_translate_table(struct dfavm_assembler_ir *a, struct dfa_table *table, s
 		assert(dst >= 0);
 		assert((size_t)dst < a->nstates);
 
-		*opp = opasm_new_stop(a, VM_CMP_NE, sym, VM_END_FAIL, table->ir_state);
+		*opp = opasm_new_stop(a, retlist, VM_CMP_NE, sym, VM_END_FAIL, table->ir_state);
 		if (*opp == NULL) {
 			return -1;
 		}
 		opp = &(*opp)->next;
 
-		*opp = opasm_new_branch(a, VM_CMP_ALWAYS, 0, dst, table->ir_state);
+		*opp = opasm_new_branch(a, retlist, VM_CMP_ALWAYS, 0, dst, table->ir_state);
 		if (*opp == NULL) {
 			return -1;
 		}
@@ -608,10 +629,10 @@ initial_translate_table(struct dfavm_assembler_ir *a, struct dfa_table *table, s
 	}
 
 	best_op = NULL;
-	best_count = xlate_table_ranges(a, table, &best_op);
+	best_count = xlate_table_ranges(a, retlist, table, &best_op);
 
 	op = NULL;
-	count = xlate_table_cases(a, table, &op);
+	count = xlate_table_cases(a, retlist, table, &op);
 
 	if (count < best_count) {
 		opasm_free_list(a,best_op);
@@ -670,7 +691,8 @@ dfa_table_init(struct dfa_table *table, long default_dest, const struct ir_state
 }
 
 static int
-initial_translate_partial(struct dfavm_assembler_ir *a, struct ir_state *st, struct dfavm_op_ir **opp)
+initial_translate_partial(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -684,11 +706,12 @@ initial_translate_partial(struct dfavm_assembler_ir *a, struct ir_state *st, str
 		group_to_table(&table, &st->u.partial.groups[i]);
 	}
 
-	return initial_translate_table(a, &table, opp);
+	return initial_translate_table(a, retlist, &table, opp);
 }
 
 static int
-initial_translate_dominant(struct dfavm_assembler_ir *a, struct ir_state *st, struct dfavm_op_ir **opp)
+initial_translate_dominant(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -702,11 +725,12 @@ initial_translate_dominant(struct dfavm_assembler_ir *a, struct ir_state *st, st
 		group_to_table(&table, &st->u.dominant.groups[i]);
 	}
 
-	return initial_translate_table(a, &table, opp);
+	return initial_translate_table(a, retlist, &table, opp);
 }
 
 static int
-initial_translate_error(struct dfavm_assembler_ir *a, struct ir_state *st, struct dfavm_op_ir **opp)
+initial_translate_error(struct dfavm_assembler_ir *a, const struct ret_list *retlist,
+	struct ir_state *st, struct dfavm_op_ir **opp)
 {
 	struct dfa_table table;
 	size_t i, ngrps;
@@ -722,11 +746,13 @@ initial_translate_error(struct dfavm_assembler_ir *a, struct ir_state *st, struc
 		group_to_table(&table, &st->u.error.groups[i]);
 	}
 
-	return initial_translate_table(a, &table, opp);
+	return initial_translate_table(a, retlist, &table, opp);
 }
 
 static struct dfavm_op_ir *
-initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir, size_t ind)
+initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir,
+	const struct ret_list *retlist,
+	size_t ind)
 {
 	struct ir_state *st;
 	struct dfavm_op_ir **opp;
@@ -735,22 +761,22 @@ initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir, size_
 	opp = &a->ops[ind];
 
 	if (st->isend && st->strategy == IR_SAME && st->u.same.to == ind) {
-		*opp = opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_SUCC, st);
+		*opp = opasm_new_stop(a, retlist, VM_CMP_ALWAYS, 0, VM_END_SUCC, st);
 		return a->ops[ind];
 	}
 
-	*opp = opasm_new_fetch(a, ind, (st->isend) ? VM_END_SUCC : VM_END_FAIL, st);
+	*opp = opasm_new_fetch(a, retlist, ind, (st->isend) ? VM_END_SUCC : VM_END_FAIL, st);
 	opp = &(*opp)->next;
 	assert(*opp == NULL);
 
 	switch (st->strategy) {
 	case IR_NONE:
-		*opp = opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL, st);
+		*opp = opasm_new_stop(a, retlist, VM_CMP_ALWAYS, 0, VM_END_FAIL, st);
 		opp = &(*opp)->next;
 		break;
 
 	case IR_SAME:
-		*opp = opasm_new_branch(a, VM_CMP_ALWAYS, 0, st->u.same.to, st);
+		*opp = opasm_new_branch(a, retlist, VM_CMP_ALWAYS, 0, st->u.same.to, st);
 		opp = &(*opp)->next;
 		break;
 
@@ -762,19 +788,19 @@ initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir, size_
 	 * intelligently.
 	 */
 	case IR_PARTIAL:
-		if (initial_translate_partial(a, st, opp) < 0) {
+		if (initial_translate_partial(a, retlist, st, opp) < 0) {
 			return NULL;
 		}
 		break;
 
 	case IR_DOMINANT:
-		if (initial_translate_dominant(a, st, opp) < 0) {
+		if (initial_translate_dominant(a, retlist, st, opp) < 0) {
 			return NULL;
 		}
 		break;
 
 	case IR_ERROR:
-		if (initial_translate_error(a, st, opp) < 0) {
+		if (initial_translate_error(a, retlist, st, opp) < 0) {
 			return NULL;
 		}
 		break;
@@ -790,20 +816,6 @@ initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir, size_
 	}
 
 	return a->ops[ind];
-}
-
-static int
-initial_translate(const struct ir *ir, struct dfavm_assembler_ir *a)
-{
-	size_t i,n;
-
-	n = a->nstates;
-
-	for (i=0; i < n; i++) {
-		a->ops[i] = initial_translate_state(a, ir, i);
-	}
-
-	return 0;
 }
 
 static void
@@ -956,7 +968,7 @@ order_basic_blocks(struct dfavm_assembler_ir *a)
 
 	/* mark all states as !in_trace */
 	for (i=0; i < n; i++) {
-		a->ops[i]->in_trace = 0;
+		a->ops[i]->in_trace = false;
 	}
 
 	opp = &a->linked;
@@ -975,7 +987,7 @@ order_basic_blocks(struct dfavm_assembler_ir *a)
 		assert(opp != NULL);
 		assert(*opp == NULL);
 
-		st->in_trace = 1;
+		st->in_trace = true;
 
 		/* look for branches to states not in the trace.
 		 * Start at the last branch and work toward the first.
@@ -1051,8 +1063,15 @@ print_all_states(struct dfavm_assembler_ir *a)
 }
 
 int
-dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, struct fsm_vm_compile_opts opts)
+dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, const struct ret_list *retlist,
+	struct fsm_vm_compile_opts opts)
 {
+	size_t i;
+
+	assert(a != NULL);
+	assert(ir != NULL);
+	assert(retlist != NULL);
+
 	a->nstates = ir->n;
 	a->start = ir->start;
 
@@ -1068,8 +1087,8 @@ dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, struct fsm_v
 		return 0;
 	}
 
-	if (initial_translate(ir, a) < 0) {
-		return 0;
+	for (i=0; i < a->nstates; i++) {
+		a->ops[i] = initial_translate_state(a, ir, retlist, i);
 	}
 
 	fixup_dests(a);
@@ -1109,7 +1128,7 @@ empty:
 		return 0;
 	}
 
-	a->ops[0] = opasm_new_stop(a, VM_CMP_ALWAYS, 0, VM_END_FAIL, NULL);
+	a->ops[0] = opasm_new_stop(a, retlist, VM_CMP_ALWAYS, 0, VM_END_FAIL, NULL);
 	if (a->ops[0] == NULL) {
 		return -1;
 	}

@@ -61,7 +61,7 @@ main(int argc, char *argv[])
 	opt.io = FSM_IO_STR;
 
 	p = argv[0];
-	fsm = re_comp(RE_PCRE, fsm_sgetc, &p, &opt, flags, &e);
+	fsm = re_comp(RE_PCRE, fsm_sgetc, &p, NULL, flags, &e);
 	if (fsm == NULL) {
 		re_perror(RE_LITERAL, &e, NULL, s);
 		return 1;
@@ -80,7 +80,7 @@ main(int argc, char *argv[])
 	printf("#include <time.h>\n");
 	printf("\n");
 
-	fsm_print_c(stdout, fsm);
+	fsm_print(stdout, fsm, &opt, NULL, FSM_PRINT_C);
 
 	printf("int\n");
 	printf("main(void)\n");

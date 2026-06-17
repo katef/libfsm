@@ -212,7 +212,6 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 		break;
 
 	case AST_EXPR_SUBTRACT:
-		assert(!"unimplemented");
 		pp_atomic(f, opt, re_flags, n->u.subtract.a, n);
 		fprintf(f, " - ");
 		pp_atomic(f, opt, re_flags, n->u.subtract.b, n);

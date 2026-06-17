@@ -4,6 +4,7 @@ SRC += src/libfsm/vm/ir.c
 SRC += src/libfsm/vm/vm.c
 SRC += src/libfsm/vm/v1.c
 SRC += src/libfsm/vm/v2.c
+SRC += src/libfsm/vm/retlist.c
 
 .for src in ${SRC:Msrc/libfsm/vm/*.c}
 CFLAGS.${src} += -I src # XXX: for internal.h

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <assert.h>
 
 #include <fsm/fsm.h>
@@ -325,7 +326,7 @@ remove_state(struct ast_expr_pool **poolp, struct rese *state)
 					return 0;
 				}
 				rep = ast_make_expr_repeat(poolp, 0, tmp,
-					ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL));
+					ast_make_count(0, AST_COUNT_UNBOUNDED));
 				if (!rep) {
 					ast_expr_free(*poolp, tmp);
 					ast_expr_free(*poolp, cat);
@@ -453,7 +454,8 @@ ast_expr_new_from_fsm(struct ast_expr_pool **poolp, const struct fsm *fsm)
 		}
 
 		rep = ast_make_expr_repeat(
-			poolp, 0, restart->expr, ast_make_count(0, NULL, AST_COUNT_UNBOUNDED, NULL));
+			poolp, 0, restart->expr,
+				ast_make_count(0, AST_COUNT_UNBOUNDED));
 		if (!rep) {
 			ast_expr_free(*poolp, cat);
 			free_restates(*poolp, restates, numstates + 1);

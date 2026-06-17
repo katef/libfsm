@@ -12,11 +12,11 @@ RE=${BUILD}/bin/re
 .for n in ${TEST.tests/pcre-repeat:T:Mout*.fsm:R:C/^out//}
 
 ${TEST_OUTDIR.tests/pcre-repeat}/got${n}.fsm: ${TEST_SRCDIR.tests/pcre-repeat}/in${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-repeat}/nfa${n}.fsm: ${TEST_SRCDIR.tests/pcre-repeat}/in${n}.re
-	${RE} -r pcre -n -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r pcre -n -py ${.ALLSRC:M*.re} \
 	> $@
 
 ${TEST_OUTDIR.tests/pcre-repeat}/res${n}: \
@@ -30,7 +30,7 @@ FSMTEST_RESULT += ${TEST_OUTDIR.tests/pcre-repeat}/res${n}
 .for n in ${TEST.tests/pcre-repeat:T:Mout*.err:R:C/^out//}
 
 ${TEST_OUTDIR.tests/pcre-repeat}/got${n}.err: ${TEST_SRCDIR.tests/pcre-repeat}/in${n}.re
-	${RE} -r pcre -py ${.ALLSRC:M*.re} \
+	${RE} -FC -r pcre -py ${.ALLSRC:M*.re} \
 	2> $@; [ $$? -ne 0 ]
 
 ${TEST_OUTDIR.tests/pcre-repeat}/res${n}: \

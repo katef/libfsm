@@ -7,7 +7,6 @@
 #ifndef RE_LITERAL_H
 #define RE_LITERAL_H
 
-struct fsm_options;
 struct re_err;
 
 enum re_literal_category {
@@ -20,7 +19,6 @@ enum re_literal_category {
 
 int
 re_is_literal(enum re_dialect dialect, int (*getc)(void *opaque), void *opaque,
-	const struct fsm_options *opt,
 	enum re_flags flags, struct re_err *err,
 	enum re_literal_category *category, char **s, size_t *n);
 

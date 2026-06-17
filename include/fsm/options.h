@@ -7,17 +7,46 @@
 #ifndef FSM_OPTIONS_H
 #define FSM_OPTIONS_H
 
-#include <stdio.h>
-
-struct fsm;
-struct fsm_state;
-
 enum fsm_io {
 	FSM_IO_GETC,
 	FSM_IO_STR,
 	FSM_IO_PAIR
 };
 
+/*
+ * Ambiguity mode. 
+ *
+ * The ambiguity mode controls how endids are emitted into generated code,
+ * and passed to the hooks.accept() callback for an accepting state.
+ *
+ * This also causes fsm_print() to resolve endid conflicts in various ways
+ * for accepting states that have multiple endids present:
+ *
+ *   AMBIG_NONE     - Do not emit endids.
+ *   AMBIG_ERROR    - Emit a single endid.
+ *                    hook.conflict() is called for accepting states
+ *                    which have multiple endids, and printing errors.
+ *   AMBIG_EARLIEST - Emit the lowest numbered endid only.
+ *   AMBIG_MULTIPLE - Emit all endids.
+ *
+ * What it means to emit multiple or single endids is particular to each
+ * output language; not every language supports both.
+ */
+enum fsm_ambig {
+	AMBIG_NONE     = 0, /* default */
+	AMBIG_ERROR    = 1 << 0,
+	AMBIG_EARLIEST = 1 << 1,
+	AMBIG_MULTIPLE = 1 << 2,
+
+	AMBIG_SINGLE   = AMBIG_ERROR | AMBIG_EARLIEST,
+	AMBIG_ANY      = ~0
+};
+
+/*
+ * Print options.
+ *
+ * This is separate to <fsm/print.h> because we also borrow it for libre.
+ */
 struct fsm_options {
 	/* boolean: true indicates to omit names for states in output */
 	unsigned int anonymous_states:1;
@@ -52,30 +81,17 @@ struct fsm_options {
 	 */
 	unsigned int group_edges:1;
 
-	/* for generated code, what kind of I/O API to generate */
-	enum fsm_io io;
-
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 
 	/* the name of the enclosing package; NULL to use `prefix` (default). */
 	const char *package_prefix;
 
-	/* character pointer, for C code fragment output. NULL for the default. */
-	const char *cp;
+	/* for generated code, what kind of I/O API to generate */
+	enum fsm_io io;
 
-	/* TODO: explain. for C code fragment output */
-	int (*leaf)(FILE *, const struct fsm_end_ids *ids,
-	    const void *leaf_opaque);
-	void *leaf_opaque;
-
-	/* TODO: explain. for C code fragment output */
-	int (*endleaf)(FILE *, const struct fsm_end_ids *ids,
-	    const void *endleaf_opaque);
-	void *endleaf_opaque;
-
-	/* custom allocation functions */
-	const struct fsm_alloc *alloc;
+	/* for generated code, how to handle multiple endids on an accepting state */
+	enum fsm_ambig ambig;
 };
 
 #endif

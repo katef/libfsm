@@ -18,6 +18,7 @@
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
+#include <fsm/capture.h>
 #include <fsm/pred.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
@@ -30,12 +31,13 @@
 
 #include <print/esc.h>
 
+#include <adt/xalloc.h>
+
 #include "libfsm/internal.h" /* XXX */
-#include "libre/print.h" /* XXX */
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 #include "libre/ast_new_from_fsm.h" /* XXX */
-
+#include "libre/print.h" /* XXX */
 
 #define DEBUG_ESCAPES     0
 #define DEBUG_VM_FSM      0
@@ -48,20 +50,25 @@
  * TODO: flags; -r for RE_REVERSE, etc
  */
 
+static int
+exec_with_captures(struct fsm *fsm,
+	int (*fsm_getc)(void *opaque), void *opaque, fsm_state_t *end);
+
 struct match {
 	fsm_end_id_t i;
 	const char *s;
 	struct match *next;
 };
 
-static struct fsm_options opt;
+static char *const *matchv;
+static size_t matchc;
 
 static void
 usage(void)
 {
 	fprintf(stderr, "usage: re    [-r <dialect>] [-nbiusfyz] [-x] <re> ... [ <text> | -- <text> ... ]\n");
 	fprintf(stderr, "       re    [-r <dialect>] [-nbiusfyz] {-q <query>} <re> ...\n");
-	fprintf(stderr, "       re -p [-r <dialect>] [-nbiusfyz] [-l <language>] [-acwX] [-k <io>] [-e <prefix>] <re> ...\n");
+	fprintf(stderr, "       re -p [-r <dialect>] [-nbiusfyz] [-l <language>] [-acwX] [-k <io>] [-E <package_prefix>] [-e <prefix>] <re> ...\n");
 	fprintf(stderr, "       re -m [-r <dialect>] [-nbiusfyz] <re> ...\n");
 	fprintf(stderr, "       re -G <max_length> [-r <dialect>] [-biu] <re>\n");
 	fprintf(stderr, "       re -h\n");
@@ -100,59 +107,74 @@ io(const char *name)
 	exit(EXIT_FAILURE);
 }
 
+/* TODO: centralise */
 static void
-print_name(const char *name,
-	fsm_print **print_fsm, ast_print **print_ast)
+lang_name(const char *name, enum fsm_print_lang *fsm_lang, enum ast_print_lang *ast_lang)
 {
 	size_t i;
 
-	struct {
+	const struct {
 		const char *name;
-		fsm_print *print_fsm;
-		ast_print *print_ast;
+		enum fsm_print_lang lang;
 	} a[] = {
-		{ "api",    fsm_print_api,    NULL },
-		{ "awk",    fsm_print_awk,    NULL },
-		{ "c",      fsm_print_c,      NULL },
-		{ "dot",    fsm_print_dot,    NULL },
-		{ "fsm",    fsm_print_fsm,    NULL },
-		{ "ir",     fsm_print_ir,     NULL },
-		{ "irjson", fsm_print_irjson, NULL },
-		{ "json",   fsm_print_json,   NULL },
-		{ "vmc",    fsm_print_vmc,    NULL },
-		{ "vmdot",  fsm_print_vmdot,  NULL },
-		{ "rust",   fsm_print_rust,   NULL },
-		{ "sh",     fsm_print_sh,     NULL },
-		{ "go",     fsm_print_go,     NULL },
+		{ "amd64",      FSM_PRINT_AMD64_NASM },
+		{ "amd64_att",  FSM_PRINT_AMD64_ATT  },
+		{ "amd64_go",   FSM_PRINT_AMD64_GO   },
+		{ "amd64_nasm", FSM_PRINT_AMD64_NASM },
 
-		{ "vmops_c",    fsm_print_vmops_c,    NULL },
-		{ "vmops_h",    fsm_print_vmops_h,    NULL },
-		{ "vmops_main", fsm_print_vmops_main, NULL },
+		{ "api",        FSM_PRINT_API        },
+		{ "awk",        FSM_PRINT_AWK        },
+		{ "c",          FSM_PRINT_C          },
+		{ "dot",        FSM_PRINT_DOT        },
+		{ "fsm",        FSM_PRINT_FSM        },
+		{ "go",         FSM_PRINT_GO         },
+		{ "ir",         FSM_PRINT_IR         },
+		{ "irjson",     FSM_PRINT_IRJSON     },
+		{ "json",       FSM_PRINT_JSON       },
+		{ "llvm",       FSM_PRINT_LLVM       },
+		{ "rust",       FSM_PRINT_RUST       },
+		{ "sh",         FSM_PRINT_SH         },
+		{ "vmc",        FSM_PRINT_VMC        },
 
-		{ "amd64",      fsm_print_vmasm,            NULL },
-		{ "amd64_att",  fsm_print_vmasm_amd64_att,  NULL },
-		{ "amd64_nasm", fsm_print_vmasm_amd64_nasm, NULL },
-		{ "amd64_go",   fsm_print_vmasm_amd64_go,   NULL },
+		{ "vmdot",      FSM_PRINT_VMDOT      },
+		{ "vmops_c",    FSM_PRINT_VMOPS_C    },
+		{ "vmops_h",    FSM_PRINT_VMOPS_H    },
+		{ "vmops_main", FSM_PRINT_VMOPS_MAIN }
+	};
 
-		{ "tree",   NULL, ast_print_tree },
-		{ "abnf",   NULL, ast_print_abnf },
-		{ "ast",    NULL, ast_print_dot  },
-		{ "pcre",   NULL, ast_print_pcre }
+	const struct {
+		const char *name;
+		enum ast_print_lang lang;
+	} b[] = {
+		{ "abnf",       AST_PRINT_ABNF       },
+		{ "ast",        AST_PRINT_DOT        },
+		{ "pcre",       AST_PRINT_PCRE       },
+		{ "tree",       AST_PRINT_TREE       }
 	};
 
 	assert(name != NULL);
-	assert(print_fsm != NULL);
-	assert(print_ast != NULL);
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(a[i].name, name)) {
-			*print_fsm = a[i].print_fsm;
-			*print_ast = a[i].print_ast;
+			*fsm_lang = a[i].lang;
+			return;
+		}
+	}
+
+	for (i = 0; i < sizeof b / sizeof *b; i++) {
+		if (0 == strcmp(b[i].name, name)) {
+			*ast_lang = b[i].lang;
 			return;
 		}
 	}
 
 	fprintf(stderr, "unrecognised output language; valid languages are: ");
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		fprintf(stderr, "%s%s",
+			a[i].name,
+			", ");
+	}
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		fprintf(stderr, "%s%s",
@@ -261,140 +283,6 @@ xopen(const char *s)
 	return f;
 }
 
-struct matches_list {
-	struct matches_list *next;
-	struct match *head;
-};
-
-static struct matches_list *all_matches = NULL;
-
-static struct match *
-find_match_with_id(fsm_end_id_t id)
-{
-	struct matches_list *res = all_matches;
-	while (res != NULL) {
-		struct match *m = res->head;
-		if (m->i == id) {
-			return m;
-		}
-		res = res->next;
-	}
-	return NULL;
-}
-
-static struct match *
-find_first_match_for_end_state(const struct fsm *dfa, fsm_state_t s)
-{
-#define MAX_END_IDS 8		/* FIXME: what is reasonable here? */
-	fsm_end_id_t end_id_buf[MAX_END_IDS];
-	size_t end_ids_written;
-	enum fsm_getendids_res res;
-
-	if (!fsm_isend(dfa, s)) {
-		return NULL;
-	}
-
-	res = fsm_getendids(dfa, s, MAX_END_IDS,
-	    end_id_buf, &end_ids_written);
-	if (res == FSM_GETENDIDS_ERROR_INSUFFICIENT_SPACE) {
-		fprintf(stderr, "Error: Multiple end IDs\n");
-		return NULL;
-	} else if (res == FSM_GETENDIDS_NOT_FOUND) {
-		return NULL;
-	} else {
-		assert(res == FSM_GETENDIDS_FOUND);
-		/* continues below */
-	}
-
-	return find_match_with_id(end_id_buf[0]);
-}
-
-static struct match *
-addmatch(struct match **head, int i, const char *s)
-{
-	struct match *new;
-
-	assert(head != NULL);
-	assert(s != NULL);
-
-	if ((1U << i) > INT_MAX) {
-		fprintf(stderr, "Too many patterns for int bitmap\n");
-		exit(EXIT_FAILURE);
-	}
-
-	/* TODO: explain we find duplicate; return success */
-	/*
-	 * This is a purposefully shallow comparison (rather than calling strcmp)
-	 * so that 're xyz xyz' will find the ambiguity.
-	 */
-	{
-		struct match *p;
-
-		for (p = *head; p != NULL; p = p->next) {
-			if (p->s == s) {
-				return p;
-			}
-		}
-	}
-
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		return NULL;
-	}
-
-	new->i = i;
-	new->s = s;
-
-	new->next = *head;
-	*head     = new;
-
-	return new;
-}
-
-static void
-add_matches_list(struct match *head)
-{
-	struct matches_list *new;
-
-	if (head == NULL) {
-		return;
-	}
-
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		perror("allocating matches list");
-		abort();
-	}
-
-	new->next = all_matches;
-	new->head = head;
-	all_matches = new;
-}
-
-static void
-free_all_matches(void)
-{
-	struct matches_list *clst;
-	struct matches_list *nlst;
-
-	for (clst = all_matches; clst != NULL; clst = nlst) {
-		struct match *curr;
-		struct match *next;
-
-		nlst = clst->next;
-
-		for (curr = clst->head; curr != NULL; curr = next) {
-			next = curr->next;
-
-			free(curr);
-		}
-
-		free(clst);
-	}
-
-	all_matches = NULL;
-}
-
 static void
 printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
 {
@@ -416,39 +304,68 @@ printexample(FILE *f, const struct fsm *fsm, fsm_state_t state)
 }
 
 static int
-endleaf_c(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
+conflict(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata, const char *example,
+	void *hook_opaque)
 {
-	const struct match *m;
-	int n;
-	size_t i, end_ids_count;
+	size_t i;
 
-	assert(endleaf_opaque == NULL);
+	assert(opt != NULL);
+	assert(opt->ambig == AMBIG_ERROR);
+	assert(state_metadata->end_id_count > 1);
 
 	(void) f;
-	(void) endleaf_opaque;
+	(void) opt;
+	(void) hook_opaque;
 
-	n = 0;
+	/* TODO: // delimeters depend on dialect */
+	/* TODO: would deal with dialect: prefix here, too */
 
-	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
+	fprintf(stderr, "ambiguous matches for ");
 
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			n |= 1 << m->i;
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
+
+		/* TODO: print nicely */
+		fprintf(stderr, "/%s/", matchv[state_metadata->end_ids[i]]);
+
+		if (i + 1 < state_metadata->end_id_count) {
+			fprintf(stderr, ", ");
 		}
 	}
 
-	fprintf(f, "return %#x;", (unsigned) n);
+	if (example != NULL) {
+		/* TODO: escape hex etc. or perhaps make_ir() did that for us */
+		fprintf(stderr, "; for example on input '%s'", example);
+	}
 
-	fprintf(f, " /* ");
+	fprintf(stderr, "\n");
 
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+	return 0;
+}
 
-			if (m->next != NULL || i < end_ids_count - 1) {
-				fprintf(f, ", ");
-			}
+static int
+comment_c(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *hook_opaque)
+{
+	size_t i;
+
+	assert(opt != NULL);
+	assert(hook_opaque == NULL);
+
+	(void) opt;
+	(void) hook_opaque;
+
+	fprintf(f, "/* ");
+
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
+
+		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
+
+		if (i + 1 < state_metadata->end_id_count) {
+			fprintf(f, ", ");
 		}
 	}
 
@@ -458,127 +375,87 @@ endleaf_c(FILE *f, const struct fsm_end_ids *end_ids,
 }
 
 static int
-endleaf_rust(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
+comment_rust(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *hook_opaque)
 {
-	const struct match *m;
-	int n;
-	size_t i, end_ids_count;
+	size_t i;
 
-	assert(endleaf_opaque == NULL);
+	assert(opt != NULL);
+	assert(hook_opaque == NULL);
 
-	(void) f;
-	(void) endleaf_opaque;
+	(void) opt;
+	(void) hook_opaque;
 
-	n = 0;
+	fprintf(f, "// ");
 
-	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
 
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			n |= 1 << m->i;
+		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
+
+		if (i + 1 < state_metadata->end_id_count) {
+			fprintf(f, ", ");
 		}
 	}
 
-	fprintf(f, "return Some(%#x)", (unsigned) n);
+	return 0;
+}
 
-	fprintf(f, " /* ");
+static int
+comment_llvm(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *hook_opaque)
+{
+	size_t i;
 
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
+	assert(opt != NULL);
+	assert(hook_opaque == NULL);
 
-			if (m->next != NULL || i < end_ids_count - 1) {
-				fprintf(f, ", ");
-			}
+	(void) opt;
+	(void) hook_opaque;
+
+	fprintf(f, "; ");
+
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
+
+		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
+
+		if (i + 1 < state_metadata->end_id_count) {
+			fprintf(f, ", ");
+		}
+	}
+
+	return 0;
+}
+
+static int
+comment_dot(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *hook_opaque)
+{
+	size_t i;
+
+	assert(opt != NULL);
+	assert(hook_opaque == NULL);
+
+	(void) opt;
+	(void) hook_opaque;
+
+	fprintf(f, "/* ");
+
+	for (i = 0; i < state_metadata->end_id_count; i++) {
+		assert(state_metadata->end_ids[i] < matchc);
+
+		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
+
+		if (i + 1 < state_metadata->end_id_count) {
+			fprintf(f, ", ");
 		}
 	}
 
 	fprintf(f, " */");
-
-	return 0;
-}
-
-static int
-endleaf_dot(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
-{
-	const struct match *m;
-	size_t i, end_ids_count;
-
-	assert(f != NULL);
-	assert(endleaf_opaque == NULL);
-
-	(void) endleaf_opaque;
-
-	fprintf(f, "label = <");
-
-	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
-
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			fprintf(f, "#%u", m->i);
-
-			if (m->next != NULL || i < end_ids_count - 1) {
-				fprintf(f, ",");
-			}
-		}
-	}
-
-	fprintf(f, ">");
-
-	/* TODO: only if comments */
-	/* TODO: centralise to libfsm/print/dot.c */
-
-#if 0
-	fprintf(f, " # ");
-
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			fprintf(f, "\"%s\"", m->s); /* XXX: escape string (and comment) */
-
-			if (m->next != NULL || i < end_ids_count - 1) {
-				fprintf(f, ", ");
-			}
-		}
-	}
-
-	fprintf(f, "\n");
-#endif
-
-	return 0;
-}
-
-static int
-endleaf_json(FILE *f, const struct fsm_end_ids *end_ids,
-    const void *endleaf_opaque)
-{
-	const struct match *m;
-	size_t i, end_ids_count;
-
-	assert(f != NULL);
-	assert(endleaf_opaque == NULL);
-
-	(void) endleaf_opaque;
-
-	fprintf(f, "[ ");
-
-	end_ids_count = (end_ids == NULL ? 0 : end_ids->count);
-
-	for (i = 0; i < end_ids_count; i++) {
-		for (m = find_match_with_id(end_ids->ids[i]); m != NULL; m = m->next) {
-			fprintf(f, "%u", m->i);
-
-			if (m->next != NULL) {
-				fprintf(f, ", ");
-			}
-		}
-	}
-
-	fprintf(f, " ]");
-
-	/* TODO: only if comments */
-	/* TODO: centralise to libfsm/print/json.c */
 
 	return 0;
 }
@@ -592,8 +469,6 @@ do_fsm_cleanup(void)
 		fsm_free(fsm_to_cleanup);
 		fsm_to_cleanup = NULL;
 	}
-
-	free_all_matches();
 }
 
 static void
@@ -601,6 +476,10 @@ parse_flags(const char *arg, enum re_flags *flags)
 {
 	for (; *arg; arg++) {
 		switch (*arg) {
+		case 'b':
+			*flags = *flags | RE_ANCHORED;
+			break;
+
 		case 'i':
 			*flags = *flags | RE_ICASE;
 			break;
@@ -611,6 +490,10 @@ parse_flags(const char *arg, enum re_flags *flags)
 
 		case 'x':
 			*flags = *flags | RE_EXTENDED;
+			break;
+
+		case 'C':
+			*flags = *flags | RE_NOCAPTURE;
 			break;
 
 		/* others? */
@@ -626,32 +509,44 @@ parse_flags(const char *arg, enum re_flags *flags)
 int
 main(int argc, char *argv[])
 {
+	static const struct fsm_options zero_options;
+	static const struct fsm_hooks zero_hooks;
+
+	/* TODO: use alloc hooks for -Q accounting */
+	struct fsm_alloc *alloc = NULL;
+	struct fsm_options opt;
+	struct fsm_hooks hooks;
+
+	struct fsm *fsm;
 	struct fsm *(*join)(struct fsm *, struct fsm *,
 	    struct fsm_combine_info *);
 	int (*query)(const struct fsm *, const struct fsm *);
-	fsm_print *print_fsm;
-	ast_print *print_ast;
+	enum fsm_print_lang fsm_lang;
+	enum ast_print_lang ast_lang;
 	enum re_dialect dialect;
-	struct fsm *fsm;
 	enum re_flags flags;
+	size_t generate_bounds = 0;
 	int xfiles, yfiles;
 	int fsmfiles;
 	int example;
 	int isliteral;
 	int keep_nfa;
 	int patterns;
-	int ambig;
 	int makevm;
-	size_t generate_bounds = 0;
+	int resolve_captures;
 
 	struct fsm_dfavm *vm;
 
 	atexit(do_fsm_cleanup);
 
+	opt = zero_options;
+	hooks = zero_hooks;
+
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
 	opt.consolidate_edges = 1;
 
+	opt.ambig             = AMBIG_ERROR;
 	opt.comments          = 1;
 	opt.io                = FSM_IO_GETC;
 
@@ -663,10 +558,13 @@ main(int argc, char *argv[])
 	isliteral = 0;
 	keep_nfa  = 0;
 	patterns  = 0;
-	ambig     = 0;
 	makevm    = 0;
-	print_fsm = NULL;
-	print_ast = NULL;
+
+	resolve_captures = 0;
+
+	fsm_lang  = FSM_PRINT_NONE;
+	ast_lang  = AST_PRINT_NONE;
+
 	query     = NULL;
 	join      = fsm_union;
 	dialect   = RE_NATIVE;
@@ -675,7 +573,7 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "acCwXe:E:G:k:" "bi" "sq:r:l:F:" "upMmnftxyz"), c != -1) {
+		while (c = getopt(argc, argv, "h" "acCwXe:E:G:k:" "bi" "sq:r:l:F:" "upMmnRftxyz"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 0;          break;
 			case 'c': opt.consolidate_edges = 0;          break;
@@ -694,18 +592,18 @@ main(int argc, char *argv[])
 				break;
 
 			case 'l':
-				print_name(optarg, &print_fsm, &print_ast);
+				lang_name(optarg, &fsm_lang, &ast_lang);
 				break;
 
 			case 'F':
 				parse_flags(optarg, &flags);
 				break;
 
-			case 'p': print_fsm = fsm_print_fsm;        break;
+			case 'p': fsm_lang  = FSM_PRINT_FSM;        break;
 			case 'q': query     = comparison(optarg);   break;
 			case 'r': dialect   = dialect_name(optarg); break;
+			case 'u': opt.ambig = AMBIG_MULTIPLE;       break;
 
-			case 'u': ambig     = 1; break;
 			case 'f': fsmfiles  = 1; break;
 			case 'x': xfiles    = 1; break;
 			case 'y': yfiles    = 1; break;
@@ -714,6 +612,7 @@ main(int argc, char *argv[])
 			case 't': isliteral = 1; break;
 			case 'z': patterns  = 1; break;
 			case 'M': makevm    = 1; break;
+			case 'R': resolve_captures = 1; break;
 
 			case 'G':
 				generate_bounds = strtoul(optarg, NULL, 10);
@@ -743,12 +642,12 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (!!print_fsm + !!print_ast + example + isliteral + !!query > 1) {
+	if ((fsm_lang != FSM_PRINT_NONE) + (ast_lang != AST_PRINT_NONE) + example + isliteral + !!query > 1) {
 		fprintf(stderr, "-m, -p, -q and -t are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
 
-	if (!!print_fsm + !!print_ast + example + isliteral + !!query && xfiles) {
+	if ((fsm_lang != FSM_PRINT_NONE) + (ast_lang != AST_PRINT_NONE) + example + isliteral + !!query && xfiles) {
 		fprintf(stderr, "-x applies only when executing\n");
 		return EXIT_FAILURE;
 	}
@@ -773,12 +672,12 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if (print_fsm == NULL) {
+	if (fsm_lang == FSM_PRINT_NONE) {
 		keep_nfa = 0;
 	}
 
 	if (keep_nfa) {
-		ambig = 1;
+		opt.ambig = AMBIG_MULTIPLE;
 	}
 
 	/* XXX: repetitive */
@@ -807,9 +706,8 @@ main(int argc, char *argv[])
 
 			literal_r =
 			re_is_literal(dialect, fsm_fgetc, f,
-				&opt, flags, &err,
+				flags, &err,
 				&literal_category, &literal_s, &literal_n);
-
 			fclose(f);
 		} else {
 			const char *s;
@@ -818,7 +716,7 @@ main(int argc, char *argv[])
 
 			literal_r =
 			re_is_literal(dialect, fsm_sgetc, &s,
-				&opt, flags, &err,
+				flags, &err,
 				&literal_category, &literal_s, &literal_n);
 		}
 
@@ -866,7 +764,7 @@ main(int argc, char *argv[])
 	}
 
 	/* XXX: repetitive */
-	if (print_ast != NULL) {
+	if (ast_lang != AST_PRINT_NONE) {
 		struct ast *ast;
 		struct re_err err;
 
@@ -881,11 +779,11 @@ main(int argc, char *argv[])
 			f = xopen(argv[0]);
 
 			if (!fsmfiles) {
-				ast = re_parse(dialect, fsm_fgetc, f, &opt, flags, &err, NULL);
+				ast = re_parse(dialect, fsm_fgetc, f, flags, &err, NULL);
 			} else {
 				struct fsm *fsm;
 
-				fsm = fsm_parse(f, &opt);
+				fsm = fsm_parse(f, alloc);
 				if (fsm == NULL) {
 					perror("fsm_parse");
 					return EXIT_FAILURE;
@@ -907,7 +805,7 @@ main(int argc, char *argv[])
 
 			s = argv[0];
 
-			ast = re_parse(dialect, fsm_sgetc, &s, &opt, flags, &err, NULL);
+			ast = re_parse(dialect, fsm_sgetc, &s, flags, &err, NULL);
 		}
 
 		if (ast == NULL) {
@@ -922,7 +820,7 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		print_ast(stdout, &opt, flags, ast);
+		ast_print(stdout, ast, &opt, flags, ast_lang);
 
 		ast_free(ast);
 
@@ -931,7 +829,7 @@ main(int argc, char *argv[])
 
 	flags |= RE_MULTI;
 
-	fsm = fsm_new(&opt);
+	fsm = fsm_new(alloc);
 	if (fsm == NULL) {
 		perror("fsm_new");
 		return EXIT_FAILURE;
@@ -942,7 +840,7 @@ main(int argc, char *argv[])
 	{
 		int i;
 
-		for (i = 0; i < argc - !(print_fsm || example || isliteral || !!query || argc <= 1); i++) {
+		for (i = 0; i < argc - !(fsm_lang != FSM_PRINT_NONE || example || isliteral || !!query || argc <= 1); i++) {
 			struct re_err err;
 			struct fsm *new, *q;
 
@@ -961,9 +859,9 @@ main(int argc, char *argv[])
 				f = xopen(argv[i]);
 
 				if (!fsmfiles) {
-					new = re_comp(dialect, fsm_fgetc, f, &opt, flags, &err);
+					new = re_comp(dialect, fsm_fgetc, f, alloc, flags, &err);
 				} else {
-					new = fsm_parse(f, &opt);
+					new = fsm_parse(f, alloc);
 					if (new == NULL) {
 						perror("fsm_parse");
 						return EXIT_FAILURE;
@@ -976,7 +874,7 @@ main(int argc, char *argv[])
 
 				s = argv[i];
 
-				new = re_comp(dialect, fsm_sgetc, &s, &opt, flags, &err);
+				new = re_comp(dialect, fsm_sgetc, &s, alloc, flags, &err);
 			}
 
 			if (new == NULL) {
@@ -1002,26 +900,13 @@ main(int argc, char *argv[])
 				}
 			}
 
-			{
-				struct match *matches = NULL;
-
-				/*
-				 * Attach this mapping to each end state for this regexp.
-				 * XXX: we should share the same matches struct for all end states
-				 * in the same regexp, and keep an argc-sized array of pointers to free().
-				 */
-				if (!fsm_setendid(new, i)) {
-					perror("fsm_setendid");
-					return EXIT_FAILURE;
-				}
-
-				if (!addmatch(&matches, i, argv[i])) {
-					perror("addmatch");
-					return EXIT_FAILURE;
-				}
-
-				add_matches_list(matches);
-
+			/*
+			 * Attach this mapping to each end state for this regexp.
+			 * We pick this up from matchv[] indexed by the end id.
+			 */
+			if (!fsm_setendid(new, i)) {
+				perror("fsm_setendid");
+				return EXIT_FAILURE;
 			}
 
 			/* TODO: implement concatenating patterns for -s in conjunction with -z.
@@ -1060,6 +945,9 @@ main(int argc, char *argv[])
 			}
 		}
 
+		matchv = argv;
+		matchc = i;
+
 		argc -= i;
 		argv += i;
 	}
@@ -1068,14 +956,16 @@ main(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
-	if ((print_fsm || example) && argc > 0) {
+	if ((fsm_lang != FSM_PRINT_NONE || example) && argc > 0) {
 		fprintf(stderr, "too many arguments\n");
 		return EXIT_FAILURE;
 	}
 
-	if (!ambig) {
+	hooks.conflict = conflict;
+
+	if ((opt.ambig | AMBIG_SINGLE)) {
 		struct fsm *dfa;
-		size_t s;
+		int r;
 
 		dfa = fsm_clone(fsm);
 		if (dfa == NULL) {
@@ -1083,60 +973,43 @@ main(int argc, char *argv[])
 			return EXIT_FAILURE;
 		}
 
-		{
-			if (!fsm_determinise(dfa)) {
-				perror("fsm_determinise");
-				return EXIT_FAILURE;
-			}
+		if (!fsm_determinise(dfa)) {
+			perror("fsm_determinise");
+			return EXIT_FAILURE;
 		}
 
-		for (s = 0; s < dfa->statecount; s++) {
-			const struct match *matches;
-			matches = find_first_match_for_end_state(dfa, s);
-			if (matches == NULL) {
-				continue;
-			}
-
-			assert(matches != NULL);
-			if (matches->next != NULL) {
-				const struct match *m;
-
-				/* TODO: // delimeters depend on dialect */
-				/* TODO: would deal with dialect: prefix here, too */
-
-				fprintf(stderr, "ambiguous matches for ");
-				for (m = matches; m != NULL; m = m->next) {
-					/* TODO: print nicely */
-					fprintf(stderr, "/%s/", m->s);
-					if (m->next != NULL) {
-						fprintf(stderr, ", ");
-					}
-				}
-
-				fprintf(stderr, "; for example on input '");
-				printexample(stderr, dfa, s);
-				fprintf(stderr, "'\n");
-
-				/* TODO: consider different error codes */
-				return EXIT_FAILURE;
-			}
-		}
-
-		/* TODO: free opaques */
+		/*
+		 * This is silly, we're doing this just to find conflicts,
+		 * because otherwise we won't find them during print,
+		 * because in re(1) we don't always print.
+		 *
+		 * I don't like that we have two places where we call fsm_print().
+		 */
+		// XXX: stdout is a non-NULL placeholder, would prefer f=NULL because FSM_PRINT_NONE
+		r = fsm_print(stdout, dfa, &opt, &hooks, FSM_PRINT_NONE);
 
 		fsm_free(dfa);
+
+		if (r < 0) {
+			exit(EXIT_FAILURE);
+		}
+
+		if (r == 1) {
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (!keep_nfa) {
 		/*
 		 * Convert to a DFA, then minimise unless we need to keep the end
 		 * state information separated per regexp. */
+// TODO: redundant wrt above
 		if (!fsm_determinise(fsm)) {
 			perror("fsm_determinise");
 			return EXIT_FAILURE;
 		}
 
-		if (!patterns && example && print_fsm != fsm_print_c) {
+		if (!patterns && example && fsm_lang != FSM_PRINT_C) {
 			if (!fsm_minimise(fsm)) {
 				perror("fsm_minimise");
 				return EXIT_FAILURE;
@@ -1158,19 +1031,30 @@ main(int argc, char *argv[])
 
 			/* TODO: would deal with dialect: prefix here, too */
 			if (patterns) {
-				const struct match *m;
-				m = find_first_match_for_end_state(fsm, s);
+			    fsm_end_id_t *ids;
+			    size_t count, i;
 
-				while (m != NULL) {
-					/* TODO: print nicely */
-					printf("/%s/", m->s);
-					if (m->next != NULL) {
-						printf(", ");
-					}
-					m = m->next;
+			    count = fsm_endid_count(fsm, s);
+			    if (count > 0) {
+				int res;
+
+				ids = xmalloc(count * sizeof *ids);
+
+				res = fsm_endid_get(fsm, s, count, ids);
+				assert(res == 1);
+
+				for (i = 0; i < count; i++) {
+				    /* TODO: print nicely */
+				    printf("/%s/", matchv[ids[i]]);
+				    if (i + 1 < count) {
+					    printf(", ");
+				    }
 				}
 
-				printf(": ");
+				free(ids);
+			    }
+
+			    printf(": ");
 			}
 
 			printexample(stdout, fsm, s);
@@ -1183,28 +1067,49 @@ main(int argc, char *argv[])
 	}
 
 	if (generate_bounds > 0) {
-		return fsm_generate_matches(fsm, generate_bounds, fsm_generate_cb_printf_escaped, &opt);
-	}
-
-	if (print_fsm != NULL) {
-		/* TODO: print examples in comments for end states;
-		 * patterns in comments for the whole FSM */
-
-		if (print_fsm == fsm_print_c || print_fsm == fsm_print_vmc) {
-			opt.endleaf = endleaf_c;
-		} else if (print_fsm == fsm_print_rust) {
-			opt.endleaf = endleaf_rust;
-		} else if (print_fsm == fsm_print_dot || print_fsm == fsm_print_vmdot) {
-			opt.endleaf = patterns ? endleaf_dot : NULL;
-		} else if (print_fsm == fsm_print_json) {
-			opt.endleaf = patterns ? endleaf_json : NULL;
+		if (!fsm_generate_matches(fsm, generate_bounds, 0, fsm_generate_cb_printf_escaped, &opt)) {
+			exit(EXIT_FAILURE);
 		}
 
-		if (-1 == print_fsm(stdout, fsm)) {
+		return 0;
+	}
+
+	if (fsm_lang != FSM_PRINT_NONE) {
+		switch (fsm_lang) {
+		case FSM_PRINT_NONE:
+			break;
+
+		case FSM_PRINT_C:
+		case FSM_PRINT_VMC:
+			hooks.comment = comment_c;
+			break;
+
+		case FSM_PRINT_RUST:
+		case FSM_PRINT_GO: /* close enough */
+			hooks.comment = comment_rust;
+			break;
+
+		case FSM_PRINT_LLVM:
+			hooks.comment = comment_llvm;
+			break;
+
+		case FSM_PRINT_DOT:
+		case FSM_PRINT_VMDOT:
+			hooks.comment = patterns ? comment_dot : NULL;
+			break;
+
+		case FSM_PRINT_JSON:
+			break;
+
+		default:
+			break;
+		}
+
+		if (-1 == fsm_print(stdout, fsm, &opt, &hooks, fsm_lang)) {
 			if (errno == ENOTSUP) {
 				fprintf(stderr, "unsupported IO API\n");
 			} else {
-				perror("print_fsm");
+				perror("fsm_print");
 			}
 			exit(EXIT_FAILURE);
 		}
@@ -1242,8 +1147,10 @@ main(int argc, char *argv[])
 
 					if (vm != NULL) {
 						e = fsm_vm_match_file(vm, f);
+					} else if (resolve_captures) {
+						assert(!"todo");
 					} else {
-						e = fsm_exec(fsm, fsm_fgetc, f, &state, NULL);
+						e = fsm_exec(fsm, fsm_fgetc, f, &state);
 					}
 
 					fclose(f);
@@ -1254,8 +1161,10 @@ main(int argc, char *argv[])
 
 					if (vm != NULL) {
 						e = fsm_vm_match_buffer(vm, s, strlen(s));
+					} else if (resolve_captures) {
+						e = exec_with_captures(fsm, fsm_sgetc, &s, &state);
 					} else {
-						e = fsm_exec(fsm, fsm_sgetc, &s, &state, NULL);
+						e = fsm_exec(fsm, fsm_sgetc, &s, &state);
 					}
 				}
 
@@ -1265,12 +1174,19 @@ main(int argc, char *argv[])
 				}
 
 				if (patterns) {
-					const struct match *m;
-					m = find_first_match_for_end_state(fsm, state);
-					while (m != NULL) {
+					fsm_end_id_t ids[1];
+					size_t count, i;
+					int res;
+
+					count = fsm_endid_count(fsm, state);
+					assert(count == 1);
+
+					res = fsm_endid_get(fsm, state, count, ids);
+					assert(res == 1);
+
+					for (i = 0; i < count; i++) {
 						/* TODO: print nicely */
-						printf("match: /%s/\n", m->s);
-						m = m->next;
+						printf("match: /%s/\n", matchv[ids[i]]);
 					}
 				}
 			}
@@ -1287,4 +1203,57 @@ main(int argc, char *argv[])
 
 		return r;
 	}
+}
+
+static int
+exec_with_captures(struct fsm *fsm,
+	int (*fsm_getc)(void *opaque), void *opaque, fsm_state_t *end)
+{
+	int c;
+	size_t ceil = 16;
+	size_t used = 0;
+	unsigned char *buf = malloc(ceil);
+	size_t i;
+	size_t capture_ceil;
+	struct fsm_capture *captures;
+	int res;
+
+	while (c = fsm_getc(opaque), c != EOF) {
+		if (used == ceil - 1) {
+			const size_t nceil = 2*ceil;
+			unsigned char *nbuf = realloc(buf, nceil);
+			if (nbuf == NULL) {
+				free(buf);
+				return -1;
+			}
+			ceil = nceil;
+			buf = nbuf;
+		}
+		buf[used] = c;
+		used++;
+	}
+	buf[used] = '\0';
+
+	capture_ceil = fsm_capture_ceiling(fsm);
+
+	captures = malloc(capture_ceil * sizeof(captures[0]));
+	if (captures == NULL) {
+		free(buf);
+		return -1;
+	}
+
+	res = fsm_exec_with_captures(fsm, buf, used,
+	    end, captures, capture_ceil);
+	if (res == 1) {
+		for (i = 0; i < capture_ceil; i++) {
+			printf("-- %zu: %zd,%zd\n",
+			    i, captures[i].pos[0], captures[i].pos[1]);
+		}
+	} else {
+		printf("-- no match\n");
+	}
+
+	free(buf);
+	free(captures);
+	return res;
 }

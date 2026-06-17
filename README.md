@@ -4,19 +4,23 @@
     ; re -cb -pl dot '[Ll]ibf+(sm)*' '[Ll]ibre' | dot
 ![libfsm.svg](doc/tutorial/libfsm.svg)
 
+libfsm is not a drop-in replacement for other regex engines, and it only supports patterns that can be compiled to deterministic FSMs. In return, supported patterns run in linear time.
+
 Getting started:
 
  * See the [tutorial introduction](doc/tutorial/re.md) for a quick overview
    of the re(1) command line interface.
  * [Compilation phases](doc/tutorial/phases.md) for typical applications
    which compile regular expressions to code.
+ * [Advice on using libfsm](doc/advice.md) for suggestions around compilation time, unsupported features, common usage patterns, and examples.
 
 You get:
 
  * libfsm — library for manipulating FSM (NFA and DFA)
  * libre  — library for compiling regular expressions to NFA
  * fsm(1) — command line interface for FSM
- * re(1)  — command line interface for executing regular expressions
+ * re(1)  — command line interface for regular expressions
+ * rx(1)  — command line interface for compiling sets of regular expressions
  * lx(1)  — lexer generator
 
 lx is an attempt to produce a simple, expressive, and unobtrusive

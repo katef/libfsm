@@ -153,22 +153,12 @@ ast_free(struct ast *ast)
 }
 
 struct ast_count
-ast_make_count(unsigned min, const struct ast_pos *start,
-    unsigned max, const struct ast_pos *end)
+ast_make_count(unsigned min, unsigned max)
 {
 	struct ast_count res;
 
-	memset(&res, 0x00, sizeof res);
-
 	res.min = min;
 	res.max = max;
-
-	if (start != NULL) {
-		res.start = *start;
-	}
-	if (end != NULL) {
-		res.end = *end;
-	}
 
 	return res;
 }
@@ -235,6 +225,7 @@ ast_expr_free(struct ast_expr_pool *pool, struct ast_expr *n)
 		return;
 
 	default:
+		fprintf(stderr, "n->type %d\n", n->type);
 		assert(!"unreached");
 	}
 
@@ -494,6 +485,7 @@ ast_expr_cmp(const struct ast_expr *a, const struct ast_expr *b)
 	case AST_EXPR_GROUP:
 		if (a->u.group.id < b->u.group.id) { return -1; }
 		if (a->u.group.id > b->u.group.id) { return +1; }
+		/* .repeated flag is ignored here */
 
 		return ast_expr_cmp(a->u.group.e, b->u.group.e);
 
@@ -646,6 +638,7 @@ ast_make_expr_alt(struct ast_expr_pool **poolp, enum re_flags re_flags)
 	res->re_flags = re_flags;
 	res->u.alt.alloc = 8; /* arbitrary initial value */
 	res->u.alt.count = 0;
+	res->u.alt.nullable_alt_inside_plus_repeat = 0;
 
 	res->u.alt.n = calloc(res->u.alt.alloc, sizeof *res->u.alt.n);
 	if (res->u.alt.n == NULL) {
@@ -753,6 +746,7 @@ ast_make_expr_group(struct ast_expr_pool **poolp, enum re_flags re_flags, struct
 	res->re_flags = re_flags;
 	res->u.group.e = e;
 	res->u.group.id = id;
+	res->u.group.repeated = 0; /* may be set during analysis */
 
 	return res;
 }
@@ -770,6 +764,7 @@ ast_make_expr_anchor(struct ast_expr_pool **poolp, enum re_flags re_flags, enum 
 	res->type = AST_EXPR_ANCHOR;
 	res->re_flags = re_flags;
 	res->u.anchor.type = type;
+	res->u.anchor.is_end_nl = 0; /* may be set later */
 
 	return res;
 }
@@ -794,8 +789,7 @@ ast_make_expr_subtract(struct ast_expr_pool **poolp, enum re_flags re_flags, str
 
 struct ast_expr *
 ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
-    const struct ast_endpoint *from, struct ast_pos start,
-    const struct ast_endpoint *to, struct ast_pos end)
+    const struct ast_endpoint *from, const struct ast_endpoint *to)
 {
 	struct ast_expr *res;
 
@@ -810,9 +804,7 @@ ast_make_expr_range(struct ast_expr_pool **poolp, enum re_flags re_flags,
 	res->type = AST_EXPR_RANGE;
 	res->re_flags = re_flags;
 	res->u.range.from = *from;
-	res->u.range.start = start;
 	res->u.range.to = *to;
-	res->u.range.end = end;
 
 	return res;
 }
@@ -852,7 +844,6 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 			}
 		} else {
 			struct ast_endpoint from, to;
-			struct ast_pos pos = { 0, 0, 0 }; /* XXX: pass in pos */
 
 			from.type = AST_ENDPOINT_LITERAL;
 			if (class->ranges[i].a <= UCHAR_MAX) {
@@ -868,7 +859,7 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 				to.u.codepoint.u = class->ranges[i].b;
 			}
 
-			res->u.alt.n[i] = ast_make_expr_range(poolp, re_flags, &from, pos, &to, pos);
+			res->u.alt.n[i] = ast_make_expr_range(poolp, re_flags, &from, &to);
 			if (res->u.alt.n[i] == NULL) {
 				goto error;
 			}
@@ -997,13 +988,31 @@ ast_expr_is_literal(const struct ast_expr *e,
 		*anchor_end = 1;
 	}
 
+done:
+
 	for (i = 0; i < count; i++) {
 		if (nodes[i] == NULL || nodes[i]->type != AST_EXPR_LITERAL) {
 			return 0;
 		}
-	}
 
-done:
+		/* mask out AST flags that we don't care about; these may be present or not */
+		int ast_flags = nodes[i]->flags
+		    & (unsigned)~(AST_FLAG_FIRST | AST_FLAG_LAST | AST_FLAG_ALWAYS_CONSUMES | AST_FLAG_CAN_CONSUME);
+
+		/* we reject anything else */
+		if (ast_flags != 0) {
+			return 0;
+		}
+
+		/* mask out re flags that we don't handle here yet (the caller is responsible for these) */
+		int re_flags = nodes[i]->re_flags
+		    & (unsigned)~(RE_END_NL | RE_NOCAPTURE);
+
+		/* and we don't permit any other re_flags */
+		if (re_flags != 0) {
+			return 0;
+		}
+	}
 
 	*n = count + is_end_nl;
 

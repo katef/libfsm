@@ -13,7 +13,6 @@
 #include <fsm/bool.h>
 #include <fsm/pred.h>
 #include <fsm/walk.h>
-#include <fsm/options.h>
 
 #include "internal.h"
 
@@ -33,7 +32,7 @@ fsm_concat(struct fsm *a, struct fsm *b,
 	assert(a != NULL);
 	assert(b != NULL);
 
-	if (a->opt != b->opt) {
+	if (a->alloc != b->alloc) {
 		errno = EINVAL;
 		return NULL;
 	}

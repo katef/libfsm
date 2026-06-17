@@ -22,7 +22,6 @@ const char *test_cases[] = {
 	"(?:a+|b)a+",
 	"(?:a*ba)+",
 	"(?:a|cd)+e?x",
-	"-> 1 'a';",
 	"(?:abc|def)+",
 	"(?:abc|def)*",
 	"(?:b|a*)",
@@ -62,12 +61,6 @@ scanner_next(void *opaque)
 	return (int) c;
 }
 
-static const struct fsm_options opt = {
-	.consolidate_edges = 1,
-	.comments = 1,
-	.group_edges = 1,
-};
-
 static int
 check_minimisation(const char *pattern)
 {
@@ -81,7 +74,7 @@ check_minimisation(const char *pattern)
 		.offset = 0
 	};
 
-	fsm = re_comp(RE_PCRE, scanner_next, &s, &opt, RE_MULTI, &err);
+	fsm = re_comp(RE_PCRE, scanner_next, &s, NULL, RE_MULTI | RE_NOCAPTURE, &err);
 	assert(fsm != NULL);
 	if (!fsm_determinise(fsm)) {
 		return 0;
@@ -110,10 +103,10 @@ check_minimisation(const char *pattern)
 		    __func__, pattern, expected_state_count, state_count_min);
 
 		fprintf(stderr, "== expected:\n");
-		fsm_print_fsm(stderr, oracle_min);
+		fsm_dump(stderr, oracle_min);
 
 		fprintf(stderr, "== got:\n");
-		fsm_print_fsm(stderr, fsm);
+		fsm_dump(stderr, fsm);
 	}
 
 	fsm_free(oracle_min);

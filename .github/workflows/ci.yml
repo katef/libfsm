@@ -15,11 +15,11 @@ env:
 jobs:
   checkout:
     name: "Checkout"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Cache checkout
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
@@ -27,7 +27,7 @@ jobs:
 
     - name: Checkout
       if: steps.cache-checkout.outputs.cache-hit != 'true'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
         path: ${{ env.wc }}
@@ -44,12 +44,15 @@ jobs:
 
   pcre_suite:
     name: "Import PCRE suite"
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04 ]
     needs: [ build ] # for cvtpcre
 
     steps:
     - name: Cache PCRE suite
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       id: cache-pcre
       with:
         path: pcre-suite/${{ env.pcre2 }}
@@ -67,19 +70,20 @@ jobs:
         chmod -R ug-w pcre-suite
 
     - name: Cache converted PCRE tests
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
-        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
+        key: cvtpcre-bmake-${{ matrix.os }}-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
 
-    - name: Fetch build
+    - name: Restore build
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
-      uses: actions/cache@v3
+      uses: actions/cache/restore@v5
       id: cache-build
       with:
         path: ${{ env.build }}
-        key: build-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }} # arbitary build, just for cvtpcre
+        key: build-bmake-${{ matrix.os }}-gcc-DEBUG-AUSAN-${{ github.sha }} # arbitrary build, just for cvtpcre
+        fail-on-cache-miss: true
 
     - name: Convert PCRE suite
       if: steps.cache-cvtpcre.outputs.cache-hit != 'true'
@@ -130,14 +134,14 @@ jobs:
 
   build:
     name: "Build ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     needs: [ checkout ]
 
     strategy:
       fail-fast: true
       matrix:
         san: [ NO_SANITIZER, AUSAN, MSAN, EFENCE, FUZZER ] # NO_SANITIZER=1 is a no-op
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang, gcc ]
         make: [ bmake ] # we test makefiles separately
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
@@ -154,22 +158,23 @@ jobs:
             cc: gcc # -fsanitize=fuzzer is clang-only
 
     steps:
-    - name: Fetch checkout
-      uses: actions/cache@v3
+    - name: Restore checkout
+      uses: actions/cache/restore@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Cache build
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       id: cache-build
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu' && steps.cache-build.outputs.cache-hit != 'true'
+      if: matrix.os == 'ubuntu-22.04' && steps.cache-build.outputs.cache-hit != 'true'
       run: |
         uname -a
         sudo apt-get install bmake electric-fence
@@ -185,7 +190,7 @@ jobs:
 
     - name: Get number of CPU cores
       if: steps.cache-build.outputs.cache-hit != 'true'
-      uses: SimenB/github-actions-cpu-cores@v1
+      uses: SimenB/github-actions-cpu-cores@v2
       id: cpu-cores
 
     - name: Make
@@ -216,14 +221,14 @@ jobs:
   # of the build during CI, even if we don't run that during tests.
   test_makefiles:
     name: "Test (Makefiles) ${{ matrix.make }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     needs: [ checkout, build ]
 
     strategy:
       fail-fast: false
       matrix:
         san: [ NO_SANITIZER ] # NO_SANITIZER=1 is a no-op
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang ]
         make: [ bmake, pmake ]
         debug: [ EXPENSIVE_CHECKS, DEBUG, RELEASE ] # RELEASE=1 is a no-op
@@ -232,20 +237,26 @@ jobs:
             make: pmake # not packaged
 
     steps:
-    - name: Fetch checkout
-      uses: actions/cache@v3
+    - name: Restore checkout
+      uses: actions/cache/restore@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     # An arbitary build.
-    - name: Fetch build
-      uses: actions/cache@v3
+    # Failing to fetch this is not fatal, we're testing Makefiles here.
+    # Some combinations of our options (pmake, EXPENSIVE_CHECKS, whatever)
+    # won't exist in cache because we didn't build those. That's okay for
+    # the purposes of this step, building those is harmless.
+    - name: Restore build
+      uses: actions/cache/restore@v5
       id: cache-build
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        fail-on-cache-miss: false
 
     # We don't need to build the entire repo to know that the makefiles work,
     # I'm just deleting a couple of .o files and rebuilding those instead.
@@ -258,7 +269,7 @@ jobs:
       run: find ${{ env.wc }} -type f -name '*.c' | sort -r | head -5 | xargs touch
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         uname -a
         sudo apt-get install pmake bmake pcregrep
@@ -273,7 +284,7 @@ jobs:
         ${{ matrix.cc }} --version
 
     - name: Get number of CPU cores
-      uses: SimenB/github-actions-cpu-cores@v1
+      uses: SimenB/github-actions-cpu-cores@v2
       id: cpu-cores
 
     - name: Make
@@ -292,7 +303,7 @@ jobs:
     # kmkf duplicate install targets, it's not interesting for libfsm's CI,
     # so I'm retrying on error here. # github.com/katef/kmkf/issues/14
     - name: Install
-      uses: nick-fields/retry@v2.8.3
+      uses: nick-fields/retry@v3
       with:
         timeout_seconds: 10 # required, but not a problem for the kmkf bug
         max_attempts: 3
@@ -301,14 +312,14 @@ jobs:
 
   test_san:
     name: "Test (Sanitizers) ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     needs: [ build ]
 
     strategy:
       fail-fast: false
       matrix:
         san: [ AUSAN, MSAN, EFENCE ]
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
@@ -321,15 +332,16 @@ jobs:
             san: MSAN # not supported
 
     steps:
-    - name: Fetch checkout
-      uses: actions/cache@v3
+    - name: Restore checkout
+      uses: actions/cache/restore@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         uname -a
         sudo apt-get install bmake pcregrep electric-fence
@@ -343,15 +355,16 @@ jobs:
         brew install bmake pcre
         ${{ matrix.cc }} --version
 
-    - name: Fetch build
-      uses: actions/cache@v3
+    - name: Restore build
+      uses: actions/cache/restore@v5
       id: cache-build
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Get number of CPU cores
-      uses: SimenB/github-actions-cpu-cores@v1
+      uses: SimenB/github-actions-cpu-cores@v2
       id: cpu-cores
 
     - name: Test
@@ -362,7 +375,7 @@ jobs:
 
   test_fuzz:
     name: "Fuzz (mode ${{ matrix.mode }}) ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 5 # this should never be reached, it's a safeguard for bugs in the fuzzer itself
     needs: [ build ]
 
@@ -370,25 +383,26 @@ jobs:
       fail-fast: false
       matrix:
         san: [ FUZZER ]
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
-        mode: [ m, p, d ]
+        mode: [ r, s, m, i, M, p ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
 
     steps:
-    - name: Fetch checkout
-      uses: actions/cache@v3
+    - name: Restore checkout
+      uses: actions/cache/restore@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         uname -a
         sudo apt-get install bmake
@@ -402,16 +416,24 @@ jobs:
         brew install bmake
         ${{ matrix.cc }} --version
 
-    - name: Fetch build
-      uses: actions/cache@v3
+    - name: Restore build
+      uses: actions/cache/restore@v5
       id: cache-build
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
-    # note we do the fuzzing unconditionally; each run adds to the corpus
+    # note we do the fuzzing unconditionally; each run adds to the corpus.
+    #
+    # We only run fuzzing for PRs in the base repo, this prevents attempting
+    # to purge the seed cache from a PR syncing a forked repo, which fails
+    # due to a permissions error (I'm unsure why, I think PRs from clones can't
+    # purge a cache in CI presumably for security/DoS reasons). PRs from clones
+    # still run fuzzing, just from empty, and do not save their seeds.
     - name: Restore seeds (mode ${{ matrix.mode }})
-      uses: actions/cache/restore@v3
+      if: github.repository == 'katef/libfsm'
+      uses: actions/cache/restore@v5
       id: cache-seeds
       with:
         path: ${{ env.seeds }}-${{ matrix.mode }}
@@ -422,7 +444,7 @@ jobs:
       run: mkdir -p ${{ env.seeds }}-${{ matrix.mode }}
 
     - name: Get number of CPU cores
-      uses: SimenB/github-actions-cpu-cores@v1
+      uses: SimenB/github-actions-cpu-cores@v2
       id: cpu-cores
 
     - name: Fuzz
@@ -448,7 +470,7 @@ jobs:
     # the same seeds for a given bug.
     # The explicit cache/restore and cache/save actions are just for that.
     - name: Save seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
-      uses: actions/cache/save@v3
+      uses: actions/cache/save@v5
       if: always()
       with:
         path: ${{ env.seeds }}-${{ matrix.mode }}
@@ -456,25 +478,25 @@ jobs:
 
     # nothing to do with the caching, I'm uploading the seeds so a developer can grab them to fuzz locally
     - name: Upload seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: seeds-${{ matrix.mode }}-${{ matrix.debug }}
         path: ${{ env.seeds }}-${{ matrix.mode }}
 
   test_pcre:
     name: "Test (PCRE suite) ${{ matrix.lang }} ${{ matrix.san }} ${{ matrix.cc }} ${{ matrix.os }} ${{ matrix.debug }}"
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     needs: [ pcre_suite ] # and also build, but pcre_suite gives us that
 
     strategy:
       fail-fast: false
       matrix:
         san: [ AUSAN, MSAN, EFENCE ]
-        os: [ ubuntu ]
+        os: [ ubuntu-22.04 ]
         cc: [ clang, gcc ]
         make: [ bmake ]
         debug: [ DEBUG, RELEASE ] # RELEASE=1 is a no-op
-        lang: [ "vm -x v1", "vm -x v2", asm, c, rust, vmc, vmops, go, goasm ]
+        lang: [ "vm -x v1", "vm -x v2", asm, c, rust, vmc, vmops, go, goasm, llvm ]
         exclude:
           - os: macos
             cc: gcc # it's clang anyway
@@ -485,7 +507,7 @@ jobs:
 
     steps:
     - name: Dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu' && matrix.san == 'EFENCE'
+      if: matrix.os == 'ubuntu-22.04' && matrix.san == 'EFENCE'
       run: |
         uname -a
         sudo apt-get install electric-fence
@@ -499,32 +521,33 @@ jobs:
         ${{ matrix.cc }} --version
 
     - name: Dependencies (Ubuntu/Go)
-      if: matrix.os == 'ubuntu' && (matrix.lang == 'go' || matrix.lang == 'goasm')
+      if: matrix.os == 'ubuntu-22.04' && (matrix.lang == 'go' || matrix.lang == 'goasm')
       run: |
         uname -a
         sudo apt-get install golang
         go version
 
-    - name: Fetch build
-      uses: actions/cache@v3
+    - name: Restore build
+      uses: actions/cache/restore@v5
       id: cache-build
       with:
         path: ${{ env.build }}
         key: build-${{ matrix.make }}-${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.debug }}-${{ matrix.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Fetch converted PCRE tests
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       id: cache-cvtpcre
       with:
         path: ${{ env.cvtpcre }}
-        key: cvtpcre-bmake-ubuntu-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
+        key: cvtpcre-bmake-${{ matrix.os }}-gcc-DEBUG-AUSAN-${{ github.sha }}-${{ env.pcre2 }}
 
     - name: Run PCRE suite (${{ matrix.lang }})
       run: CC=${{ matrix.cc }} ./${{ env.build }}/bin/retest -O1 -l ${{ matrix.lang }} ${{ env.cvtpcre }}/*.tst
 
   docs:
     name: Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [ checkout ]
 
     env:
@@ -532,7 +555,7 @@ jobs:
 
     steps:
     - name: Cache docs
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       id: cache-docs
       with:
         path: ${{ env.build }}
@@ -545,17 +568,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install bmake libxml2-utils xsltproc docbook-xml docbook-xsl
 
-    - name: Fetch checkout
+    - name: Restore checkout
       if: steps.cache-docs.outputs.cache-hit != 'true'
-      uses: actions/cache@v3
+      uses: actions/cache/restore@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Get number of CPU cores
       if: steps.cache-docs.outputs.cache-hit != 'true'
-      uses: SimenB/github-actions-cpu-cores@v1
+      uses: SimenB/github-actions-cpu-cores@v2
       id: cpu-cores
 
     - name: Test docs
@@ -575,57 +599,60 @@ jobs:
 
   install:
     name: Install
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [ build, docs ]
 
     env:
       san: NO_SANITIZER # NO_SANITIZER=1 is a no-op
-      os: ubuntu
+      os: ubuntu-22.04
       cc: clang
       make: bmake
       debug: RELEASE # RELEASE=1 is a no-op
 
     steps:
     - name: Cache prefix
-      uses: actions/cache@v3
+      uses: actions/cache@v5
       id: cache-prefix
       with:
         path: ${{ env.prefix }}
         key: prefix-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
 
     - name: Dependencies (Ubuntu)
-      if: env.os == 'ubuntu' && steps.cache-prefix.outputs.cache-hit != 'true'
+      if: env.os == 'ubuntu-22.04' && steps.cache-prefix.outputs.cache-hit != 'true'
       run: |
         uname -a
         sudo apt-get install bmake
 
-    - name: Fetch checkout
+    - name: Restore checkout
       if: steps.cache-prefix.outputs.cache-hit != 'true'
-      uses: actions/cache@v3
+      uses: actions/cache/restore@v5
       id: cache-checkout
       with:
         path: ${{ env.wc }}
         key: checkout-${{ github.sha }}
+        fail-on-cache-miss: true
 
-    - name: Fetch build
+    - name: Restore build
       if: steps.cache-prefix.outputs.cache-hit != 'true'
-      uses: actions/cache@v3
+      uses: actions/cache/restore@v5
       id: cache-build
       with:
         path: ${{ env.build }}
         key: build-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
-    - name: Fetch docs
+    - name: Restore docs
       if: steps.cache-prefix.outputs.cache-hit != 'true'
-      uses: actions/cache@v3
+      uses: actions/cache/restore@v5
       id: cache-docs
       with:
         path: ${{ env.build }}
         key: docs-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Get number of CPU cores
       if: steps.cache-prefix.outputs.cache-hit != 'true'
-      uses: SimenB/github-actions-cpu-cores@v1
+      uses: SimenB/github-actions-cpu-cores@v2
       id: cpu-cores
 
     - name: Install
@@ -636,12 +663,12 @@ jobs:
 
   fpm:
     name: Package ${{ matrix.pkg }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [ install ]
 
     env:
       san: NO_SANITIZER # NO_SANITIZER=1 is a no-op
-      os: ubuntu
+      os: ubuntu-22.04
       cc: clang
       make: bmake
       debug: RELEASE # RELEASE=1 is a no-op
@@ -654,18 +681,19 @@ jobs:
 
     steps:
     - name: Dependencies (Ubuntu)
-      if: env.os == 'ubuntu'
+      if: env.os == 'ubuntu-22.04'
       run: |
         uname -a
         sudo gem install --no-document fpm
         fpm -v
 
-    - name: Fetch prefix
-      uses: actions/cache@v3
+    - name: Restore prefix
+      uses: actions/cache/restore@v5
       id: cache-prefix
       with:
         path: ${{ env.prefix }}
         key: prefix-${{ env.make }}-${{ env.os }}-${{ env.cc }}-${{ env.debug }}-${{ env.san }}-${{ github.sha }}
+        fail-on-cache-miss: true
 
     - name: Find version
       # TODO: would get a tag or branch name here
@@ -684,7 +712,7 @@ jobs:
         printf "package_file=%s\n" $(basename pkg/*) >> $GITHUB_ENV
 
     - name: Upload
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.package_file }}
         path: pkg/${{ env.package_file }}

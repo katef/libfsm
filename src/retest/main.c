@@ -34,7 +34,6 @@
 #include <re/re.h>
 
 #include "libfsm/internal.h" /* XXX */
-#include "libre/print.h" /* XXX */
 #include "libre/class.h" /* XXX */
 #include "libre/ast.h" /* XXX */
 
@@ -57,7 +56,6 @@ struct match {
 	struct match *next;
 };
 
-static int tty_output = 0;
 static int do_timing  = 0;
 
 static int do_watchdog   = 0;
@@ -179,6 +177,7 @@ usage(void)
 	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
 	fprintf(stderr, "                 vmops     compile as per fsm_print_vmops_{c,h,main}()\n");
 	fprintf(stderr, "                 rust      compile as per fsm_print_rust()\n");
+	fprintf(stderr, "                 llvm      compile as per fsm_print_llvm()\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -x <encoding>\n");
@@ -393,7 +392,7 @@ hexdigit:
 
 					ndig++;
 				} else {
-					s[j++] = ccode;
+					s[j++] = (char)ccode;
 					st = ST_BARE;
 
 					if (!hexcurly) {
@@ -738,6 +737,7 @@ flagstring(enum re_flags flags, char buf[16])
  */
 static int
 process_test_file(const char *filename,
+	const struct fsm_alloc *alloc,
 	enum re_dialect default_dialect, enum implementation impl, int max_errors, struct error_record *erec)
 {
 	static const struct fsm_runner init_runner;
@@ -968,16 +968,8 @@ process_test_file(const char *filename,
 
 			flagstring(flags, &flagdesc[0]);
 
-			if (tty_output) {
-				char *re  = dup_str_esc(regexp, NULL);
-				printf("[      ] line %d: working on %s regexp /%s/%s ...\r",
-					linenum, dialect_name, re, flagdesc);
-				fflush(stdout);
-				free(re);
-			}
-
 			re_str = regexp;
-			fsm = re_comp(dialect, fsm_sgetc, &re_str, &opt, flags, &err);
+			fsm = re_comp(dialect, fsm_sgetc, &re_str, alloc, flags, &err);
 			if (fsm == NULL) {
 				fprintf(stderr, "line %d: error with %s regexp /%s/%s: %s\n",
 					linenum, dialect_name, regexp, flagdesc, re_strerror(err.e));
@@ -1048,11 +1040,11 @@ process_test_file(const char *filename,
 
 #if DEBUG_VM_FSM
 			fprintf(stderr, "FSM:\n");
-			fsm_print_fsm(stderr, fsm);
+			fsm_dump(stderr, fsm);
 			fprintf(stderr, "---\n");
 			{
 				FILE *f = fopen("dump.fsm", "w");
-				fsm_print_fsm(f, fsm);
+				fsm_dump(f, fsm);
 				fclose(f);
 			}
 #endif /* DEBUG_VM_FSM */
@@ -1061,7 +1053,7 @@ process_test_file(const char *filename,
 			fprintf(stderr, "REGEXP matching for /%s/%s\n", regexp, flagdesc);
 #endif /* DEBUG_TEST_REGEXP */
 
-			ret = fsm_runner_initialize(fsm, &runner, impl, vm_opts);
+			ret = fsm_runner_initialize(fsm, &opt, &runner, impl, vm_opts);
 
 			fsm_free(fsm);
 
@@ -1181,7 +1173,7 @@ finish:
 		exit(EXIT_FAILURE);
 	}
 
-	return num_errors;
+	return num_errors + num_re_errors;
 }
 
 static enum fsm_io
@@ -1220,14 +1212,14 @@ io(const char *name)
 int
 main(int argc, char *argv[])
 {
+	/* TODO: use alloc hooks for -Q accounting as well as watchdog timeouts */
+	struct fsm_alloc *alloc = NULL;
+
 	enum re_dialect dialect;
 	enum implementation impl;
 	int max_test_errors;
 
 	int optlevel = 1;
-
-	/* is output to a tty or not? */
-	tty_output = isatty(fileno(stdout));
 
 	/* note these defaults are the opposite than for fsm(1) */
 	opt.anonymous_states  = 1;
@@ -1266,22 +1258,24 @@ main(int argc, char *argv[])
 				break;
 
 			case 'l':
-				if (strcmp(optarg, "vm") == 0) {
-					impl = IMPL_INTERPRET;
+				if (strcmp(optarg, "asm") == 0) {
+					impl = IMPL_VMASM;
 				} else if (strcmp(optarg, "c") == 0) {
 					impl = IMPL_C;
-				} else if (strcmp(optarg, "asm") == 0) {
-					impl = IMPL_VMASM;
-				} else if (strcmp(optarg, "vmc") == 0) {
-					impl = IMPL_VMC;
-				} else if (strcmp(optarg, "vmops") == 0) {
-					impl = IMPL_VMOPS;
 				} else if (strcmp(optarg, "go") == 0) {
 					impl = IMPL_GO;
 				} else if (strcmp(optarg, "goasm") == 0) {
 					impl = IMPL_GOASM;
+				} else if (strcmp(optarg, "llvm") == 0) {
+					impl = IMPL_LLVM;
 				} else if (strcmp(optarg, "rust") == 0) {
 					impl = IMPL_RUST;
+				} else if (strcmp(optarg, "vm") == 0) {
+					impl = IMPL_INTERPRET;
+				} else if (strcmp(optarg, "vmc") == 0) {
+					impl = IMPL_VMC;
+				} else if (strcmp(optarg, "vmops") == 0) {
+					impl = IMPL_VMOPS;
 				} else {
 					fprintf(stderr, "unknown argument to -l: %s\n", optarg);
 					usage();
@@ -1342,7 +1336,7 @@ main(int argc, char *argv[])
 	}
 
 	if (do_watchdog) {
-		opt.alloc = &watchdog_alloc;
+		alloc = &watchdog_alloc;
 	}
 
 	if (argc < 1) {
@@ -1378,7 +1372,8 @@ main(int argc, char *argv[])
 				return EXIT_FAILURE;
 			}
 
-			nerrs = process_test_file(argv[i], dialect, impl, max_test_errors, &erec);
+			nerrs = process_test_file(argv[i], alloc,
+				dialect, impl, max_test_errors, &erec);
 
 			if (erec.len > 0) {
 				error_record_print(stderr, &erec);

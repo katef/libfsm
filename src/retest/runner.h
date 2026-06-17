@@ -6,6 +6,7 @@
 #include <fsm/vm.h>
 
 struct fsm;
+struct fsm_options;
 struct fsm_dfavm;
 
 enum error_type {
@@ -26,12 +27,13 @@ enum error_type {
 
 enum implementation {
 	IMPL_C,
-	IMPL_RUST,
 	IMPL_GO,
 	IMPL_GOASM,
-	IMPL_VMC,
-	IMPL_VMASM,
 	IMPL_INTERPRET,
+	IMPL_LLVM,
+	IMPL_RUST,
+	IMPL_VMASM,
+	IMPL_VMC,
 	IMPL_VMOPS,
 };
 
@@ -47,12 +49,17 @@ struct fsm_runner {
 		struct {
 			/* pub extern "C" fn f(ptr: *const c_uchar, len: usize) -> usize */
 			void *h;
-			int64_t (*func)(const unsigned char *, size_t);
+			bool (*func)(const unsigned char *, size_t);
 		} impl_rust;
 
 		struct {
 			void *h;
-			int64_t (*func)(const unsigned char *, int64_t);
+			bool (*func)(const char *, const char *);
+		} impl_llvm;
+
+		struct {
+			void *h;
+			bool (*func)(const unsigned char *, int64_t);
 		} impl_go;
 
 		struct {
@@ -67,7 +74,8 @@ struct fsm_runner {
 };
 
 enum error_type
-fsm_runner_initialize(struct fsm *fsm, struct fsm_runner *r, enum implementation impl, struct fsm_vm_compile_opts vm_opts);
+fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
+	struct fsm_runner *r, enum implementation impl, struct fsm_vm_compile_opts vm_opts);
 
 void
 fsm_runner_finalize(struct fsm_runner *r);

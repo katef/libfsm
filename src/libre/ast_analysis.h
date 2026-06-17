@@ -12,8 +12,6 @@
  */
 
 struct ast;
-struct re_err;
-struct fsm_options;
 
 enum ast_analysis_res {
 	AST_ANALYSIS_OK,
@@ -30,7 +28,8 @@ enum ast_analysis_res {
 	AST_ANALYSIS_UNSATISFIABLE,
 
 	AST_ANALYSIS_ERROR_NULL   = -1,
-	AST_ANALYSIS_ERROR_MEMORY = -2
+	AST_ANALYSIS_ERROR_MEMORY = -2,
+	AST_ANALYSIS_ERROR_UNSUPPORTED = -3,
 };
 
 enum ast_analysis_res

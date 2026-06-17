@@ -20,7 +20,8 @@
 #define DFAVM_MAGIC "DFAVM$"
 
 struct ir;
-struct ir_state;
+struct ret;
+struct ret_list;
 struct fsm_vm_compile_opts;
 struct dfavm_op_ir_pool;
 
@@ -75,10 +76,12 @@ struct dfavm_op_ir {
 	 */
 	uint32_t index;
 
-	const struct ir_state *ir_state; // for void *opaque
+	const char *example;
+	const struct ret *ret;
 
-	uint32_t num_incoming; // number of branches to this instruction
-	int in_trace;
+	uint32_t num_incoming:31; // number of branches to this instruction, :31 for packing
+	unsigned int in_trace:1;
+
 	int cmp_arg;
 
 	enum dfavm_op_cmp cmp;
@@ -191,7 +194,7 @@ const char *
 cmp_name(int cmp);
 
 int
-dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, struct fsm_vm_compile_opts opts);
+dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, const struct ret_list *retlist, struct fsm_vm_compile_opts opts);
 
 struct fsm_dfavm *
 dfavm_compile_vm(const struct dfavm_assembler_ir *a, struct fsm_vm_compile_opts opts);

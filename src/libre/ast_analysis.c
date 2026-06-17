@@ -13,7 +13,6 @@
 #include <re/re.h>
 
 #include "class.h"
-#include "print.h"
 #include "ast.h"
 #include "ast_analysis.h"
 
@@ -21,11 +20,14 @@
 
 #define LOG_ANALYSIS 0
 #define LOG_FIRST_ANALYSIS (0 + LOG_ANALYSIS)
-#define LOG_REPEATED_GROUPS (0 + LOG_ANALYSIS)
+#define LOG_REPETITION_CASES (0 + LOG_ANALYSIS)
 #define LOG_FORKING (0 + LOG_ANALYSIS)
 #define LOG_ANCHORING (0 + LOG_ANALYSIS)
 #define LOG_CONCAT_FLAGS (0 + LOG_ANALYSIS)
 #define LOG_UNANCHORED_FLAGS (0 + LOG_ANALYSIS)
+
+#define LOG_REPETITION_CASES (0 + LOG_ANALYSIS)
+#define LOG_PINCER_ANCHORS (0 + LOG_ANALYSIS)
 
 #define LOG(LEVEL, ...)							\
 	do {								\
@@ -36,6 +38,12 @@
 
 /* Mask for end-anchor flags */
 #define END_ANCHOR_FLAG_MASK (AST_FLAG_ANCHORED_END | AST_FLAG_END_NL)
+#define ANCHOR_FLAG_MASK (END_ANCHOR_FLAG_MASK | AST_FLAG_ANCHORED_START)
+
+struct capture_env {
+	long max_capture_id;
+	int use_captures;
+};
 
 static int
 is_nullable(const struct ast_expr *n)
@@ -73,6 +81,24 @@ set_flags(struct ast_expr *n, enum ast_flags flags)
 	n->flags |= flags;
 }
 
+static int
+is_unsatisfiable_or_skipped(const struct ast_expr *n)
+{
+	return (n->flags & AST_FLAG_UNSATISFIABLE)
+	    || (n->type == AST_EXPR_REPEAT
+		&& n->u.repeat.min == 0
+		&& n->u.repeat.max == 0);
+}
+
+static void
+prune_repeat_node(struct ast_expr *n)
+{
+	assert(n->type == AST_EXPR_REPEAT && n->u.repeat.min == 0);
+	LOG(3, "%s: setting REPEAT node %p's max count to 0\n",
+	    __func__, (void *)n);
+	n->u.repeat.max = 0;
+}
+
 static enum ast_analysis_res
 analysis_iter(struct ast_expr *n)
 {
@@ -104,7 +130,9 @@ analysis_iter(struct ast_expr *n)
 				    (void *)n, (void *)child);
 				set_flags(child, AST_FLAG_NULLABLE);
 			}
-			analysis_iter(child);
+			enum ast_analysis_res child_res = analysis_iter(child);
+                        if (child_res != AST_ANALYSIS_OK) { return child_res; }
+
 			if (can_consume_input(child)) {
 				any_can_consume = 1;
 			}
@@ -143,7 +171,8 @@ analysis_iter(struct ast_expr *n)
 
 		for (i = 0; i < n->u.alt.count; i++) {
 			struct ast_expr *child = n->u.alt.n[i];
-			analysis_iter(child);
+			enum ast_analysis_res child_res = analysis_iter(child);
+                        if (child_res != AST_ANALYSIS_OK) { return child_res; }
 
 			/* spread nullability upward */
 			if (is_nullable(child)) {
@@ -190,7 +219,8 @@ analysis_iter(struct ast_expr *n)
 			set_flags(n, AST_FLAG_NULLABLE);
 		}
 
-		analysis_iter(e);
+                enum ast_analysis_res child_res = analysis_iter(e);
+                if (child_res != AST_ANALYSIS_OK) { return child_res; }
 		set_flags(n, e->flags & AST_FLAG_CAN_CONSUME);
 
 		if (n->u.repeat.min > 0 && e->flags & AST_FLAG_ALWAYS_CONSUMES) {
@@ -229,7 +259,8 @@ analysis_iter(struct ast_expr *n)
 			set_flags(e, AST_FLAG_NULLABLE);
 		}
 
-		analysis_iter(e);
+                enum ast_analysis_res child_res = analysis_iter(e);
+                if (child_res != AST_ANALYSIS_OK) { return child_res; }
 		set_flags(n, e->flags & (AST_FLAG_CAN_CONSUME | AST_FLAG_ALWAYS_CONSUMES));
 
 		if (is_nullable(e)) {
@@ -239,7 +270,7 @@ analysis_iter(struct ast_expr *n)
 	}
 
 	case AST_EXPR_ANCHOR:
-		/* anchor flags will be handled on the second pass */
+		/* anchor flags will be handled on the next pass */
 		break;
 
 	case AST_EXPR_SUBTRACT:
@@ -267,23 +298,280 @@ analysis_iter(struct ast_expr *n)
 	return AST_ANALYSIS_OK;
 }
 
-/* Analysis for unanchored starts/ends uses three values, because some
- * details decide the whole subtree is/isn't, others should defer to
- * analysis elsewhere it the tree, but an overall result of undecided
- * still decides yes. */
-enum unanchored_analysis_res {
-	UA_NO = 'N',
-	UA_YES = 'Y',
-	UA_UNDECIDED = 'U',
+static int
+is_only_anchors(struct ast_expr *expr)
+{
+	if (can_consume_input(expr)) { return 0; }
+
+	switch (expr->type) {
+	case AST_EXPR_ANCHOR:
+		return 1;
+
+	case AST_EXPR_CONCAT:
+		if (expr->u.concat.count == 0) { return 0; }
+		for (size_t i = 0; i < expr->u.concat.count; i++) {
+			if (!is_only_anchors(expr->u.concat.n[i])
+			    && can_consume_input(expr->u.concat.n[i])) {
+				return 0;
+			}
+		}
+		return 1;
+
+	case AST_EXPR_ALT:
+		assert(expr->u.alt.count > 0);
+		for (size_t i = 0; i < expr->u.alt.count; i++) {
+			/* earlier matches will shadow later ones */
+			if (is_only_anchors(expr->u.alt.n[i])) {
+				return 1;
+			}
+		}
+		return 0;
+
+	case AST_EXPR_REPEAT:
+		if (expr->u.repeat.min == 0 && expr->u.repeat.max == 0) {
+			return 0;
+		}
+		return is_only_anchors(expr->u.repeat.e);
+
+	case AST_EXPR_GROUP:
+		return is_only_anchors(expr->u.group.e);
+
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static enum ast_analysis_res
+analysis_iter_repetition(struct ast_expr *n, struct ast_expr *outermost_repeat_parent,
+	int shadowed_by_previous_alt_case, struct ast_expr *repeat_plus_ancestor)
+{
+	enum ast_analysis_res res = AST_ANALYSIS_OK;
+
+	LOG(3 - LOG_REPETITION_CASES, "%s: node %p, type %s, shadowed_by_previous_alt_case %d\n",
+	    __func__, (void *)n, ast_node_type_name(n->type), shadowed_by_previous_alt_case);
+
+	if (shadowed_by_previous_alt_case) {
+		assert(outermost_repeat_parent == NULL
+		    || outermost_repeat_parent->type == AST_EXPR_ALT);
+	}
+
+	switch (n->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_TOMBSTONE:
+	case AST_EXPR_ANCHOR:
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+	case AST_EXPR_RANGE:
+		break;
+
+	case AST_EXPR_CONCAT: {
+		/* If this CONCAT array of nodes always consumes input, then
+		 * it cannot be repeated empty, so it cannot produce the
+		 * special case that needs outermost_repeat_parent for
+		 * AST_EXPR_REPEAT's case below.
+		 *
+		 * An example input that needs this is 'x(()x)*' for "xx",
+		 * because the 'x' prevents the outermost group
+		 * from repeating and matching empty again after consuming
+		 * a run of "x"s. */
+		if (always_consumes_input(n)) {
+			outermost_repeat_parent = NULL;
+		}
+
+		for (size_t i = 0; i < n->u.concat.count; i++) {
+			res = analysis_iter_repetition(n->u.concat.n[i], outermost_repeat_parent,
+			    shadowed_by_previous_alt_case, repeat_plus_ancestor);
+			if (res != AST_ANALYSIS_OK) { return res; }
+		}
+		break;
+	}
+
+	case AST_EXPR_ALT: {
+		/* See AST_EXPR_GROUP below for why this matters. */
+		int new_shadowed_by_previous_alt_case = shadowed_by_previous_alt_case;
+
+		/* FIXME: check nesting of this construct */
+
+		LOG(3 - LOG_REPETITION_CASES,
+		    "%s: ALT node %p, repeat_plus_ancestor %p\n",
+		    __func__, (void *)n, (void *)repeat_plus_ancestor);
+
+		for (size_t i = 0; i < n->u.alt.count; i++) {
+			/* If this is an ALT inside of a repeated subtree that contains
+			 * a capture, this will need special handling. */
+			if (outermost_repeat_parent != NULL) {
+				LOG(3 - LOG_REPETITION_CASES,
+				    "%s: setting outermost_repeat_parent to %p for alt branch %zu, repeat_plus_ancestor %p\n",
+				    __func__, (void *)n, i, (void *)repeat_plus_ancestor);
+				outermost_repeat_parent = n;
+			}
+
+			if (is_nullable(n->u.alt.n[i]) || is_only_anchors(n->u.alt.n[i])) {
+				LOG(3 - LOG_REPETITION_CASES,
+				    "%s: setting new_shadowed_by_previous_alt_case for alt branch %zu, repeat_plus_ancestor %p\n",
+				    __func__, i, (void *)repeat_plus_ancestor);
+				new_shadowed_by_previous_alt_case = 1;
+				if (repeat_plus_ancestor != NULL) {
+					n->u.alt.nullable_alt_inside_plus_repeat = 1;
+					assert(repeat_plus_ancestor->type == AST_EXPR_REPEAT);
+					assert(repeat_plus_ancestor->u.repeat.min == 1);
+					assert(repeat_plus_ancestor->u.repeat.max == AST_COUNT_UNBOUNDED);
+
+					/* Repetition of an alt subtree which has a capture group child that
+					 * only contains only* anchors is not handled properly yet. This
+					 * isn't actually _useful_, it's just something that comes up
+					 * in fuzzing, so reject it as an unsupported PCRE construct.
+					 *
+					 * An example input that triggers this is '^(($)|)+$' . */
+					set_flags(n, AST_FLAG_UNSATISFIABLE);
+					return AST_ANALYSIS_ERROR_UNSUPPORTED;
+				}
+			}
+
+			res = analysis_iter_repetition(n->u.alt.n[i],
+			    outermost_repeat_parent,
+			    new_shadowed_by_previous_alt_case,
+			    repeat_plus_ancestor);
+			if (res != AST_ANALYSIS_OK) { return res; }
+		}
+		break;
+	}
+
+	case AST_EXPR_REPEAT:
+	{
+		struct ast_expr *child = n->u.repeat.e;
+
+		LOG(3 - LOG_REPETITION_CASES, "%s: REPEAT node %p, min %u max %u nullable? %d, !cci %d\n",
+		    __func__, (void *)n, n->u.repeat.min, n->u.repeat.max,
+		    is_nullable(child), can_consume_input(child));
+
+		if (n->u.repeat.min == 1 &&
+		    n->u.repeat.max == AST_COUNT_UNBOUNDED) {
+			LOG(3 - LOG_REPETITION_CASES, "%s: setting repeat_plus_ancestor to %p\n",
+			    __func__, (void *)n);
+			repeat_plus_ancestor = n;
+		} else {
+			repeat_plus_ancestor = NULL;
+		}
+
+		/* Special cases for a repeated group that contains possibly empty captures,
+		 * in order to correctly reflect their repeating one more time and capture
+		 * at the end (but without an infinite loop).
+		 *
+		 * For example, '^((x?))*$' will always end up with capture groups 1 and 2
+		 * at the end of the input for any number of "x"s, since the outermost ()*
+		 * can always repeat once more time, consuming nothing, and clobber the
+		 * existing captures. We mark repeated groups so that the compiled capture
+		 * program can move saving the captures after the repetition, instead
+		 * behaving like `^((?:x?)*(())$`.
+		 *
+		 * However, if the repeated subtree always consumes input, such as with
+		 * '^(()a)+b$', then clear any passed in outermost_repeat_parent, because
+		 * having to consume input will prevent that extra repetition of the
+		 * empty captures. */
+		if (always_consumes_input(n)) {
+			res = analysis_iter_repetition(child, NULL, shadowed_by_previous_alt_case,
+			    repeat_plus_ancestor);
+		} else if (outermost_repeat_parent == NULL && n->u.repeat.max > 1) {
+		        LOG(3 - LOG_REPETITION_CASES, "%s: recursing with outermost_repeat_parent set to %p\n",
+			    __func__, (void *)n);
+			res = analysis_iter_repetition(child, n, 0,
+			    repeat_plus_ancestor);
+		} else {
+			LOG(3 - LOG_REPETITION_CASES, "%s: recursing with outermost_repeat_parent %p\n",
+			    __func__, (void *)outermost_repeat_parent);
+			res = analysis_iter_repetition(child, outermost_repeat_parent, shadowed_by_previous_alt_case,
+			    repeat_plus_ancestor);
+		}
+		if (res != AST_ANALYSIS_OK) { return res; }
+		break;
+	}
+
+	case AST_EXPR_GROUP:
+		LOG(3 - LOG_REPETITION_CASES,
+		    "%s: GROUP %p, repeat_plus_ancestor %p\n",
+		    __func__, (void *)n, (void *)repeat_plus_ancestor);
+
+
+		if (outermost_repeat_parent != NULL && (is_nullable(n) || !can_consume_input(n))) {
+			int should_mark_repeated = 1;
+			/* If the outermost_repeat_parent is an ALT node and a previous ALT subtree
+			 * matching the empty string is shadowing this group, then do not mark it
+			 * as repeated, because that can lead to incorrect handling in somewhat
+			 * contrived regexes like '^(?:|(|x))*$'. */
+			if (outermost_repeat_parent->type == AST_EXPR_ALT && shadowed_by_previous_alt_case) {
+				LOG(3 - LOG_REPETITION_CASES,
+				    "%s: hit group shadowed_by_previous_alt_case, skipping\n", __func__);
+				should_mark_repeated = 0;
+			}
+
+			if (n->flags & (AST_FLAG_ANCHORED_START | AST_FLAG_ANCHORED_END)) {
+				LOG(3 - LOG_REPETITION_CASES,
+				    "%s: hit repeating anchor, skipping\n", __func__);
+				should_mark_repeated = 0;
+			}
+
+			if (should_mark_repeated) {
+				LOG(3 - LOG_REPETITION_CASES, "%s: setting group %u to repeated\n",
+				    __func__, n->u.group.id);
+				n->u.group.repeated = 1;
+				assert(outermost_repeat_parent->type == AST_EXPR_REPEAT ||
+				    outermost_repeat_parent->type == AST_EXPR_ALT);
+				LOG(3 - LOG_REPETITION_CASES, "%s: setting contains_empty_groups on outermost_repeat_parent %p\n",
+				    __func__, (void *)outermost_repeat_parent);
+				if (outermost_repeat_parent->type == AST_EXPR_REPEAT) {
+					outermost_repeat_parent->u.repeat.contains_empty_groups = 1;
+				} else if (outermost_repeat_parent->type == AST_EXPR_ALT) {
+					outermost_repeat_parent->u.alt.contains_empty_groups = 1;
+				} else {
+					assert(!"type mismatch");
+				}
+			}
+		}
+
+		if (repeat_plus_ancestor != NULL && (is_nullable(n) || !can_consume_input(n))) {
+			assert(repeat_plus_ancestor->type == AST_EXPR_REPEAT
+			    && repeat_plus_ancestor->u.repeat.min == 1
+			    && repeat_plus_ancestor->u.repeat.max == AST_COUNT_UNBOUNDED);
+			LOG(3 - LOG_REPETITION_CASES,
+			    "%s: not yet implemented, skipping\n", __func__);
+			/* return AST_ANALYSIS_ERROR_UNSUPPORTED; */
+		}
+
+		res = analysis_iter_repetition(n->u.group.e, outermost_repeat_parent,
+		    shadowed_by_previous_alt_case, repeat_plus_ancestor);
+		if (res != AST_ANALYSIS_OK) { return res; }
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		res = analysis_iter_repetition(n->u.subtract.a, outermost_repeat_parent, shadowed_by_previous_alt_case,
+			repeat_plus_ancestor);
+		if (res != AST_ANALYSIS_OK) { return res; }
+		res = analysis_iter_repetition(n->u.subtract.b, outermost_repeat_parent, shadowed_by_previous_alt_case,
+			repeat_plus_ancestor);
+		break;
+
+	default:
+		assert(!"unreached");
+	}
+	return res;
+}
+
+enum anchoring_analysis_res {
+	ANCHOR_ANALYSIS_ANCHORED = 'a',
+	ANCHOR_ANALYSIS_UNANCHORED = 'u',
+	ANCHOR_ANALYSIS_UNDECIDED = '_',
 };
 
-static enum unanchored_analysis_res
+static enum anchoring_analysis_res
 analysis_iter_unanchored_start(const struct ast_expr *n)
 {
 	if (n->flags & AST_FLAG_ANCHORED_START) {
 		LOG(4 - LOG_UNANCHORED_FLAGS, "%s: n (%p)->flags & AST_FLAG_ANCHORED_START -> N\n",
 		    __func__, (void *)n);
-		return UA_NO;
+		return ANCHOR_ANALYSIS_ANCHORED;
 	}
 
 	LOG(4 - LOG_UNANCHORED_FLAGS, "%s: node %p, type %s\n",
@@ -293,7 +581,7 @@ analysis_iter_unanchored_start(const struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 		LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> U\n",
 		    __func__, ast_node_type_name(n->type));
-		return UA_UNDECIDED;
+		return ANCHOR_ANALYSIS_UNDECIDED;
 
 	case AST_EXPR_TOMBSTONE:
 		break;
@@ -302,12 +590,12 @@ analysis_iter_unanchored_start(const struct ast_expr *n)
 		switch (n->u.anchor.type) {
 		case AST_ANCHOR_START:
 			LOG(3 - LOG_UNANCHORED_FLAGS, "%s: ^ anchor -> N\n", __func__);
-			return UA_NO;
+			return ANCHOR_ANALYSIS_ANCHORED;
 
 		case AST_ANCHOR_END:
 			LOG(3 - LOG_UNANCHORED_FLAGS, "%s: $ anchor -> U\n", __func__);
 			/* will be handled by other cases */
-			return UA_UNDECIDED;
+			return ANCHOR_ANALYSIS_UNDECIDED;
 
 		default:
 			assert(!"unreached");
@@ -323,7 +611,7 @@ analysis_iter_unanchored_start(const struct ast_expr *n)
 	case AST_EXPR_RANGE:
 		LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> Y\n",
 		    __func__, ast_node_type_name(n->type));
-		return UA_YES;
+		return ANCHOR_ANALYSIS_UNANCHORED;
 
 	case AST_EXPR_CONCAT: {
 		size_t i;
@@ -331,8 +619,8 @@ analysis_iter_unanchored_start(const struct ast_expr *n)
 		/* has unanchored start if first non-nullable child does */
 		for (i = 0; i < n->u.concat.count; i++) {
 			const struct ast_expr *child = n->u.concat.n[i];
-			const enum unanchored_analysis_res child_res = analysis_iter_unanchored_start(child);
-			if (child_res != UA_UNDECIDED) {
+			const enum anchoring_analysis_res child_res = analysis_iter_unanchored_start(child);
+			if (child_res != ANCHOR_ANALYSIS_UNDECIDED) {
 				LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> %c (child res)\n",
 				    __func__, ast_node_type_name(n->type), child_res);
 				return child_res;
@@ -350,19 +638,19 @@ analysis_iter_unanchored_start(const struct ast_expr *n)
 		size_t i;
 
 		/* if all children agree, return that result, otherwise undecided */
-		const enum unanchored_analysis_res first_child_res = analysis_iter_unanchored_start(n->u.alt.n[0]);
+		const enum anchoring_analysis_res first_child_res = analysis_iter_unanchored_start(n->u.alt.n[0]);
 		LOG(3 - LOG_UNANCHORED_FLAGS, "%s: ALT child 0 -- %s -> %c (child res)\n",
 		    __func__, ast_node_type_name(n->type), first_child_res);
 
 		for (i = 1; i < n->u.alt.count; i++) {
 			const struct ast_expr *child = n->u.alt.n[i];
-			const enum unanchored_analysis_res child_res = analysis_iter_unanchored_start(child);
+			const enum anchoring_analysis_res child_res = analysis_iter_unanchored_start(child);
 			LOG(3 - LOG_UNANCHORED_FLAGS, "%s: ALT child %zd -- %s -> %c (child res)\n",
 			    __func__, i, ast_node_type_name(n->type), child_res);
 			if (child_res != first_child_res) {
 				LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> %c (child result) contracts first, returning U\n",
 				    __func__, ast_node_type_name(n->type), child_res);
-				return UA_UNDECIDED;
+				return ANCHOR_ANALYSIS_UNDECIDED;
 			}
 		}
 
@@ -375,7 +663,7 @@ analysis_iter_unanchored_start(const struct ast_expr *n)
 		if (n->u.repeat.min == 0) {
 			LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> U (repeat.min == 0)\n",
 			    __func__, ast_node_type_name(n->type));
-			return UA_UNDECIDED;
+			return ANCHOR_ANALYSIS_UNDECIDED;
 		}
 		return analysis_iter_unanchored_start(n->u.repeat.e);
 
@@ -389,16 +677,16 @@ analysis_iter_unanchored_start(const struct ast_expr *n)
 		assert(!"unreached");
 	}
 
-	return UA_UNDECIDED;
+	return ANCHOR_ANALYSIS_UNDECIDED;
 }
 
-static enum unanchored_analysis_res
+static enum anchoring_analysis_res
 analysis_iter_unanchored_end(const struct ast_expr *n)
 {
 	if (n->flags & AST_FLAG_ANCHORED_END) {
 		LOG(4 - LOG_UNANCHORED_FLAGS, "%s: node (%p)->flags & AST_FLAG_ANCHORED_END -> N\n",
 		    __func__, (void *)n);
-		return UA_NO;
+		return ANCHOR_ANALYSIS_ANCHORED;
 	}
 
 	LOG(4 - LOG_UNANCHORED_FLAGS, "%s: node %p, type %s\n",
@@ -408,7 +696,7 @@ analysis_iter_unanchored_end(const struct ast_expr *n)
 	case AST_EXPR_EMPTY:
 		LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> U\n",
 		    __func__, ast_node_type_name(n->type));
-		return UA_UNDECIDED;
+		return ANCHOR_ANALYSIS_UNDECIDED;
 
 	case AST_EXPR_TOMBSTONE:
 		break;
@@ -418,12 +706,12 @@ analysis_iter_unanchored_end(const struct ast_expr *n)
 		case AST_ANCHOR_START:
 			LOG(3 - LOG_UNANCHORED_FLAGS, "%s: ^ %s -> U\n",
 			    __func__, ast_node_type_name(n->type));
-			return UA_UNDECIDED;
+			return ANCHOR_ANALYSIS_UNDECIDED;
 
 		case AST_ANCHOR_END:
 			LOG(3 - LOG_UNANCHORED_FLAGS, "%s: $ %s -> N\n",
 			    __func__, ast_node_type_name(n->type));
-			return UA_NO;
+			return ANCHOR_ANALYSIS_ANCHORED;
 
 		default:
 			assert(!"unreached");
@@ -439,7 +727,7 @@ analysis_iter_unanchored_end(const struct ast_expr *n)
 	case AST_EXPR_RANGE:
 		LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> Y\n",
 		    __func__, ast_node_type_name(n->type));
-		return UA_YES;
+		return ANCHOR_ANALYSIS_UNANCHORED;
 
 	case AST_EXPR_CONCAT: {
 		size_t i;
@@ -447,8 +735,8 @@ analysis_iter_unanchored_end(const struct ast_expr *n)
 		/* has unanchored end if last non-nullable child does */
 		for (i = n->u.concat.count; i > 0; i--) {
 			const struct ast_expr *child = n->u.concat.n[i - 1];
-			const enum unanchored_analysis_res child_res = analysis_iter_unanchored_end(child);
-			if (child_res != UA_UNDECIDED) {
+			const enum anchoring_analysis_res child_res = analysis_iter_unanchored_end(child);
+			if (child_res != ANCHOR_ANALYSIS_UNDECIDED) {
 				LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> %c (child res)\n",
 				    __func__, ast_node_type_name(n->type), child_res);
 				return child_res;
@@ -466,19 +754,19 @@ analysis_iter_unanchored_end(const struct ast_expr *n)
 		size_t i;
 
 		/* if all children agree, return that result, otherwise undecided */
-		const enum unanchored_analysis_res first_child_res = analysis_iter_unanchored_end(n->u.alt.n[0]);
+		const enum anchoring_analysis_res first_child_res = analysis_iter_unanchored_end(n->u.alt.n[0]);
 		LOG(3 - LOG_UNANCHORED_FLAGS, "%s: ALT child 0 -- %s -> %c (child res)\n",
 		    __func__, ast_node_type_name(n->type), first_child_res);
 
 		for (i = 1; i < n->u.alt.count; i++) {
 			const struct ast_expr *child = n->u.alt.n[i];
-			const enum unanchored_analysis_res child_res = analysis_iter_unanchored_end(child);
+			const enum anchoring_analysis_res child_res = analysis_iter_unanchored_end(child);
 			LOG(3 - LOG_UNANCHORED_FLAGS, "%s: ALT child %zd -- %s -> %c (child res)\n",
 			    __func__, i, ast_node_type_name(n->type), child_res);
 			if (child_res != first_child_res) {
 				LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> %c (child result) contracts first, returning U\n",
 				    __func__, ast_node_type_name(n->type), child_res);
-				return UA_UNDECIDED;
+				return ANCHOR_ANALYSIS_UNDECIDED;
 			}
 		}
 
@@ -491,7 +779,7 @@ analysis_iter_unanchored_end(const struct ast_expr *n)
 		if (n->u.repeat.min == 0) {
 			LOG(3 - LOG_UNANCHORED_FLAGS, "%s: %s -> U (repeat.min == 0)\n",
 			    __func__, ast_node_type_name(n->type));
-			return UA_UNDECIDED;
+			return ANCHOR_ANALYSIS_UNDECIDED;
 		}
 		return analysis_iter_unanchored_end(n->u.repeat.e);
 
@@ -505,7 +793,7 @@ analysis_iter_unanchored_end(const struct ast_expr *n)
 		assert(!"unreached");
 	}
 
-	return UA_UNDECIDED;
+	return ANCHOR_ANALYSIS_UNDECIDED;
 }
 
 static void
@@ -552,6 +840,47 @@ set_flags_subtree(struct ast_expr *n, enum ast_flags flags)
 	}
 }
 
+static int
+can_consume_single_newline(struct ast_expr *n)
+{
+	if (!can_consume_input(n)) { return 0; }
+
+	if (n->flags & AST_FLAG_MATCHES_1NEWLINE) { return 1; }
+
+	switch (n->type) {
+	case AST_EXPR_LITERAL:
+		return n->u.literal.c == '\n';
+
+	case AST_EXPR_CODEPOINT:
+		return n->u.codepoint.u == (uint32_t)'\n';
+
+	case AST_EXPR_RANGE:
+		if ((n->u.range.from.type == AST_ENDPOINT_LITERAL) &&
+		    (n->u.range.to.type == AST_ENDPOINT_LITERAL)) {
+			return n->u.range.from.u.literal.c <= '\n'
+			    && n->u.range.to.u.literal.c >= '\n';
+		} else if ((n->u.range.from.type == AST_ENDPOINT_CODEPOINT) &&
+		    (n->u.range.to.type == AST_ENDPOINT_CODEPOINT)) {
+			    return n->u.range.from.u.codepoint.u <= '\n'
+				&& n->u.range.to.u.codepoint.u >= '\n';
+		} else if (n->u.range.from.type == AST_ENDPOINT_NAMED) {
+			/* currently unreachable, named ranges are unsupported */
+			assert(!"unreachable");
+			break;
+		}
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		return can_consume_single_newline(n->u.subtract.a)
+		    && !can_consume_single_newline(n->u.subtract.b);
+
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 struct anchoring_env {
 	enum re_flags re_flags;
 
@@ -563,8 +892,67 @@ struct anchoring_env {
 	/* Corresponding flag for end anchors while sweeping backward. */
 	int followed_by_consuming;
 
+	/* Special case for detecting '$[^a]', which matches "\n" with
+	 * a capture group 0 of (0,1) in PCRE. */
+	int followed_by_consuming_newline;
+
+	/* Flag for tracking whether we're in a part of the subtree that
+	 * is always before a start anchor. This influences satisfiability
+	 * and edge cases like '()*^'. */
 	int before_start_anchor;
+
+	/* Flag used to detect and reject the awkward case in '$[^a]',
+	 * where (according to PCRE) the character class after the '$'
+	 * should match the literal newline, but nothing else, and only
+	 * once. Because $ is actually a zero-width assertion that
+	 * execution is either at the end of input or a trailing
+	 * newline, it has the rather surprising result that '$[^a]'
+	 * will not match "x" but *will* match "x\n" (because it has a $
+	 * before a trailing newline, and because the newline matches
+	 * the non-skippable [^a]). We just return an unsupported
+	 * error for this case. */
+	enum newline_after_end_anchor_state {
+		NAEAS_NONE,
+		NAEAS_WOULD_MATCH_ONCE,
+	} newline_after_end_anchor_state;
+
+	int after_end_anchor;
 };
+
+/* Does the subtree match a literal '\n'? */
+static int
+matches_newline(const struct ast_expr *n)
+{
+	switch (n->type) {
+	case AST_EXPR_LITERAL:
+		return n->u.literal.c == '\n';
+
+	case AST_EXPR_SUBTRACT:
+		return matches_newline(n->u.subtract.a)
+		    && !matches_newline(n->u.subtract.b);
+
+	case AST_EXPR_RANGE:
+	{
+		const struct ast_endpoint *f = &n->u.range.from;
+		const struct ast_endpoint *t = &n->u.range.to;
+		if (f->type != AST_ENDPOINT_LITERAL
+		    || t->type != AST_ENDPOINT_LITERAL) {
+			/* not implemented */
+			LOG(1 - LOG_ANCHORING, "%s: not implemented\n", __func__);
+			return 0;
+		}
+
+		const int res = f->u.literal.c <= '\n' && t->u.literal.c >= '\n';
+		LOG(1 - LOG_ANCHORING, "%s: RANGE res %d\n", __func__, res);
+		return res;
+	}
+
+	default:
+		break;
+	}
+
+	return 0;
+}
 
 /* Tree walker that analyzes the AST, marks which nodes and subtrees are
  * anchored at the start and/or end, and determines which subtrees are
@@ -600,7 +988,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		case AST_ANCHOR_START:
 			/*
 			 * If it's not possible to get here without consuming
-			 * any input and there's a start anchor, the regex is
+			 * any input and there's a start anchor, the subtree is
 			 * inherently unsatisfiable.
 			 */
 			set_flags(n, AST_FLAG_ANCHORED_START);
@@ -628,8 +1016,14 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 		case AST_ANCHOR_END:
 			set_flags(n, AST_FLAG_ANCHORED_END);
+			env->after_end_anchor = 1;
+			LOG(3 - LOG_ANCHORING,
+			    "%s: END anchor\n", __func__);
 			if (n->u.anchor.is_end_nl && !(env->re_flags & RE_ANCHORED)) {
 				set_flags(n, AST_FLAG_END_NL);
+				if (env->newline_after_end_anchor_state == NAEAS_NONE) {
+					env->newline_after_end_anchor_state = NAEAS_WOULD_MATCH_ONCE;
+				}
 			}
 			break;
 
@@ -642,8 +1036,25 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	 * These are the types that actually consume input.
 	 */
 	case AST_EXPR_LITERAL:
+		if (n->u.literal.c == '\n') {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+
+			if (env->newline_after_end_anchor_state == NAEAS_WOULD_MATCH_ONCE) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: LITERAL: rejecting non-optional newline match after $ as unsupported\n",
+				    __func__);
+				set_flags(n, AST_FLAG_UNSATISFIABLE);
+				/* fprintf(stderr, "%s:%u: AST_ANALYSIS_ERROR_UNSUPPORTED\n", __func__, __LINE__); */
+				return AST_ANALYSIS_ERROR_UNSUPPORTED;
+			}
+		}
+		break;
+
 	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_RANGE:
+		if (can_consume_single_newline(n)) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+		}
 		break;		/* handled outside switch/case */
 
 	case AST_EXPR_CONCAT: {
@@ -673,6 +1084,13 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 			if (res != AST_ANALYSIS_OK &&
 			    res != AST_ANALYSIS_UNSATISFIABLE) { /* unsat is handled below */
+				if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
+
+					/* FIXME: check this */
+					assert(child->flags & AST_FLAG_UNSATISFIABLE);
+
+					set_flags(n, AST_FLAG_UNSATISFIABLE);
+				}
 				return res;
 			}
 
@@ -703,12 +1121,12 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				env->past_always_consuming = 1;
 			}
 
+			env->newline_after_end_anchor_state = child_env.newline_after_end_anchor_state;
+			env->after_end_anchor = child_env.after_end_anchor;
 		}
 
 		/* flow ANCHORED_START and ANCHORED_END flags upward */
 		{
-			int after_always_consumes = 0;
-
 			for (i = 0; i < n->u.concat.count; i++) {
 				struct ast_expr *child = n->u.concat.n[i];
 				if (child->flags & AST_FLAG_ANCHORED_START) {
@@ -716,20 +1134,11 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 					    "%s: setting ANCHORED_START due to child %zu (%p)'s analysis\n",
 					    __func__, i, (void *)child);
 					set_flags(n, AST_FLAG_ANCHORED_START);
-
-					if (after_always_consumes) {
-						LOG(3 - LOG_ANCHORING,
-						    "%s: setting %p and child %p UNSATISFIABLE due to ^-anchored child that always consumes input\n",
-						    __func__, (void *)n, (void *)child);
-						set_flags(n, AST_FLAG_UNSATISFIABLE);
-						set_flags(child, AST_FLAG_UNSATISFIABLE);
-					}
 				}
 
 				if (always_consumes_input(child)) {
 					LOG(3 - LOG_ANCHORING,
 					    "%s: child %zd always consumes input\n", __func__, i);
-					after_always_consumes = 1;
 				}
 			}
 		}
@@ -786,17 +1195,10 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		for (i = 0; i < n->u.concat.count; i++) {
 			struct ast_expr *child = n->u.concat.n[i];
 			if (after_end_anchor) {
-				if (always_consumes_input(child)) {
-					LOG(3 - LOG_ANCHORING,
-					    "%s: after_end_anchor & ALWAYS_CONSUMES on child %p -> UNSATISFIABLE\n",
-					    __func__, (void *)child);
-					set_flags(child, AST_FLAG_UNSATISFIABLE);
-				}
-
 				if (child->type == AST_EXPR_REPEAT
 				    && (child->flags & AST_FLAG_UNSATISFIABLE)
 				    && child->u.repeat.min == 0) {
-					child->u.repeat.max = 0;
+					prune_repeat_node(child);
 				}
 			} else if (!after_end_anchor
 			    && child->flags & AST_FLAG_ANCHORED_END
@@ -807,6 +1209,13 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 					    __func__, (void *)child);
 					after_end_anchor = 1;
 				}
+			}
+		}
+
+		for (i = 0; i < n->u.concat.count; i++) {
+			struct ast_expr *child = n->u.concat.n[i];
+			if (can_consume_single_newline(child)) {
+				set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
 			}
 		}
 
@@ -844,10 +1253,27 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				    __func__, i, (void *)n->u.alt.n[i]);
 				assert(child->flags & AST_FLAG_UNSATISFIABLE);
 			} else if (res == AST_ANALYSIS_OK) {
-				all_set_past_always_consuming &= child_env.past_always_consuming;
-				any_sat = 1;
+				if (child->type == AST_EXPR_REPEAT
+				    && /*child->u.repeat.min == 0 &&*/ child->u.repeat.max == 0) {
+					LOG(3 - LOG_ANCHORING,
+					    "%s: ignoring pruned REPEAT node\n", __func__);
+				} else {
+					all_set_past_always_consuming &= child_env.past_always_consuming;
+					any_sat = 1;
+				}
+			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
+				assert(child->flags & AST_FLAG_UNSATISFIABLE);
+				continue;
 			} else {
 				return res;
+			}
+
+			if (env->after_end_anchor
+			    && always_consumes_input(child)) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: ALT child %zd is after_end_anchor and always_consumes_input => UNSATISFIABLE\n",
+				    __func__, i);
+				set_flags(child, AST_FLAG_UNSATISFIABLE);
 			}
 
 			if (!(child->flags & AST_FLAG_UNSATISFIABLE)) { /* ignore unsat nodes */
@@ -857,6 +1283,10 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				if (!(child->flags & AST_FLAG_ANCHORED_END)) {
 					all_end_anchored = 0;
 				}
+			}
+
+			if (child->flags & AST_FLAG_MATCHES_1NEWLINE) {
+				set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
 			}
 		}
 
@@ -883,7 +1313,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		if (all_end_anchored) {
 			LOG(3 - LOG_ANCHORING,
 			    "%s: ALT: all_end_anchored -> ANCHORED_END\n", __func__);
-			/* FIXME: AST_FLAG_END_NL: need to determine how this interacts
+			/* TODO: AST_FLAG_END_NL: need to determine how this interacts
 			 * with alt nodes. `^(?:(a)\z|(a)$)` */
 			set_flags(n, AST_FLAG_ANCHORED_END);
 		}
@@ -891,8 +1321,18 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		break;
 	}
 
-	case AST_EXPR_REPEAT:
-		res = analysis_iter_anchoring(env, n->u.repeat.e);
+	case AST_EXPR_REPEAT:;
+		const int orig_after_end_anchor = env->after_end_anchor;
+
+		if (n->u.repeat.min == 0) {
+			/* Call the child with a copy of the anchoring env,
+			 * since any subtree repeated zero or more times can
+			 * always be ignored. */
+			struct anchoring_env child_env = *env;
+			res = analysis_iter_anchoring(&child_env, n->u.repeat.e);
+		} else {
+			res = analysis_iter_anchoring(env, n->u.repeat.e);
+		}
 
 		/*
 		 * This logic corresponds to the equivalent case for tombstone nodes
@@ -911,7 +1351,7 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			if (n->u.repeat.min == 0) {
 				LOG(3 - LOG_ANCHORING,
 				    "%s: REPEAT: UNSATISFIABLE but can be repeated 0 times, ignoring\n", __func__);
-				n->u.repeat.max = 0;
+				prune_repeat_node(n);
 				break;
 			} else if (n->u.repeat.min > 0) {
 				set_flags(n, AST_FLAG_UNSATISFIABLE);
@@ -920,21 +1360,63 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				return AST_ANALYSIS_UNSATISFIABLE;
 			}
 		} else if (res != AST_ANALYSIS_OK) {
-			LOG(3 - LOG_ANCHORING,
-			    "%s: REPEAT: analysis on child returned %d\n", __func__, res);
-			return res;
+			if (n->u.repeat.min == 0) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: REPEAT: analysis on child returned %d, setting repeat count to 0\n", __func__, res);
+				prune_repeat_node(n);
+			} else {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: REPEAT: analysis on child returned %d\n", __func__, res);
+				return res;
+			}
 		}
 
-		if (n->u.repeat.e->flags & AST_FLAG_ANCHORED_END && n->u.repeat.min > 0) {
-			/* FIXME: if repeating something that is always
-			 * anchored at the end, repeat.max could be
-			 * capped at 1, but I have not yet found any
-			 * inputs where that change is necessary to
-			 * produce a correct result. */
-			LOG(3 - LOG_ANCHORING,
-			    "%s: REPEAT: repeating ANCHORED_END subtree >0 times -> ANCHORED_END\n", __func__);
-			set_flags(n, n->u.repeat.e->flags & END_ANCHOR_FLAG_MASK);
+		if (can_consume_single_newline(n->u.repeat.e)) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
 		}
+
+		if (n->u.repeat.e->flags & AST_FLAG_ANCHORED_START && n->u.repeat.min > 0) {
+			LOG(3 - LOG_ANCHORING,
+			    "%s: REPEAT: repeating ANCHORED_START subtree >0 times -> ANCHORED_START\n", __func__);
+			set_flags(n, AST_FLAG_ANCHORED_START);
+			n->u.repeat.max = 1;
+		}
+
+		if (can_consume_single_newline(n->u.repeat.e)) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+		}
+
+		/* If the child subtree is anchored at the start and/or end, then this
+		 * node can be repeated at most once. */
+		const int child_is_anchored = n->u.repeat.e->flags & (AST_FLAG_ANCHORED_START | AST_FLAG_ANCHORED_END);
+		if (child_is_anchored) {
+			if (n->u.repeat.min >= 1) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: REPEAT: copying anchor flags from child subtree since we cannot repeat it 0 times\n", __func__);
+				set_flags(n, n->u.repeat.e->flags & END_ANCHOR_FLAG_MASK);
+			}
+
+			if (n->u.repeat.min > 1) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: REPEAT: anchored, so clamping min repeat to at most once\n", __func__);
+				n->u.repeat.min = 1;
+			}
+			if (n->u.repeat.max > 1) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: REPEAT: anchored, so clamping max repeat to at most once\n", __func__);
+				n->u.repeat.max = 1;
+			}
+		}
+
+		/* If there's a {0,_} repeat group after an end anchor that always consumes
+		 * input, set its max count to 0. This should be based on the after_end_anchor
+		 * flag value *before* analyzing the repeated subtree. */
+		if (orig_after_end_anchor
+		    && always_consumes_input(n)
+		    && n->u.repeat.min == 0) {
+			prune_repeat_node(n);
+ 		}
+
 		break;
 
 	case AST_EXPR_GROUP:
@@ -964,6 +1446,10 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		} while(0)
 
 		PROPAGATE_CHILD_FLAGS("GROUP", n, n->u.group.e);
+
+		if (n->u.group.e->flags & AST_FLAG_MATCHES_1NEWLINE) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+		}
 		break;
 
 	case AST_EXPR_SUBTRACT:
@@ -974,6 +1460,15 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		if (n->u.subtract.a->flags & AST_FLAG_ANCHORED_END) {
 			set_flags(n, n->u.subtract.a->flags & END_ANCHOR_FLAG_MASK);
 		}
+
+		if (env->newline_after_end_anchor_state == NAEAS_WOULD_MATCH_ONCE) {
+			LOG(3 - LOG_ANCHORING,
+			    "%s: SUBTRACT: rejecting non-optional newline match after $ as unsupported\n",
+			    __func__);
+			set_flags(n, AST_FLAG_UNSATISFIABLE);
+			return AST_ANALYSIS_ERROR_UNSUPPORTED;
+		}
+
 		if (res != AST_ANALYSIS_OK) {
 			if (res == AST_ANALYSIS_UNSATISFIABLE) {
 				set_flags(n, AST_FLAG_UNSATISFIABLE);
@@ -991,6 +1486,10 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			}
 			return res;
 		}
+		if (can_consume_single_newline(n->u.repeat.e)) {
+			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
+		}
+
 		break;
 
 	default:
@@ -1017,9 +1516,9 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	enum ast_analysis_res res;
 
 	/*
-	 * Second pass, in reverse, specifically checking for end-anchored
-	 * subtrees that are unsatisfiable because they are followed by
-	 * nodes that always consume input.
+	 * Second anchoring pass, in reverse, specifically checking for
+	 * end-anchored subtrees that are unsatisfiable because they are
+	 * followed by nodes that always consume input.
 	 *
 	 * Also check for subtrees that always consume input appearing
 	 * before a start anchor and mark them as unsatisfiable.
@@ -1031,6 +1530,14 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
+		if (env->before_start_anchor) {
+			/* Needed for cases like '()*^' matching "". */
+			LOG(3 - LOG_ANCHORING, "%s: skipping EMPTY before ^\n", __func__);
+
+			set_flags(n, AST_FLAG_ANCHORED_START);
+		}
+		break;
+
 	case AST_EXPR_TOMBSTONE:
 		break;
 
@@ -1044,15 +1551,25 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			break;
 
 		case AST_ANCHOR_END:
-			/* should already be set during forward pass */
-			assert(n->flags & AST_FLAG_ANCHORED_END);
+			/* Normally this will have been set during the forward pass,
+			 * but if it's inside an unsatisfiable CONCAT node whose earlier
+			 * children casued it to be rejected, forward analysis will not
+			 * have reached it. */
+			set_flags(n, AST_FLAG_ANCHORED_END);
 
 			if (env->followed_by_consuming) {
-				LOG(3 - LOG_ANCHORING,
-				    "%s: END anchor & followed_by_consuming, setting UNSATISFIABLE\n",
-				    __func__);
-				set_flags(n, AST_FLAG_UNSATISFIABLE);
-				return AST_ANALYSIS_UNSATISFIABLE;
+				if (env->followed_by_consuming_newline) {
+					LOG(3 - LOG_ANCHORING,
+					    "%s: END anchor & followed_by_consuming, returning UNSUPPORTED\n",
+					    __func__);
+					return AST_ANALYSIS_ERROR_UNSUPPORTED;
+				} else {
+					LOG(3 - LOG_ANCHORING,
+					    "%s: END anchor & followed_by_consuming, setting UNSATISFIABLE\n",
+					    __func__);
+					set_flags(n, AST_FLAG_UNSATISFIABLE);
+					return AST_ANALYSIS_UNSATISFIABLE;
+				}
 			}
 
 			break;
@@ -1076,6 +1593,7 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 
 	case AST_EXPR_CONCAT: {
 		size_t i;
+		int start_anchored = 0;
 		for (i = n->u.concat.count; i > 0; i--) {
 			struct ast_expr *child = n->u.concat.n[i - 1];
 			assert(child->type != AST_EXPR_TOMBSTONE);
@@ -1113,7 +1631,16 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 					set_flags(n, AST_FLAG_UNSATISFIABLE);
 				}
 			} else if (res != AST_ANALYSIS_OK) {
+				set_flags(n, AST_FLAG_UNSATISFIABLE);
+				LOG(3 - LOG_ANCHORING,
+				    "%s: CONCAT: got res of %d, bubbling up\n", __func__, res);
 				return res;
+			}
+
+			if (child->flags & AST_FLAG_ANCHORED_START) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: CONCAT: child %zd is ANCHORED_START\n", __func__, i);
+				start_anchored = 1;
 			}
 
 			/* If we were previously not past any nodes that always
@@ -1128,12 +1655,35 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				env->followed_by_consuming = 1;
 			}
 
+			if (!env->followed_by_consuming_newline &&
+			    (child_env.followed_by_consuming_newline
+				|| child->flags & AST_FLAG_MATCHES_1NEWLINE)) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: setting followed_by_consuming_newline due to child %p's analysis\n",
+				    __func__, (void *)child);
+				env->followed_by_consuming_newline = 1;
+			}
+
+			if (start_anchored) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: earliest unskipped child had ANCHORED_START, bubbling up\n",
+				    __func__);
+				set_flags(n, AST_FLAG_ANCHORED_START);
+			}
+
 			if (!env->before_start_anchor && child_env.before_start_anchor
 			    && !is_nullable(child)) {
 				LOG(3 - LOG_ANCHORING,
 				    "%s: setting before_start_anchor due to child %p's analysis\n",
 				    __func__, (void *)child);
 				env->before_start_anchor = 1;
+			}
+
+			if (!env->followed_by_consuming_newline && child_env.followed_by_consuming_newline) {
+				LOG(3 - LOG_ANCHORING,
+				    "%s: setting followed_by_consuming_newline due to child %p's analysis\n",
+				    __func__, (void *)child);
+				env->followed_by_consuming_newline = 1;
 			}
 		}
 
@@ -1143,6 +1693,7 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	case AST_EXPR_ALT: {
 		int any_sat = 0;
 		int all_set_followed_by_consuming = 1;
+		int any_set_followed_by_consuming_newline = 0;
 		int all_set_before_start_anchor = 1;
 
 		assert(n->u.alt.count > 0);
@@ -1166,9 +1717,22 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 				    __func__, i, (void *)n->u.alt.n[i]);
 				assert(child->flags & AST_FLAG_UNSATISFIABLE);
 			} else if (res == AST_ANALYSIS_OK) {
-				all_set_followed_by_consuming &= child_env.followed_by_consuming;
-				all_set_before_start_anchor &= child_env.before_start_anchor;
-				any_sat = 1;
+				if (0 && child->type == AST_EXPR_REPEAT
+				    && child->u.repeat.max == 0) {
+					LOG(3 - LOG_ANCHORING,
+					    "%s: ignoring pruned REPEAT node\n", __func__);
+				} else {
+					all_set_followed_by_consuming &= child_env.followed_by_consuming;
+					all_set_before_start_anchor &= child_env.before_start_anchor;
+					
+					any_set_followed_by_consuming_newline |= child_env.followed_by_consuming_newline;
+					
+					any_sat = 1;
+				}
+			} else if (res == AST_ANALYSIS_ERROR_UNSUPPORTED) {
+				LOG(3 - LOG_ANCHORING, "%s: got res of UNSUPPORTED, bubbling up\n", __func__);
+				assert(child->flags & AST_FLAG_UNSATISFIABLE);
+				continue;
 			} else {
 				return res;
 			}
@@ -1181,11 +1745,19 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			env->followed_by_consuming = 1;
 		}
 
+		if (!env->followed_by_consuming_newline && any_set_followed_by_consuming_newline) {
+			LOG(3 - LOG_ANCHORING,
+			    "%s: ALT: any_set_followed_by_consuming_newline -> setting env->followed_by_consuming_newline for feature PCRE rejection\n",
+			    __func__);
+			env->followed_by_consuming_newline = 1;
+		}
+
 		if (!env->before_start_anchor && all_set_before_start_anchor) {
 			LOG(3 - LOG_ANCHORING,
-			    "%s: ALT: all_set_before_start_anchor -> setting env->before_start_anchor\n",
+			    "%s: ALT: all_set_before_start_anchor -> setting env->before_start_anchor and ANCHORED_START\n",
 			    __func__);
 			env->before_start_anchor = 1;
+			set_flags(n, AST_FLAG_ANCHORED_START);
 		}
 
 		/* An ALT group is only unsatisfiable if they ALL are. */
@@ -1200,12 +1772,21 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 	}
 
 	case AST_EXPR_REPEAT:
-		res = analysis_iter_reverse_anchoring(env, n->u.repeat.e);
+		if (n->u.repeat.min == 0) {
+			/* Call the child with a copy of the anchoring env,
+			 * since any subtree repeated zero or more times can
+			 * always be ignored. */
+			struct anchoring_env child_env = *env;
+			res = analysis_iter_reverse_anchoring(&child_env, n->u.repeat.e);
+		} else {
+			res = analysis_iter_reverse_anchoring(env, n->u.repeat.e);
+		}
+
 		if (res == AST_ANALYSIS_UNSATISFIABLE) {
 			if (n->u.repeat.min == 0) {
 				LOG(3 - LOG_ANCHORING,
 				    "%s: REPEAT: UNSATISFIABLE but can be repeated 0 times, ignoring\n", __func__);
-				n->u.repeat.max = 0; /* skip */
+				prune_repeat_node(n);
 				break;
 			} else if (n->u.repeat.min > 0) {
 				LOG(3 - LOG_ANCHORING,
@@ -1218,6 +1799,18 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			    "%s: REPEAT: analysis on child returned %d\n", __func__, res);
 			return res;
 		}
+
+		/* If there's a repeat group that always matches anything before a start anchor,
+		 * set its max count to 0. */
+		if (env->before_start_anchor
+		    && is_nullable(n)
+		    && always_consumes_input(n)) {
+			LOG(3 - LOG_ANCHORING,
+			    "%s: REPEAT: repeated group that consumes input before ^, setting max count to 0\n",
+			    __func__);
+			prune_repeat_node(n);
+		}
+
 		break;
 
 	case AST_EXPR_GROUP:
@@ -1231,6 +1824,14 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			}
 			return res;
 		}
+
+		if (n->u.group.e->flags & ANCHOR_FLAG_MASK) {
+			LOG(3 - LOG_ANCHORING,
+			    "%s: bubbling up anchoring flags from %p to %p\n",
+			    __func__, (void *)n->u.group.e, (void *)n);
+			set_flags(n, n->u.group.e->flags & ANCHOR_FLAG_MASK);
+		}
+
 		break;
 
 	case AST_EXPR_SUBTRACT:
@@ -1269,6 +1870,10 @@ analysis_iter_reverse_anchoring(struct anchoring_env *env, struct ast_expr *n)
 		return AST_ANALYSIS_UNSATISFIABLE;
 	}
 
+	if (n->flags & AST_FLAG_CAN_CONSUME && matches_newline(n)) {
+		env->followed_by_consuming_newline = 1;
+	}
+
 	return AST_ANALYSIS_OK;
 }
 
@@ -1302,7 +1907,7 @@ assign_firsts(struct ast_expr *n)
 			assign_firsts(child);
 
 			if (can_consume_input(child) || (child->flags & AST_FLAG_ANCHORED_START)) {
-				break;
+				if (!is_nullable(child)) { break; }
 			}
 		}
 		break;
@@ -1319,9 +1924,7 @@ assign_firsts(struct ast_expr *n)
 	}
 
 	case AST_EXPR_REPEAT:
-		if (n->u.repeat.max > 0) {
-			set_flags(n, AST_FLAG_FIRST);
-		}
+		set_flags(n, AST_FLAG_FIRST);
 
 		/* Don't recurse.
 		 *
@@ -1333,7 +1936,7 @@ assign_firsts(struct ast_expr *n)
 		 * subexpression is compiled, the links to the global self-loop
 		 * are created, which the REPEAT node then copies.
 		 *
-		 * It probably makes sense to not go further
+		 * FIXME: needs tests. It probably makes sense to not go further
 		 * here because the top layer of the repeated section
 		 * should only link to the global start once. */
 
@@ -1384,7 +1987,7 @@ assign_lasts(struct ast_expr *n)
 			struct ast_expr *child = n->u.concat.n[i - 1];
 			assign_lasts(child);
 			if (can_consume_input(child) || (child->flags & AST_FLAG_ANCHORED_END)) {
-				break;
+				if (!is_nullable(child)) { break; }
 			}
 		}
 
@@ -1402,9 +2005,7 @@ assign_lasts(struct ast_expr *n)
 	}
 
 	case AST_EXPR_REPEAT:
-		if (n->u.repeat.max > 0) {
-			set_flags(n, AST_FLAG_LAST);
-		}
+		set_flags(n, AST_FLAG_LAST);
 
 		/* Don't recurse.
 		 *
@@ -1416,7 +2017,7 @@ assign_lasts(struct ast_expr *n)
 		 * subexpression is compiled, the links to the global self-loop
 		 * are created, which the REPEAT node then copies.
 		 *
-		 * It probably makes sense to not go further
+		 * FIXME: needs tests. It probably makes sense to not go further
 		 * here because the top layer of the repeated section
 		 * should only link to the global start once. */
 
@@ -1437,6 +2038,461 @@ assign_lasts(struct ast_expr *n)
 	}
 }
 
+static enum ast_analysis_res
+analysis_iter_captures(struct capture_env *env, struct ast_expr *n)
+{
+	enum ast_analysis_res res;
+
+	switch (n->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_TOMBSTONE:
+		break;
+
+	case AST_EXPR_ANCHOR:
+		if (env->use_captures && n->u.anchor.type == AST_ANCHOR_END && !n->u.anchor.is_end_nl) {
+			set_flags(n, AST_FLAG_UNSATISFIABLE);
+			return AST_ANALYSIS_ERROR_UNSUPPORTED;
+		}
+		break;
+
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+	case AST_EXPR_RANGE:
+		break;
+
+	case AST_EXPR_CONCAT: {
+		size_t i;
+
+		for (i = 0; i < n->u.concat.count; i++) {
+			res = analysis_iter_captures(env, n->u.concat.n[i]);
+			if (res != AST_ANALYSIS_OK) {
+				return res;
+			}
+		}
+
+		break;
+	}
+
+	case AST_EXPR_ALT: {
+		size_t i;
+
+		for (i = 0; i < n->u.alt.count; i++) {
+			res = analysis_iter_captures(env, n->u.alt.n[i]);
+			if (res != AST_ANALYSIS_OK) {
+				return res;
+			}
+		}
+
+		break;
+	}
+
+	case AST_EXPR_REPEAT: {
+		res = analysis_iter_captures(env, n->u.repeat.e);
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+
+/* Set this to 1 when running the fuzzer, so that it ignores
+ * uninteresting failures from regexes like '.{1000000}' that use
+ * repetition to hit memory limits.
+ *
+ * This should be set by the build system when building for fuzzing. */
+#ifndef FUZZING_LIMITS
+#define FUZZING_LIMITS 0
+#endif
+
+#if FUZZING_LIMITS
+                if ((n->u.repeat.max != AST_COUNT_UNBOUNDED && n->u.repeat.max >= 10)
+		    || (n->u.repeat.min >= 10)) {
+			fprintf(stderr, "%s: rejecting regex with {count} >= 10 (%u)\n",
+			    __func__, n->u.repeat.max);
+			return AST_ANALYSIS_ERROR_MEMORY;
+                }
+#endif
+
+		break;
+	}
+
+	case AST_EXPR_GROUP:
+		if (env->max_capture_id == AST_NO_MAX_CAPTURE_ID
+		    || n->u.group.id > env->max_capture_id) {
+			env->max_capture_id = n->u.group.id;
+		}
+
+		res = analysis_iter_captures(env, n->u.group.e);
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		res = analysis_iter_captures(env, n->u.subtract.a);
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+
+		res = analysis_iter_captures(env, n->u.subtract.b);
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+		break;
+
+	default:
+		assert(!"unreached");
+	}
+
+	return AST_ANALYSIS_OK;
+}
+
+struct pincer_anchors_env {
+	unsigned int always_consumes_or_anchored_start:1;
+	unsigned int always_consumes_or_anchored_end:1;
+
+	unsigned int alloc_fail:1;
+	size_t used;
+	size_t ceil;
+	struct ast_expr **nodes;
+};
+
+enum analysis_direction { AD_FORWARD, AD_BACKWARD };
+
+static int
+subtree_contains_anchor(const struct ast_expr *expr, enum ast_anchor_type type)
+{
+	switch (expr->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+	case AST_EXPR_RANGE:
+	case AST_EXPR_TOMBSTONE:
+		return 0;
+
+	case AST_EXPR_ANCHOR:
+		return expr->u.anchor.type == type;
+
+	case AST_EXPR_CONCAT:
+		for (size_t i = 0; i < expr->u.concat.count; i++) {
+			if (subtree_contains_anchor(expr->u.concat.n[i], type)) {
+				return 1;
+			}
+		}
+		return 0;
+	case AST_EXPR_ALT:
+		for (size_t i = 0; i < expr->u.alt.count; i++) {
+			if (subtree_contains_anchor(expr->u.alt.n[i], type)) {
+				return 1;
+			}
+		}
+		return 0;
+
+	case AST_EXPR_REPEAT:
+		if (expr->u.repeat.min > 0) {
+			return subtree_contains_anchor(expr->u.repeat.e, type);
+		}
+		return 0;
+
+	case AST_EXPR_GROUP:
+		return subtree_contains_anchor(expr->u.group.e, type);
+	case AST_EXPR_SUBTRACT:
+		return subtree_contains_anchor(expr->u.subtract.a, type);
+
+	default:
+		assert(!"match fail");
+	}
+}
+
+static void
+pincer_anchors_record_anchor(struct pincer_anchors_env *env, struct ast_expr *n)
+{
+	if (env->used == env->ceil) {
+		const size_t nceil = (env->ceil == 0 ? 8 : 2*env->ceil);
+		struct ast_expr **nnodes = realloc(env->nodes,
+		    nceil * sizeof(nnodes[0]));
+		if (nnodes == NULL) {
+			env->alloc_fail = 1;
+			return;
+		}
+		env->ceil = nceil;
+		env->nodes = nnodes;
+	}
+
+	env->nodes[env->used++] = n;
+}
+
+/* Check for regexes with out-of-order start and end anchors, combined
+ * with alternate subtrees that must consume input. A minimal example of
+ * this is `(a|$)(b|^)` (tests/pcre-anchor/in92.re) -- Either an 'a' is
+ * consumed or matching must be at the end of input (with optional
+ * '\n'), followed by either consuming a 'b' or being at the start of
+ * input. This should only match "", "\n", and "<anything>ab<anything>",
+ * but because the anchors are out of order it takes a further analysis
+ * pass and extra AST_FLAG_CONSTRAINED_AT_{START,END} node flags to
+ * ensure that neither is linked to the unanchored start/end loops. */
+static void
+analysis_iter_pincer_anchors(struct ast_expr *expr, struct pincer_anchors_env *env, enum analysis_direction dir)
+{
+	LOG(3 - LOG_PINCER_ANCHORS, "%s: expr %p %s\n",
+	    __func__, (void *)expr, ast_node_type_name(expr->type));
+	switch (expr->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+		return;
+
+	case AST_EXPR_ANCHOR:
+		if (expr->u.anchor.type == AST_ANCHOR_START) {
+			LOG(3 - LOG_PINCER_ANCHORS, "%s: expr %p ANCHOR_START, flags start %d, end %d, dir %s\n",
+			    __func__, (void *)expr,
+			    env->always_consumes_or_anchored_start,
+			    env->always_consumes_or_anchored_end,
+			    dir == AD_FORWARD ? "FORWARD" : "BACKWARD");
+			if (dir == AD_FORWARD && env->always_consumes_or_anchored_end) {
+				LOG(3 - LOG_PINCER_ANCHORS, "%s: expr %p ANCHOR_START: recording CONSTRAINED_AT_END\n",
+				    __func__, (void *)expr);
+				/* record for later -- these should only be set if there's an anchored *pair* */
+				pincer_anchors_record_anchor(env, expr);
+			}
+		} else if (expr->u.anchor.type == AST_ANCHOR_END) {
+			LOG(3 - LOG_PINCER_ANCHORS, "%s: expr %p ANCHOR_END, flags start %d, end %d, dir %s\n",
+			    __func__, (void *)expr,
+			    env->always_consumes_or_anchored_start,
+			    env->always_consumes_or_anchored_end,
+			    dir == AD_FORWARD ? "FORWARD" : "BACKWARD");
+			if (dir == AD_BACKWARD && env->always_consumes_or_anchored_start) {
+				LOG(3 - LOG_PINCER_ANCHORS, "%s: expr %p ANCHOR_END: recording CONSTRAINED_AT_START\n",
+				    __func__, (void *)expr);
+				pincer_anchors_record_anchor(env, expr);
+			}
+		}
+		break;
+
+	case AST_EXPR_CONCAT:
+		if (dir == AD_FORWARD) {
+			for (size_t i = 0; i < expr->u.concat.count; i++) {
+				analysis_iter_pincer_anchors(expr->u.concat.n[i], env, dir);
+			}
+		} else if (dir == AD_BACKWARD) {
+			for (size_t i = expr->u.concat.count; i > 0; i--) {
+				analysis_iter_pincer_anchors(expr->u.concat.n[i - 1], env, dir);
+			}
+		}
+		break;
+	case AST_EXPR_ALT:
+	{
+		int all_always_consume_or_anchored_start = 1;
+		int all_always_consume_or_anchored_end = 1;
+		int has_always_consuming = 0;
+		int has_non_consuming_anchored_start = 0;
+		int has_non_consuming_anchored_end = 0;
+
+		if (dir == AD_FORWARD) {
+			for (size_t i = 0; i < expr->u.alt.count; i++) {
+				struct ast_expr *child = expr->u.alt.n[i];
+				LOG(3 - LOG_PINCER_ANCHORS,
+				    "%s: ALT child %zu/%zu : %p\n",
+				    __func__, i, expr->u.alt.count, (void *)child);
+				if (is_unsatisfiable_or_skipped(child)) { continue; }
+
+				analysis_iter_pincer_anchors(child, env, dir);
+				if (child->flags & AST_FLAG_ALWAYS_CONSUMES) {
+					has_always_consuming = 1;
+				} else {
+					if (child->flags & AST_FLAG_ANCHORED_START
+					    && subtree_contains_anchor(child, AST_ANCHOR_START)) {
+						has_non_consuming_anchored_start = 1;
+					} else {
+						all_always_consume_or_anchored_start = 0;
+					}
+
+					if (child->flags & AST_FLAG_ANCHORED_END
+					    && subtree_contains_anchor(child, AST_ANCHOR_END)) {
+						has_non_consuming_anchored_end = 1;
+					} else {
+						all_always_consume_or_anchored_end = 0;
+					}
+				}
+				LOG(3 - LOG_PINCER_ANCHORS,
+				    "%s: flags all_acoa_start %d, all_acoa_end %d, hac %d, hnca_start %d, hnca_end %d\n",
+				    __func__,
+				    all_always_consume_or_anchored_start,
+				    all_always_consume_or_anchored_end,
+				    has_always_consuming,
+				    has_non_consuming_anchored_start,
+				    has_non_consuming_anchored_end);
+			}
+		} else if (dir == AD_BACKWARD) {
+			for (size_t i = expr->u.alt.count; i > 0; i--) {
+				struct ast_expr *child = expr->u.alt.n[i - 1];
+				LOG(3 - LOG_PINCER_ANCHORS,
+				    "%s: ALT child %zu/%zu : %p\n",
+				    __func__, i, expr->u.alt.count, (void *)child);
+				if (is_unsatisfiable_or_skipped(child)) { continue; }
+
+				analysis_iter_pincer_anchors(child, env, dir);
+				if (child->flags & AST_FLAG_ALWAYS_CONSUMES) {
+					has_always_consuming = 1;
+				} else {
+					if (child->flags & AST_FLAG_ANCHORED_START
+					    && subtree_contains_anchor(child, AST_ANCHOR_START)) {
+						has_non_consuming_anchored_start = 1;
+					} else {
+						all_always_consume_or_anchored_start = 0;
+					}
+
+					if (child->flags & AST_FLAG_ANCHORED_END
+					    && subtree_contains_anchor(child, AST_ANCHOR_END)) {
+						has_non_consuming_anchored_end = 1;
+					} else {
+						all_always_consume_or_anchored_end = 0;
+					}
+				}
+				LOG(3 - LOG_PINCER_ANCHORS,
+				    "%s: flags all_acoa_start %d, all_acoa_end %d, hac %d, hnca_start %d, hnca_end %d\n",
+				    __func__,
+				    all_always_consume_or_anchored_start,
+				    all_always_consume_or_anchored_end,
+				    has_always_consuming,
+				    has_non_consuming_anchored_start,
+				    has_non_consuming_anchored_end);
+			}
+		}
+
+		if (has_always_consuming
+		    && has_non_consuming_anchored_start
+		    && all_always_consume_or_anchored_start) {
+			LOG(3 - LOG_PINCER_ANCHORS, "%s: ALT %p: setting env->always_consumes_or_anchored_start\n",
+			    __func__, (void *)expr);
+			env->always_consumes_or_anchored_start = 1;
+			LOG(3 - LOG_PINCER_ANCHORS, "%s: %p: setting AST_FLAG_CONSTRAINED_AT_START\n",
+			    __func__, (void *)expr);
+			set_flags(expr, AST_FLAG_CONSTRAINED_AT_START);
+		}
+		if (has_always_consuming
+		    && has_non_consuming_anchored_end
+		    && all_always_consume_or_anchored_end) {
+			LOG(3 - LOG_PINCER_ANCHORS, "%s: ALT %p: setting env->always_consumes_or_anchored_end\n",
+			    __func__, (void *)expr);
+			env->always_consumes_or_anchored_end = 1;
+			LOG(3 - LOG_PINCER_ANCHORS, "%s: %p: setting AST_FLAG_CONSTRAINED_AT_END\n",
+			    __func__, (void *)expr);
+			set_flags(expr, AST_FLAG_CONSTRAINED_AT_END);
+		}
+
+		break;
+	}
+
+	case AST_EXPR_REPEAT:
+		analysis_iter_pincer_anchors(expr->u.repeat.e, env, dir);
+		break;
+
+	case AST_EXPR_GROUP:
+		analysis_iter_pincer_anchors(expr->u.group.e, env, dir);
+		break;
+	case AST_EXPR_SUBTRACT:
+		/* It could just return here, as long as we aren't
+		 * subtracting anything besides character sets. */
+		analysis_iter_pincer_anchors(expr->u.subtract.a, env, dir);
+		break;
+
+	case AST_EXPR_RANGE:
+		/* nothing to do */
+		break;
+
+	case AST_EXPR_TOMBSTONE:
+		break;
+	default:
+		assert(!"match fail");
+	}
+}
+
+static void
+analysis_pincer_anchors_apply_flags_iter(struct ast_expr *expr)
+{
+	LOG(3 - LOG_PINCER_ANCHORS, "%s: expr %p %s\n",
+	    __func__, (void *)expr, ast_node_type_name(expr->type));
+	switch (expr->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+	case AST_EXPR_ANCHOR:
+		break;
+
+	case AST_EXPR_CONCAT:
+		for (size_t i = 0; i < expr->u.concat.count; i++) {
+			analysis_pincer_anchors_apply_flags_iter(expr->u.concat.n[i]);
+		}
+		break;
+	case AST_EXPR_ALT:
+		for (size_t i = 0; i < expr->u.alt.count; i++) {
+			analysis_pincer_anchors_apply_flags_iter(expr->u.alt.n[i]);
+		}
+		break;
+
+	case AST_EXPR_REPEAT:
+		analysis_pincer_anchors_apply_flags_iter(expr->u.repeat.e);
+		break;
+
+	case AST_EXPR_GROUP:
+		analysis_pincer_anchors_apply_flags_iter(expr->u.group.e);
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		/* it could just return here as long as we aren't
+		 * subtracting anything besides character sets */
+		analysis_pincer_anchors_apply_flags_iter(expr->u.subtract.a);
+		analysis_pincer_anchors_apply_flags_iter(expr->u.subtract.b);
+		break;
+
+	case AST_EXPR_RANGE:
+		/* nothing to do */
+		break;
+
+	case AST_EXPR_TOMBSTONE:
+		break;
+	default:
+		assert(!"match fail");
+	}
+}
+
+static enum ast_analysis_res
+analysis_pincer_anchors_apply_flags(struct ast_expr *expr, struct pincer_anchors_env *env)
+{
+	if (env->alloc_fail) {
+		return AST_ANALYSIS_ERROR_MEMORY;
+	}
+
+	analysis_pincer_anchors_apply_flags_iter(expr);
+
+	int has_start = 0;
+	int has_end = 0;
+	for (size_t i = 0; i < env->used; i++) {
+		const struct ast_expr *n = env->nodes[i];
+		assert(n->type == AST_EXPR_ANCHOR);
+		if (n->u.anchor.type == AST_ANCHOR_START) {
+			has_start = 1;
+		} else if (n->u.anchor.type == AST_ANCHOR_END) {
+			has_end = 1;
+		}
+	}
+
+	if (!has_start || !has_end) {
+		/* skip: only meaningful when constrained on both sides */
+		return AST_ANALYSIS_OK;
+	}
+
+	for (size_t i = 0; i < env->used; i++) {
+		struct ast_expr *n = env->nodes[i];
+		assert(n->type == AST_EXPR_ANCHOR);
+		if (n->u.anchor.type == AST_ANCHOR_START) {
+			set_flags(n, AST_FLAG_CONSTRAINED_AT_END);
+		} else if (n->u.anchor.type == AST_ANCHOR_END) {
+			set_flags(n, AST_FLAG_CONSTRAINED_AT_START);
+		}
+	}
+
+	return AST_ANALYSIS_OK;
+}
+
 enum ast_analysis_res
 ast_analysis(struct ast *ast, enum re_flags flags)
 {
@@ -1449,12 +2505,24 @@ ast_analysis(struct ast *ast, enum re_flags flags)
 	assert(ast->expr != NULL);
 
 	/*
-	 * First pass -- track nullability, clean up some artifacts from
-	 * parsing.
+	 * First pass -- track nullability, which subtrees can/always consume
+	 * input, and clean up some artifacts from parsing.
 	 */
 	res = analysis_iter(ast->expr);
 	if (res != AST_ANALYSIS_OK) {
 		return res;
+	}
+
+	/* Next pass, check for capture IDs. */
+	{
+		struct capture_env env = { .max_capture_id = AST_NO_MAX_CAPTURE_ID };
+		env.use_captures = !(flags & RE_NOCAPTURE);
+
+		res = analysis_iter_captures(&env, ast->expr);
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+		ast->max_capture_id = env.max_capture_id;
 	}
 
 	/*
@@ -1465,28 +2533,62 @@ ast_analysis(struct ast *ast, enum re_flags flags)
 	 */
 	{
 		/* first anchoring analysis pass, sweeping forward */
-		struct anchoring_env env = { .re_flags = flags };
+		struct anchoring_env env = {
+			.re_flags = flags,
+			.newline_after_end_anchor_state = NAEAS_NONE,
+		};
 		res = analysis_iter_anchoring(&env, ast->expr);
 		if (res != AST_ANALYSIS_OK) { return res; }
 
 		/* another anchoring analysis pass, sweeping backward */
 		res = analysis_iter_reverse_anchoring(&env, ast->expr);
 		if (res != AST_ANALYSIS_OK) { return res; }
-
-		/*
-		 * Next passes, mark all nodes in a first and/or last
-		 * position. This is informed by the anchoring flags, so
-		 * that needs to happen first.
-		 */
-		assign_firsts(ast->expr);
-		assign_lasts(ast->expr);
-
-		ast->has_unanchored_start = (analysis_iter_unanchored_start(ast->expr) != UA_NO);
-		ast->has_unanchored_end = (analysis_iter_unanchored_end(ast->expr) != UA_NO);
-		LOG(2 - LOG_UNANCHORED_FLAGS,
-		    "%s: has_unanchored_start %d, has_unanchored_end %d\n",
-		    __func__, ast->has_unanchored_start, ast->has_unanchored_end);
 	}
+
+	/*
+	 * Next passes, mark all nodes in a first and/or last
+	 * position. This is informed by the anchoring flags, so
+	 * that needs to happen first.
+	 */
+	assign_firsts(ast->expr);
+	assign_lasts(ast->expr);
+
+	/* Next pass, mark some cases that need special handling
+	 * due to repetition. For example, with cases like
+	 * ^((x?))*$ the inner capture will always need to repeat
+	 * one more time to match () after any 'x's.
+	 *
+	 * This needs to happen after the anchoring passes. */
+	res = analysis_iter_repetition(ast->expr, NULL, 0, NULL);
+	if (res != AST_ANALYSIS_OK) { return res; }
+
+	ast->has_unanchored_start = (analysis_iter_unanchored_start(ast->expr) != ANCHOR_ANALYSIS_ANCHORED);
+	ast->has_unanchored_end = (analysis_iter_unanchored_end(ast->expr) != ANCHOR_ANALYSIS_ANCHORED);
+
+	/* Based on all analysis thus far, check for another obscure
+	 * edge case that is otherwise difficult to handle properly.
+	 * This may set an extra flag on start/end anchor nodes. */
+	{
+		struct pincer_anchors_env pincer_anchors_env = { .ceil = 0, };
+		LOG(3 - LOG_PINCER_ANCHORS, "%s: -> analysis_iter_pincer_anchors FORWARD\n", __func__);
+		analysis_iter_pincer_anchors(ast->expr, &pincer_anchors_env, AD_FORWARD);
+
+		LOG(3 - LOG_PINCER_ANCHORS, "%s: -> analysis_iter_pincer_anchors BACKWARD\n", __func__);
+		pincer_anchors_env.always_consumes_or_anchored_start = 0;
+		pincer_anchors_env.always_consumes_or_anchored_end = 0;
+		analysis_iter_pincer_anchors(ast->expr, &pincer_anchors_env, AD_BACKWARD);
+
+		res = analysis_pincer_anchors_apply_flags(ast->expr, &pincer_anchors_env);
+		free(pincer_anchors_env.nodes);
+
+		if (res != AST_ANALYSIS_OK) {
+			return res;
+		}
+	}
+
+	LOG(2 - LOG_UNANCHORED_FLAGS,
+	    "%s: has_unanchored_start %d, has_unanchored_end %d\n",
+	    __func__, ast->has_unanchored_start, ast->has_unanchored_end);
 
 	return res;
 }

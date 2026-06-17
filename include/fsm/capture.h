@@ -23,41 +23,32 @@ struct fsm_capture {
 	size_t pos[2];
 };
 
-/* How many captures does the FSM use? */
+/* What is the max capture ID an FSM uses? */
 unsigned
-fsm_countcaptures(const struct fsm *fsm);
+fsm_capture_ceiling(const struct fsm *fsm);
 
 /* Does a specific state have any capture actions? */
 int
 fsm_capture_has_capture_actions(const struct fsm *fsm, fsm_state_t state);
 
-/* Set a capture path on an FSM. This means that during matching, the
- * portion of a match between the path's START and END states will be
- * captured. As the FSM is transformed (determinisation, minimisation,
- * unioning, etc.), the path will be converted to refer to the pair(s)
- * of new states instead. If the path's END state is no longer reachable
- * from its START state, then the capture path will be ignored.
- * Multiple instances of the same capture_id and path are ignored. */
-int
-fsm_capture_set_path(struct fsm *fsm, unsigned capture_id,
-    fsm_state_t start, fsm_state_t end);
-
-/* Increase the base capture ID for all captures in an fsm.
- * This could be used before combining multiple FSMs -- for
- * example, before unioning a and b, where a has 3 captures
- * and b has 2, b may be rebase'd to 3 -- so a has captures
- * 0-2 and b has 3-4. */
-void
-fsm_capture_rebase_capture_id(struct fsm *fsm, unsigned base);
-
-/* Same, but for capture action states. */
-void
-fsm_capture_rebase_capture_action_states(struct fsm *fsm, fsm_state_t base);
-
 /* Allocate a capture buffer with enough space for
- * the current FSM's captures. */
+ * the current FSM's captures.
+ *
+ * This is provided for convenience -- the necessary array
+ * count can be checked with fsm_capture_ceiling, and then
+ * the buffer can be allocated directly. */
 struct fsm_capture *
-fsm_capture_alloc(const struct fsm *fsm);
+fsm_capture_alloc_capture_buffer(const struct fsm *fsm);
+
+/* Free a capture buffer. */
+void
+fsm_capture_free_capture_buffer(const struct fsm *fsm, struct fsm_capture *capture_buffer);
+
+/* Note that a capture is active for a particular end state.
+ * Using this for a non-end state is an unchecked error. */
+int
+fsm_capture_set_active_for_end(struct fsm *fsm,
+    unsigned capture_id, fsm_state_t end_state);
 
 #ifndef NDEBUG
 #include <stdio.h>

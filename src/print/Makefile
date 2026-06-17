@@ -6,6 +6,7 @@ SRC += src/print/dot.c
 SRC += src/print/abnf.c
 SRC += src/print/fsm.c
 SRC += src/print/json.c
+SRC += src/print/llvm.c
 SRC += src/print/pcre.c
 SRC += src/print/rust.c
 SRC += src/print/tok.c
