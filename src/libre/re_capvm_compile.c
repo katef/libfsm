@@ -757,7 +757,7 @@ capvm_compile_iter(struct capvm_compile_env *env,
 				}
 
 				/* Based on analysis, either emit a JMP or SPLIT. */
-				if (n->u.alt.nullable_alt_inside_plus_repeat) {
+				if (n->type == AST_EXPR_ALT && n->u.alt.nullable_alt_inside_plus_repeat) {
 					const uint32_t pos_split_after = reserve_program_opcode(p);
 					flow_info[c_i].backpatch = pos_split_after;
 					struct capvm_opcode *op_split_after = &p->ops[pos_split_after];
