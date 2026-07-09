@@ -31,7 +31,7 @@ struct re_pos;
  * You can distinguish compile-time errors (that is,
  * syntax errors in the format string) vs. runtime errors
  * (that is, nonexistent groups) by calling
- * re_interpolate_groups() ahead of time with groupc = 0
+ * re_interpolate() ahead of time with groupc = 0
  * and passing a non-NULL nonexistent value.
  *
  * The output string will always be less than or equal in
@@ -49,7 +49,7 @@ struct re_pos;
  * buffer is indeterminate.
  */
 bool
-re_interpolate_groups(const char *fmt, char esc,
+re_interpolate(const char *fmt, char esc,
 	const char *group0, unsigned groupc, const char *groupv[], const char *nonexistent,
 	char *outs, size_t outn,
 	struct re_pos *start, struct re_pos *end);

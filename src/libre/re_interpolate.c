@@ -31,7 +31,7 @@
     } while (0)
 
 bool
-re_interpolate_groups(const char *fmt, char esc,
+re_interpolate(const char *fmt, char esc,
 	const char *group0, unsigned groupc, const char *groupv[], const char *nonexistent,
 	char *outs, size_t outn,
 	struct re_pos *start, struct re_pos *end)
