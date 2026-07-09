@@ -47,7 +47,6 @@ re_interpolate(const char *fmt, char esc, enum re_interpolate_flags flags,
 	} state;
 
 	assert(esc != '\0');
-	assert(flags == 0);
 	assert(group0 != NULL || groupc == 0);
 	assert(groupc < UINT_MAX / 10 - 1);
 	assert(outs != NULL || outn == 0);
@@ -102,7 +101,7 @@ re_interpolate(const char *fmt, char esc, enum re_interpolate_flags flags,
 			goto error;
 
 		case STATE_DIGIT:
-			if (isdigit((unsigned char) *p)) {
+			if (!(flags & RE_INTERPOLATE_SINGLE_DIGIT) && isdigit((unsigned char) *p)) {
 				group *= 10;
 				group += *p - '0';
 

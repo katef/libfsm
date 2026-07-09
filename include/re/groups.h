@@ -10,7 +10,11 @@
 struct re_pos;
 
 enum re_interpolate_flags {
-	RE_INTERPOLATE_PLACEHOLDER,
+	/*
+	 * group numbers are single-digit only. e.g. "\0123"
+	 * means group \0 followed by literal "123".
+	 */
+	RE_INTERPOLATE_SINGLE_DIGIT = 1 << 0,
 };
 
 /*
