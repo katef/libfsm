@@ -9,6 +9,10 @@
 
 struct re_pos;
 
+enum re_interpolate_flags {
+	RE_INTERPOLATE_PLACEHOLDER,
+};
+
 /*
  * esc is the character for escaping group references,
  * typically '\\' or '$'.
@@ -49,7 +53,7 @@ struct re_pos;
  * buffer is indeterminate.
  */
 bool
-re_interpolate(const char *fmt, char esc,
+re_interpolate(const char *fmt, char esc, enum re_interpolate_flags flags,
 	const char *group0, unsigned groupc, const char *groupv[], const char *nonexistent,
 	char *outs, size_t outn,
 	struct re_pos *start, struct re_pos *end);

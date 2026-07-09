@@ -23,7 +23,7 @@ test(const char *fmt, size_t groupc, const char *groupv[], const char *expected)
 	assert(fmt != NULL);
 	assert(expected != NULL);
 
-	if (!re_interpolate(fmt, '$', "<g0>", groupc, groupv, "<ne>", outs, sizeof outs, NULL, NULL)) {
+	if (!re_interpolate(fmt, '$', 0, "<g0>", groupc, groupv, "<ne>", outs, sizeof outs, NULL, NULL)) {
 		printf("%s/%zu XXX\n", fmt, groupc);
 		failed++;
 		return;

@@ -21,7 +21,7 @@ test(const char *fmt, bool expected)
 
 	assert(fmt != NULL);
 
-	r = re_interpolate(fmt, '$', "<g0>", 0, NULL, "<ne>", NULL, 0, NULL, NULL);
+	r = re_interpolate(fmt, '$', 0, "<g0>", 0, NULL, "<ne>", NULL, 0, NULL, NULL);
 
 	failed += r != expected;
 

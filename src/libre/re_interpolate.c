@@ -31,7 +31,7 @@
     } while (0)
 
 bool
-re_interpolate(const char *fmt, char esc,
+re_interpolate(const char *fmt, char esc, enum re_interpolate_flags flags,
 	const char *group0, unsigned groupc, const char *groupv[], const char *nonexistent,
 	char *outs, size_t outn,
 	struct re_pos *start, struct re_pos *end)
@@ -47,6 +47,7 @@ re_interpolate(const char *fmt, char esc,
 	} state;
 
 	assert(esc != '\0');
+	assert(flags == 0);
 	assert(group0 != NULL || groupc == 0);
 	assert(groupc < UINT_MAX / 10 - 1);
 	assert(outs != NULL || outn == 0);
