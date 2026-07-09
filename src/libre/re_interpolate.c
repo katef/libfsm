@@ -43,7 +43,9 @@ re_interpolate(const char *fmt, char esc, enum re_interpolate_flags flags,
 	enum {
 		STATE_LIT,
 		STATE_ESC,
-		STATE_DIGIT
+		STATE_DIGIT,
+		STATE_OPEN_BRACE,
+		STATE_INSIDE_BRACES,
 	} state;
 
 	assert(esc != '\0');
@@ -89,6 +91,15 @@ re_interpolate(const char *fmt, char esc, enum re_interpolate_flags flags,
 			if (*p == esc) {
 				OUT_CHAR(esc);
 				state = STATE_LIT;
+				continue;
+			}
+
+			if ((flags & RE_INTERPOLATE_BRACES) && *p == '{') {
+				if (start != NULL) {
+					start->byte = p - fmt;
+				}
+
+				state = STATE_OPEN_BRACE;
 				continue;
 			}
 
@@ -161,6 +172,60 @@ re_interpolate(const char *fmt, char esc, enum re_interpolate_flags flags,
 
 			OUT_CHAR(*p);
 			continue;
+
+		case STATE_OPEN_BRACE:
+			assert((flags & RE_INTERPOLATE_BRACES));
+
+			/* RE_INTERPOLATE_SINGLE_DIGIT does not apply inside braces */
+			if (isdigit((unsigned char) *p)) {
+				group = *p - '0';
+
+				/* see STATE_DIGIT */
+				if (group > groupc) {
+					group = groupc + 1;
+				}
+
+				state = STATE_INSIDE_BRACES;
+				continue;
+			}
+
+			/* at least one digit is required */
+			goto error;
+
+		case STATE_INSIDE_BRACES:
+			assert((flags & RE_INTERPOLATE_BRACES));
+
+			/* RE_INTERPOLATE_SINGLE_DIGIT does not apply inside braces */
+			if (isdigit((unsigned char) *p)) {
+				group *= 10;
+				group += *p - '0';
+
+				/* see STATE_DIGIT */
+				if (group > groupc) {
+					group = groupc + 1;
+				}
+				continue;
+			}
+
+			if (group == 0) {
+				OUT_GROUP(group0);
+			} else if (group <= groupc) {
+				assert(groupv[group - 1] != NULL);
+				OUT_GROUP(groupv[group - 1]);
+			} else if (nonexistent == NULL) {
+				/* see STATE_DIGIT */
+				goto error;
+			} else {
+				OUT_GROUP(nonexistent);
+			}
+
+			if (*p == '}') {
+				group = 0;
+				state = STATE_LIT;
+				continue;
+			}
+
+			goto error;
 
 		default:
 			assert(!"unreached");

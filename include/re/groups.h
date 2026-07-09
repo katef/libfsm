@@ -15,6 +15,14 @@ enum re_interpolate_flags {
 	 * means group \0 followed by literal "123".
 	 */
 	RE_INTERPOLATE_SINGLE_DIGIT = 1 << 0,
+
+	/*
+	 * Enable \{...} syntax for groups.
+	 * Multiple digits are permitted within the braces, regardless
+	 * of whether RE_INTERPOLATE_SINGLE_DIGIT is set or not.
+	 * At least one digit must be present.
+	 */
+	RE_INTERPOLATE_BRACES = 1 << 1
 };
 
 /*

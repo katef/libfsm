@@ -15,7 +15,8 @@
 static unsigned failed;
 
 static void
-test_err(const char *fmt, size_t groupc, const char *groupv[], const char *ne,
+test_err(const char *fmt, enum re_interpolate_flags flags,
+	size_t groupc, const char *groupv[], const char *ne,
 	unsigned expected_start, unsigned expected_end)
 {
 	struct re_pos start, end;
@@ -27,7 +28,7 @@ test_err(const char *fmt, size_t groupc, const char *groupv[], const char *ne,
 	outs[0] = 'x';
 
 	/* for these tests we're expecting to error */
-	if (re_interpolate(fmt, '$', 0, "<g0>", groupc, groupv, ne, outs, sizeof outs, &start, &end)) {
+	if (re_interpolate(fmt, '$', flags, "<g0>", groupc, groupv, ne, outs, sizeof outs, &start, &end)) {
 		printf("%s/%zu XXX\n", fmt, groupc);
 		failed++;
 		return;
@@ -53,22 +54,31 @@ int main(void) {
 	const char *gn[] = { "one", "two", "three", "four" };
 	const char **g0 = NULL;
 
-	test_err("$", 0, g0, ne, 0, 1);
-	test_err("$x", 0, g0, ne, 0, 1);
-	test_err("$ ", 4, gn, ne, 0, 1);
-	test_err("$\\01", 0, g0, ne, 0, 1);
+	test_err("$", 0, 0, g0, ne, 0, 1);
+	test_err("$x", 0, 0, g0, ne, 0, 1);
+	test_err("$ ", 0, 4, gn, ne, 0, 1);
+	test_err("$\\01", 0, 0, g0, ne, 0, 1);
 
-	test_err("$0$", 0, g0, ne, 2, 3);
-	test_err("$$$x", 4, gn, ne, 2, 3);
+	test_err("$0$", 0, 0, g0, ne, 2, 3);
+	test_err("$$$x", 0, 4, gn, ne, 2, 3);
 
-	test_err("xyz$1", 0, gn, NULL, 3, 5);
-	test_err("xyz$2", 1, gn, NULL, 3, 5);
+	test_err("xyz$1", 0, 0, gn, NULL, 3, 5);
+	test_err("xyz$2", 0, 1, gn, NULL, 3, 5);
 
-	test_err("01234567890", 1, gn, ne, 0, 10);
-	test_err("$$$$$$$$$$$$$$$$$$$$", 1, gn, ne, 0, 20);
-	test_err("$1$1$1$$", 1, gn, ne, 0, 8);
-	test_err("$1$1$1x", 1, gn, ne, 0, 7);
-	test_err("xxxyyyzzz$$", 1, gn, ne, 0, 11);
+	test_err("01234567890", 0, 1, gn, ne, 0, 10);
+	test_err("$$$$$$$$$$$$$$$$$$$$", 0, 1, gn, ne, 0, 20);
+	test_err("$1$1$1$$", 0, 1, gn, ne, 0, 8);
+	test_err("$1$1$1x", 0, 1, gn, ne, 0, 7);
+	test_err("xxxyyyzzz$$", 0, 1, gn, ne, 0, 11);
+
+	test_err("${", 0, 4, gn, ne, 0, 1);
+	test_err("${}", 0, 4, gn, ne, 0, 1);
+	test_err("${}x", 0, 4, gn, ne, 0, 1);
+	test_err("${1}x", 0, 4, gn, ne, 0, 1);
+
+	test_err("${", RE_INTERPOLATE_BRACES, 4, gn, ne, 1, 2);
+	test_err("${}", RE_INTERPOLATE_BRACES, 4, gn, ne, 1, 2);
+	test_err("${}x", RE_INTERPOLATE_BRACES, 4, gn, ne, 1, 2);
 
 	return failed;
 }

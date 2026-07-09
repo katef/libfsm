@@ -15,13 +15,13 @@
 static unsigned failed;
 
 static void
-test(const char *fmt, bool expected)
+test(const char *fmt, enum re_interpolate_flags flags, bool expected)
 {
 	bool r;
 
 	assert(fmt != NULL);
 
-	r = re_interpolate(fmt, '$', 0, "<g0>", 0, NULL, "<ne>", NULL, 0, NULL, NULL);
+	r = re_interpolate(fmt, '$', flags, "<g0>", 0, NULL, "<ne>", NULL, 0, NULL, NULL);
 
 	failed += r != expected;
 
@@ -30,10 +30,20 @@ test(const char *fmt, bool expected)
 }
 
 int main(void) {
-	test("", true);
-	test("abc", true);
-	test("$$", true);
-	test("$x", false);
+	test("", 0, true);
+	test("abc", 0, true);
+	test("$$", 0, true);
+	test("$x", 0, false);
+	test("{", 0, true);
+	test("}", 0, true);
+
+	test("{", RE_INTERPOLATE_BRACES, true);
+	test("}", RE_INTERPOLATE_BRACES, true);
+
+	test("${", RE_INTERPOLATE_BRACES, false);
+	test("${}", RE_INTERPOLATE_BRACES, false);
+	test("$}{", RE_INTERPOLATE_BRACES, false);
+	test("{$}", RE_INTERPOLATE_BRACES, false);
 
 	return failed;
 }
