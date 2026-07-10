@@ -9,6 +9,22 @@
 
 struct re_pos;
 
+enum re_interpolate_flags {
+	/*
+	 * group numbers are single-digit only. e.g. "\0123"
+	 * means group \0 followed by literal "123".
+	 */
+	RE_INTERPOLATE_SINGLE_DIGIT = 1 << 0,
+
+	/*
+	 * Enable \{...} syntax for groups.
+	 * Multiple digits are permitted within the braces, regardless
+	 * of whether RE_INTERPOLATE_SINGLE_DIGIT is set or not.
+	 * At least one digit must be present.
+	 */
+	RE_INTERPOLATE_BRACES = 1 << 1
+};
+
 /*
  * esc is the character for escaping group references,
  * typically '\\' or '$'.
@@ -31,7 +47,7 @@ struct re_pos;
  * You can distinguish compile-time errors (that is,
  * syntax errors in the format string) vs. runtime errors
  * (that is, nonexistent groups) by calling
- * re_interpolate_groups() ahead of time with groupc = 0
+ * re_interpolate() ahead of time with groupc = 0
  * and passing a non-NULL nonexistent value.
  *
  * The output string will always be less than or equal in
@@ -49,7 +65,7 @@ struct re_pos;
  * buffer is indeterminate.
  */
 bool
-re_interpolate_groups(const char *fmt, char esc,
+re_interpolate(const char *fmt, char esc, enum re_interpolate_flags flags,
 	const char *group0, unsigned groupc, const char *groupv[], const char *nonexistent,
 	char *outs, size_t outn,
 	struct re_pos *start, struct re_pos *end);

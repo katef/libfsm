@@ -23,7 +23,7 @@ test(const char *fmt, size_t groupc, const char *groupv[], const char *expected)
 	assert(fmt != NULL);
 	assert(expected != NULL);
 
-	if (!re_interpolate_groups(fmt, '$', "<g0>", groupc, groupv, "<ne>", outs, sizeof outs, NULL, NULL)) {
+	if (!re_interpolate(fmt, '$', 0, "<g0>", groupc, groupv, "<ne>", outs, sizeof outs, NULL, NULL)) {
 		printf("%s/%zu XXX\n", fmt, groupc);
 		failed++;
 		return;
@@ -47,6 +47,10 @@ int main(void) {
 
 	test("x", 0, g0, "x");
 	test("x", 4, gn, "x");
+	test("{", 0, g0, "{");
+	test("{", 4, gn, "{");
+	test("}", 0, g0, "}");
+	test("}", 4, gn, "}");
 
 	test("\001", 0, g0, "\001");
 	test("\001", 4, gn, "\001");
