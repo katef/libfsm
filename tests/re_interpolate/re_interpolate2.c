@@ -33,12 +33,31 @@ int main(void) {
 	test("", 0, true);
 	test("abc", 0, true);
 	test("$$", 0, true);
-	test("$x", 0, false);
 	test("{", 0, true);
 	test("}", 0, true);
 
+	test("$x", 0, false);
+	test("${}", 0, false);
+	test("${1}", 0, false);
+	test("_${0}_", 0, false);
+	test("_${1}_", 0, false);
+	test("${1", 0, false);
+	test("${", 0, false);
+	test("${$", 0, false);
+	test("${0$", 0, false);
+
 	test("{", RE_INTERPOLATE_BRACES, true);
 	test("}", RE_INTERPOLATE_BRACES, true);
+	test("$x", RE_INTERPOLATE_BRACES, false);
+	test("${}", RE_INTERPOLATE_BRACES, false);
+	test("${1}", RE_INTERPOLATE_BRACES, true);
+	test("${1}", RE_INTERPOLATE_BRACES, true);
+	test("_${0}_", RE_INTERPOLATE_BRACES, true);
+	test("_${1}_", RE_INTERPOLATE_BRACES, true);
+	test("${1", RE_INTERPOLATE_BRACES, false);
+	test("${", RE_INTERPOLATE_BRACES, false);
+	test("${$", RE_INTERPOLATE_BRACES, false);
+	test("${0$", RE_INTERPOLATE_BRACES, false);
 
 	test("${", RE_INTERPOLATE_BRACES, false);
 	test("${}", RE_INTERPOLATE_BRACES, false);

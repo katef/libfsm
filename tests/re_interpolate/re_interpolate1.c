@@ -74,7 +74,11 @@ int main(void) {
 	test_err("${", 0, 4, gn, ne, 0, 1);
 	test_err("${}", 0, 4, gn, ne, 0, 1);
 	test_err("${}x", 0, 4, gn, ne, 0, 1);
+	test_err("_${0})", 0, 4, gn, ne, 1, 2);
 	test_err("${1}x", 0, 4, gn, ne, 0, 1);
+	test_err("${1}", 0, 4, gn, ne, 0, 1);
+	test_err("${10}", 0, 4, gn, ne, 0, 1);
+	test_err("${1}1", 0, 4, gn, ne, 0, 1);
 
 	test_err("${", RE_INTERPOLATE_BRACES, 4, gn, ne, 1, 2);
 	test_err("${}", RE_INTERPOLATE_BRACES, 4, gn, ne, 1, 2);
