@@ -1126,7 +1126,14 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			LOG(3 - LOG_ANCHORING,
 			    "%s: REPEAT: repeating ANCHORED_START subtree >0 times -> ANCHORED_START\n", __func__);
 			set_flags(n, AST_FLAG_ANCHORED_START);
+			/* Repeating an anchored subtree is equivalent to a single
+			 * occurrence. Clamp the lower bound as well, so that min <= max
+			 * still holds for the compiler when the pattern asks for more
+			 * than one repetition. */
 			n->u.repeat.max = 1;
+			if (n->u.repeat.min > n->u.repeat.max) {
+				n->u.repeat.min = n->u.repeat.max;
+			}
 		}
 
 		if (can_consume_single_newline(n->u.repeat.e)) {
@@ -1138,6 +1145,9 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			    "%s: REPEAT: repeating ANCHORED_END subtree >0 times -> ANCHORED_END\n", __func__);
 			set_flags(n, n->u.repeat.e->flags & END_ANCHOR_FLAG_MASK);
 			n->u.repeat.max = 1;
+			if (n->u.repeat.min > n->u.repeat.max) {
+				n->u.repeat.min = n->u.repeat.max;
+			}
 		}
 
 		/* If there's a {0,_} repeat group after an end anchor that always consumes
