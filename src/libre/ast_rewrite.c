@@ -496,8 +496,12 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 		 * the sum of the ranges of the two inputs.
 		 */
 		if (i != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
-			/* I don't know why this is true */
-			assert(w - v > i - h + k - j);
+			/*
+			 * This is (i - 1) * (k - 1) >= (h - 1) * (j - 1), which holds
+			 * because i >= h and k >= j. Equality is possible: both
+			 * repetitions may be fixed, such as (?:b{2}){4}.
+			 */
+			assert(w - v >= i - h + k - j);
 		}
 
 		/*
