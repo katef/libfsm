@@ -50,11 +50,11 @@ static struct fsm_alloc *alloc;
 struct fsm_options opt;
 
 int print_progress;
-int keep_nfa;
+static int keep_nfa;
 
-struct ast_zone *cur_zone = NULL;
-unsigned zn = 0;
-int zerror = 0;
+static struct ast_zone *cur_zone = NULL;
+static unsigned zn = 0;
+static int zerror = 0;
 static pthread_mutex_t zmtx = PTHREAD_MUTEX_INITIALIZER;
 
 void
