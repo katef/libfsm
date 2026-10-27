@@ -1122,22 +1122,30 @@ analysis_iter_anchoring(struct anchoring_env *env, struct ast_expr *n)
 			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
 		}
 
+		/* (^...){2} is equivalent to (^...){1} */
 		if (n->u.repeat.e->flags & AST_FLAG_ANCHORED_START && n->u.repeat.min > 0) {
 			LOG(3 - LOG_ANCHORING,
 			    "%s: REPEAT: repeating ANCHORED_START subtree >0 times -> ANCHORED_START\n", __func__);
 			set_flags(n, AST_FLAG_ANCHORED_START);
 			n->u.repeat.max = 1;
+			if (n->u.repeat.min > 1) {
+				n->u.repeat.min = 1;
+			}
 		}
 
 		if (can_consume_single_newline(n->u.repeat.e)) {
 			set_flags(n, AST_FLAG_MATCHES_1NEWLINE);
 		}
 
+		/* (...$){2} is equivalent to (...$){1} */
 		if (n->u.repeat.e->flags & AST_FLAG_ANCHORED_END && n->u.repeat.min > 0) {
 			LOG(3 - LOG_ANCHORING,
 			    "%s: REPEAT: repeating ANCHORED_END subtree >0 times -> ANCHORED_END\n", __func__);
 			set_flags(n, n->u.repeat.e->flags & END_ANCHOR_FLAG_MASK);
 			n->u.repeat.max = 1;
+			if (n->u.repeat.min > 1) {
+				n->u.repeat.min = 1;
+			}
 		}
 
 		/* If there's a {0,_} repeat group after an end anchor that always consumes
