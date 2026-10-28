@@ -26,16 +26,11 @@ print_tokens(FILE *f, const struct ast *ast)
 
 	fprintf(f, "enum %stoken {\n", prefix.api);
 
-	/* TODO: the token prefix needs to be configurable */
 	for (t = ast->tl; t != NULL; t = t->next) {
 		fprintf(f, "\t%s", prefix.tok);
 		esctok(f, t->s);
-		fprintf(f, ",\n");
+		fprintf(f, "%s\n", t->next != NULL ? "," : "");
 	}
-
-	fprintf(f, "\t%sEOF,\n", prefix.tok);
-	fprintf(f, "\t%sERROR,\n", prefix.tok);
-	fprintf(f, "\t%sUNKNOWN\n", prefix.tok);
 
 	fprintf(f, "};\n");
 }

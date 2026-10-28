@@ -1027,10 +1027,6 @@ print_name(FILE *f, const struct ast *ast)
 		fprintf(f, "\";\n");
 	}
 
-	fprintf(f, "\tcase %sEOF:     return \"EOF\";\n", prefix.tok);
-	fprintf(f, "\tcase %sERROR:   return \"ERROR\";\n", prefix.tok);
-	fprintf(f, "\tcase %sUNKNOWN: return \"UNKNOWN\";\n", prefix.tok);
-
 	fprintf(f, "\tdefault: return \"?\";\n");
 
 	fprintf(f, "\t}\n");
