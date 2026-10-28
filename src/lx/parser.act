@@ -421,10 +421,22 @@
 	@};
 
 	<make-ast>: () -> (a :ast) = @{
+		const char *builtins[] = { "EOF", "UNKNOWN", "ERROR" };
+		struct ast_token *t;
+		size_t i;
+
 		@a = ast_new();
 		if (@a == NULL) {
 			perror("ast_new");
 			@!;
+		}
+
+		for (i = 0; i < sizeof builtins / sizeof *builtins; i++) {
+			t = ast_addtoken(@a, builtins[i]);
+			if (t == NULL) {
+				perror("ast_addtoken");
+				@!;
+			}
 		}
 	@};
 
