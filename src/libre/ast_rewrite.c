@@ -494,10 +494,14 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 		 * a{h,i}{j,k} is equivalent to a{h*j,i*k} if it's possible to combine,
 		 * and it's possible iff the range of the result is not more than
 		 * the sum of the ranges of the two inputs.
+		 *
+		 * The degenerate case (where both sides of the assert are equal)
+		 * is where min=max for both nodes, so i - h == 0, k - j == 0, and
+		 * cross-multiplying w - v is also 0.
+		 * This happens for e.g. (?:b{3}){2} and (?:b{2}){3}
 		 */
 		if (i != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
-			/* I don't know why this is true */
-			assert(w - v > i - h + k - j);
+			assert(w - v >= i - h + k - j);
 		}
 
 		/*
