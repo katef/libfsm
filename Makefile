@@ -133,6 +133,7 @@ SUBDIR += tests/pcre-classes
 SUBDIR += tests/pcre-anchor
 SUBDIR += tests/pcre-flags
 SUBDIR += tests/pcre-repeat
+SUBDIR += tests/ast_rewriting
 SUBDIR += tests/pred
 SUBDIR += tests/re_literal
 SUBDIR += tests/re_strings
