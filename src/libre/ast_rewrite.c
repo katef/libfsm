@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 
 #include <fsm/fsm.h>
 #include <fsm/bool.h>
@@ -477,59 +478,50 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 			return 1;
 		}
 
-		if (h == 0 || h == 1) {
-			dead = n->u.repeat.e;
-
-			n->u.repeat.min = v;
-			n->u.repeat.max = w;
-			n->u.repeat.e    = n->u.repeat.e->u.repeat.e;
-
-			dead->type = AST_EXPR_EMPTY;
-			ast_expr_free(*poolp, dead);
-
-			return 1;
-		}
-
 		/*
-		 * a{h,i}{j,k} is equivalent to a{h*j,i*k} if it's possible to combine,
-		 * and it's possible iff the range of the result is not more than
-		 * the sum of the ranges of the two inputs.
+		 * a{h,i}{j,k} is equivalent to a{h*j,i*k} iff there are no gaps
+		 * between the blocks a{h*m,i*m} for m in j..k inclusive.
+		 * Subsequent blocks begin no earlier than the previous one ends,
+		 * so only the first two need checking: h*(j+1) <= (i*j)+1.
+		 *
+		 * This is always true for h <= 1, and for a single block (j == k).
+		 * Here we're bailing out for the opposite reason.
 		 */
-		if (i != AST_COUNT_UNBOUNDED && k != AST_COUNT_UNBOUNDED) {
-			/* I don't know why this is true */
-			assert(w - v > i - h + k - j);
+		if (h > 1 && j != k) {
+			if (j == 0) {
+				return 1;
+			}
+
+			if (i != AST_COUNT_UNBOUNDED) {
+				unsigned p, q;
+
+				if (j == UINT_MAX) {
+					return 1;
+				}
+
+				if (mul_overflow(h, j + 1, &p)) {
+					return 1;
+				}
+
+				if (mul_overflow(i, j, &q)) {
+					return 1;
+				}
+
+				assert(p > 0);
+				if (p - 1 > q) {
+					return 1;
+				}
+			}
 		}
 
-		/*
-		 * a{h,}{j,}
-		 * a{h,i}{j,}
-		 * a{h,}{j,k}
-		 */
-		if ((i == AST_COUNT_UNBOUNDED || k == AST_COUNT_UNBOUNDED) && h <= 1 && j <= 1) {
-			dead = n->u.repeat.e;
+		dead = n->u.repeat.e;
 
-			n->u.repeat.min = v;
-			n->u.repeat.max = w;
-			n->u.repeat.e   = n->u.repeat.e->u.repeat.e;
+		n->u.repeat.min = v;
+		n->u.repeat.max = w;
+		n->u.repeat.e   = n->u.repeat.e->u.repeat.e;
 
-			dead->type = AST_EXPR_EMPTY;
-			ast_expr_free(*poolp, dead);
-
-			return 1;
-		}
-
-		if (h > 1 && i == AST_COUNT_UNBOUNDED && j > 0) {
-			dead = n->u.repeat.e;
-
-			n->u.repeat.min = v;
-			n->u.repeat.max = w;
-			n->u.repeat.e   = n->u.repeat.e->u.repeat.e;
-
-			dead->type = AST_EXPR_EMPTY;
-			ast_expr_free(*poolp, dead);
-
-			return 1;
-		}
+		dead->type = AST_EXPR_EMPTY;
+		ast_expr_free(*poolp, dead);
 
 		return 1;
 	}
