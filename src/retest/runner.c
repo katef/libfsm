@@ -199,7 +199,7 @@ compile(enum implementation impl,
 		if (0 != systemf("%s tool %s %s -p main -o %s %s",
 			"go", (impl == IMPL_GO) ? "compile" : "asm", asflags, tmp_o1, tmp_src))
 		{
-			return 0;
+			goto error_go;
 		}
 
 		as      = getenv("AS");
@@ -208,14 +208,14 @@ compile(enum implementation impl,
 		if (0 != systemf("%s tool objdump -gnu %s | awk -f ./build/bin/go2att.awk | %s %s -o %s",
 				"go", tmp_o1, as ? as : "as", asflags ? asflags : "", tmp_o2))
 		{
-			return 0;
+			goto error_go;
 		}
 
 		if (0 != systemf("%s %s -shared %s -o %s",
 				cc ? cc : "gcc", cflags ? cflags : "",
 				tmp_o2, tmp_so))
 		{
-			return 0;
+			goto error_go;
 		}
 
 		if (-1 == close(fd_o1)) {
@@ -239,6 +239,16 @@ compile(enum implementation impl,
 		}
 
 		break;
+
+error_go:
+
+		close(fd_o1);
+		close(fd_o2);
+
+		unlinkat(-1, tmp_o1, 0);
+		unlinkat(-1, tmp_o2, 0);
+
+		return 0;
 	}
 
 	case IMPL_VMASM: {
@@ -253,7 +263,7 @@ compile(enum implementation impl,
 		if (0 != systemf("%s %s -o %s %s",
 				as ? as : "as", asflags ? asflags : "", tmp_o, tmp_src))
 		{
-			return 0;
+			goto error_vmasm;
 		}
 
 		if (0 != systemf("%s %s -shared %s %s -o %s",
@@ -264,7 +274,7 @@ compile(enum implementation impl,
 
 				tmp_o, tmp_so))
 		{
-			return 0;
+			goto error_vmasm;
 		}
 
 		if (-1 == close(fd_o)) {
@@ -278,6 +288,14 @@ compile(enum implementation impl,
 		}
 
 		break;
+
+error_vmasm:
+
+		close(fd_o);
+
+		unlinkat(-1, tmp_o, 0);
+
+		return 0;
 	}
 
 	case IMPL_INTERPRET:
@@ -335,6 +353,9 @@ runner_init_compiled(struct fsm *fsm,
 		fd_so  = xmkstemps(tmp_so);
 
 		if (!compile(r->impl, tmp_src, tmp_so)) {
+			close(fd_so);
+			unlinkat(-1, tmp_so, 0);
+			unlinkat(-1, tmp_src, 0);
 			return ERROR_FILE_IO;
 		}
 
@@ -346,6 +367,8 @@ runner_init_compiled(struct fsm *fsm,
 		h = dlopen(tmp_so, RTLD_NOW);
 		if (h == NULL) {
 			fprintf(stderr, "%s: %s", tmp_so, dlerror());
+			unlinkat(-1, tmp_so, 0);
+			unlinkat(-1, tmp_src, 0);
 			return ERROR_FILE_IO;
 		}
 
