@@ -222,6 +222,7 @@ fsm_determinise_with_config(struct fsm *nfa,
 		}
 #endif
 		if (!fsm_addstate_bulk(dfa, dfacount)) {
+			fsm_free(dfa);
 			goto cleanup;
 		}
 
@@ -261,15 +262,18 @@ fsm_determinise_with_config(struct fsm *nfa,
 			 * known to have been an end state.
 			 */
 			if (!fsm_endid_carry(nfa, ss, dfa, m->dfastate)) {
+				fsm_free(dfa);
 				goto cleanup;
 			}
 		}
 
 		if (!remap_capture_actions(&map, issp, dfa, nfa)) {
+			fsm_free(dfa);
 			goto cleanup;
 		}
 
 		if (!remap_eager_outputs(&map, issp, dfa, nfa)) {
+			fsm_free(dfa);
 			goto cleanup;
 		}
 
