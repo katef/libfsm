@@ -37,8 +37,8 @@ fsm_concat(struct fsm *a, struct fsm *b,
 		return NULL;
 	}
 
-	if (a->statecount == 0) { return b; }
-	if (b->statecount == 0) { return a; }
+	if (a->statecount == 0) { fsm_free(a); return b; }
+	if (b->statecount == 0) { fsm_free(b); return a; }
 
 	if (!fsm_has(a, fsm_isend)) {
 		errno = EINVAL;
