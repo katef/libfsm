@@ -18,7 +18,7 @@ ${res}:
 test:: ${res}
 
 ${res}:
-	diff -q ${.ALLSRC:M*.txt}; \
+	diff -q ${.ALLSRC:M*.txt} ${.ALLSRC:M*.re}; \
 	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
 	> $@
 
