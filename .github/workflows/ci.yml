@@ -520,6 +520,17 @@ jobs:
         brew update
         ${{ matrix.cc }} --version
 
+    - name: Dependencies (Ubuntu/Rust)
+      if: matrix.os == 'ubuntu-22.04' && (matrix.lang == 'rust')
+      run: |
+        # rustc 1.99.0 miscompiles extern "C" fn -> bool
+        # fixed in 1.99.1, see rust-lang/rust#163911
+        uname -a
+        if [ "$(rustc --version | cut -f2 -d' ')" = 1.99.0 ]; then
+          rustup update stable
+        fi
+        rustc --version
+
     - name: Dependencies (Ubuntu/Go)
       if: matrix.os == 'ubuntu-22.04' && (matrix.lang == 'go' || matrix.lang == 'goasm')
       run: |
