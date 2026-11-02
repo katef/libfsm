@@ -199,6 +199,9 @@ print_conflicts(FILE *f, const struct fsm *fsm,
 
 		ids = f_malloc(fsm->alloc, count * sizeof *ids);
 		if (ids == NULL) {
+			if (example != NULL) {
+				f_free(fsm->alloc, example);
+			}
 			goto error;
 		}
 
@@ -216,18 +219,19 @@ print_conflicts(FILE *f, const struct fsm *fsm,
 			.end_ids = ids,
 			.end_id_count = count,
 		};
-		if (-1 == print_hook_conflict(f, opt, hooks,
+		res = print_hook_conflict(f, opt, hooks,
 			&state_metadata,
-			example))
-		{
-			goto error;
-		}
+			example);
 
 		if (example != NULL) {
 			f_free(fsm->alloc, example);
 		}
 
 		f_free(fsm->alloc, ids);
+
+		if (res == -1) {
+			goto error;
+		}
 
 		conflicts++;
 	}
