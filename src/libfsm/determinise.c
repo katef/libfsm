@@ -936,12 +936,12 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 		    env->pbuf[0],
 		    nceil * sizeof(env->pbuf[0]));
 		if (a == NULL) { return 0; }
+		env->pbuf[0] = a;
 		fsm_state_t *b = f_realloc(env->alloc,
 		    env->pbuf[1],
 		    nceil * sizeof(env->pbuf[1]));
 		if (b == NULL) { return 0; }
 		env->pbuf_ceil = nceil;
-		env->pbuf[0] = a;
 		env->pbuf[1] = b;
 	}
 
