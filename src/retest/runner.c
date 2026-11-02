@@ -51,7 +51,8 @@ xmkstemps(char *s)
 {
 	int fd;
 
-	fd = mkstemps(s, strlen(strrchr(s, '.')));
+	/* XXX: (strrchr)() because glibc's strrchr macro mistakenly uses _Generic under C89 */
+	fd = mkstemps(s, strlen((strrchr)(s, '.')));
 	if (fd == -1) {
 		perror(s);
 		exit(EXIT_FAILURE);
