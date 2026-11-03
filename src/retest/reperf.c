@@ -797,9 +797,9 @@ perf_case_run(struct perf_case *c, enum halt halt,
 		}
 	}
 
-done:
-
 	fsm_runner_finalize(&runner);
+
+done:
 
 	return ret;
 }
