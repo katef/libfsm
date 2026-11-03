@@ -173,16 +173,18 @@ ast_setendmapping(struct fsm *fsm, struct ast_mapping *m)
 
 	lx_mutex_unlock();
 
-	if (fsm_setendid(fsm, id)) {
-		if (LOG()) {
-			fprintf(stderr, "ast_setendmapping: saving mapping %p at mappings[%d]\n",
-			    (void *)m, id);
-		}
-		mappings[id] = m;
-		mapping_count++;
-		return 1;
+	if (!fsm_setendid(fsm, id)) {
+		return 0;
 	}
-	return 0;
+
+	if (LOG()) {
+		fprintf(stderr, "ast_setendmapping: saving mapping %p at mappings[%d]\n",
+		    (void *)m, id);
+	}
+
+	mappings[id] = m;
+	mapping_count++;
+	return 1;
 }
 
 struct ast_mapping *
