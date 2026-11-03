@@ -31,9 +31,9 @@ enum lx_token {
 	TOK_ESC,
 	TOK_CHAR,
 	TOK_STR,
-	TOK_EOF,
 	TOK_ERROR,
-	TOK_UNKNOWN
+	TOK_UNKNOWN,
+	TOK_EOF
 };
 
 /*

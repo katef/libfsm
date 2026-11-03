@@ -193,7 +193,6 @@ lx_dynfree(void *buf_opaque)
 static enum lx_token
 z0(struct lx *lx)
 {
-	int has_consumed_input = 0;
 	int c;
 
 	assert(lx != NULL);
@@ -212,7 +211,6 @@ z0(struct lx *lx)
 	state = S0;
 
 	while (c = fsm_getc(getc_opaque), c != EOF) {
-		has_consumed_input = 1;
 		switch (state) {
 		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
@@ -291,9 +289,7 @@ z0(struct lx *lx)
 	switch (state) {
 	case S1: return TOK_CHAR;
 	case S2: return lx->z = z4, TOK_RE;
-	default: 
-				if (!has_consumed_input) { return TOK_EOF; }
-				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	default: lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 	}
 
 		if (lx->push != NULL) {
@@ -304,16 +300,12 @@ z0(struct lx *lx)
 
 	lx->lgetc = NULL;
 
-	if (!has_consumed_input) {
-		return TOK_EOF;
-	} 
 	return TOK_ERROR;
 }
 
 static enum lx_token
 z1(struct lx *lx)
 {
-	int has_consumed_input = 0;
 	int c;
 
 	assert(lx != NULL);
@@ -332,7 +324,6 @@ z1(struct lx *lx)
 	state = S0;
 
 	while (c = fsm_getc(getc_opaque), c != EOF) {
-		has_consumed_input = 1;
 		switch (state) {
 		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
@@ -394,9 +385,7 @@ z1(struct lx *lx)
 			case 'd':
 			case 'e':
 			case 'f': state = S7; break;
-			default:  
-				if (!has_consumed_input) { return TOK_EOF; }
-				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -458,9 +447,7 @@ z1(struct lx *lx)
 	case S5: return TOK_OCT;
 	case S6: return TOK_ESC;
 	case S7: return TOK_HEX;
-	default: 
-				if (!has_consumed_input) { return TOK_EOF; }
-				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	default: lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 	}
 
 		if (lx->push != NULL) {
@@ -471,16 +458,12 @@ z1(struct lx *lx)
 
 	lx->lgetc = NULL;
 
-	if (!has_consumed_input) {
-		return TOK_EOF;
-	} 
 	return TOK_ERROR;
 }
 
 static enum lx_token
 z2(struct lx *lx)
 {
-	int has_consumed_input = 0;
 	int c;
 
 	assert(lx != NULL);
@@ -499,7 +482,6 @@ z2(struct lx *lx)
 	state = S0;
 
 	while (c = fsm_getc(getc_opaque), c != EOF) {
-		has_consumed_input = 1;
 		switch (state) {
 		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
@@ -523,9 +505,7 @@ z2(struct lx *lx)
 	switch (state) {
 	case S1: return TOK_CHAR;
 	case S2: return lx->z = z4, TOK_STR;
-	default: 
-				if (!has_consumed_input) { return TOK_EOF; }
-				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	default: lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 	}
 
 		if (lx->push != NULL) {
@@ -536,16 +516,12 @@ z2(struct lx *lx)
 
 	lx->lgetc = NULL;
 
-	if (!has_consumed_input) {
-		return TOK_EOF;
-	} 
 	return TOK_ERROR;
 }
 
 static enum lx_token
 z3(struct lx *lx)
 {
-	int has_consumed_input = 0;
 	int c;
 
 	assert(lx != NULL);
@@ -564,7 +540,6 @@ z3(struct lx *lx)
 	state = S0;
 
 	while (c = fsm_getc(getc_opaque), c != EOF) {
-		has_consumed_input = 1;
 		switch (state) {
 		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
@@ -588,9 +563,7 @@ z3(struct lx *lx)
 	switch (state) {
 	case S1: return TOK_UNKNOWN;
 	case S2: return lx->z = z4, lx->z(lx);
-	default: 
-				if (!has_consumed_input) { return TOK_EOF; }
-				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	default: lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 	}
 
 		switch (state) {
@@ -611,16 +584,12 @@ z3(struct lx *lx)
 
 	lx->lgetc = NULL;
 
-	if (!has_consumed_input) {
-		return TOK_EOF;
-	} 
 	return TOK_ERROR;
 }
 
 static enum lx_token
 z4(struct lx *lx)
 {
-	int has_consumed_input = 0;
 	int c;
 
 	assert(lx != NULL);
@@ -641,7 +610,6 @@ z4(struct lx *lx)
 	state = S0;
 
 	while (c = fsm_getc(getc_opaque), c != EOF) {
-		has_consumed_input = 1;
 		switch (state) {
 		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
@@ -725,9 +693,7 @@ z4(struct lx *lx)
 			case '\n':
 			case '\r':
 			case ' ': state = S25; break;
-			default:  
-				if (!has_consumed_input) { return TOK_EOF; }
-				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -789,9 +755,7 @@ z4(struct lx *lx)
 			case 'x':
 			case 'y':
 			case 'z': state = S28; break;
-			default:  
-				if (!has_consumed_input) { return TOK_EOF; }
-				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+			default:  lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
@@ -1027,6 +991,7 @@ z4(struct lx *lx)
 
 	/* end states */
 	switch (state) {
+	case S0: return TOK_EOF;
 	case S1: return TOK_COMMA;
 	case S3: return TOK_IDENT;
 	case S4: return TOK_AND;
@@ -1054,9 +1019,7 @@ z4(struct lx *lx)
 	case S26: return TOK_MAP;
 	case S27: return TOK_TO;
 	case S28: return TOK_TOKEN;
-	default: 
-				if (!has_consumed_input) { return TOK_EOF; }
-				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+	default: lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 	}
 
 		switch (state) {
@@ -1079,9 +1042,6 @@ z4(struct lx *lx)
 
 	lx->lgetc = NULL;
 
-	if (!has_consumed_input) {
-		return TOK_EOF;
-	} 
 	return TOK_ERROR;
 }
 
@@ -1116,9 +1076,9 @@ lx_name(enum lx_token t)
 	case TOK_ESC: return "ESC";
 	case TOK_CHAR: return "CHAR";
 	case TOK_STR: return "STR";
-	case TOK_EOF:     return "EOF";
-	case TOK_ERROR:   return "ERROR";
+	case TOK_ERROR: return "ERROR";
 	case TOK_UNKNOWN: return "UNKNOWN";
+	case TOK_EOF: return "EOF";
 	default: return "?";
 	}
 }
@@ -1157,6 +1117,9 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 		case TOK_ESC: return "";
 		case TOK_CHAR: return "";
 		case TOK_STR: return "";
+		case TOK_ERROR: return "";
+		case TOK_UNKNOWN: return "";
+		case TOK_EOF: return "";
 		default: goto error;
 		}
 	} else
@@ -1189,6 +1152,9 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 		case TOK_ESC: return "";
 		case TOK_CHAR: return "";
 		case TOK_STR: return "";
+		case TOK_ERROR: return "";
+		case TOK_UNKNOWN: return "";
+		case TOK_EOF: return "";
 		default: goto error;
 		}
 	} else
@@ -1221,6 +1187,9 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 		case TOK_ESC: return "";
 		case TOK_CHAR: return "";
 		case TOK_STR: return "";
+		case TOK_ERROR: return "";
+		case TOK_UNKNOWN: return "";
+		case TOK_EOF: return "";
 		default: goto error;
 		}
 	} else
@@ -1253,6 +1222,9 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 		case TOK_ESC: return "";
 		case TOK_CHAR: return "";
 		case TOK_STR: return "";
+		case TOK_ERROR: return "";
+		case TOK_UNKNOWN: return "";
+		case TOK_EOF: return "";
 		default: goto error;
 		}
 	} else
@@ -1285,6 +1257,9 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 		case TOK_ESC: return "";
 		case TOK_CHAR: return "";
 		case TOK_STR: return "";
+		case TOK_ERROR: return "";
+		case TOK_UNKNOWN: return "";
+		case TOK_EOF: return "";
 		default: goto error;
 		}
 	}
