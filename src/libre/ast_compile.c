@@ -942,6 +942,7 @@ comp_iter(struct comp_env *env,
 		 */
 
 		if (fsm_empty(q)) {
+			fsm_free(q);
 			EPSILON(x, y);
 			break;
 		}
