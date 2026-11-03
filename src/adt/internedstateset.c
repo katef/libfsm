@@ -84,7 +84,7 @@ interned_state_set_pool_alloc(const struct fsm_alloc *a)
 	if (sets == NULL) { goto cleanup; }
 
 	buf = f_malloc(a, DEF_BUF * sizeof(buf[0]));
-	if (sets == NULL) { goto cleanup; }
+	if (buf == NULL) { goto cleanup; }
 
 	buckets = f_malloc(a, DEF_BUCKETS * sizeof(buckets[0]));
 	if (buckets == NULL) { goto cleanup; }
