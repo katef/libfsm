@@ -38,6 +38,7 @@ struct ast {
 	struct ast_token *tl;
 
 	struct ast_zone *global;
+	const struct ast_mapping *eof_mapping;
 };
 
 struct ast *

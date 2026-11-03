@@ -85,6 +85,8 @@
 	                              act_state->lex_tok = tok;                     } while (0)
 	#define RESTORE_LEXER    do { act_state->lex_tok = act_state->lex_tok_save; } while (0)
 
+	static char *eof_token = "EOF"; /* morally const */
+
 	static void
 	err(const struct lex_state *lex_state, const char *fmt, ...)
 	{
@@ -420,6 +422,26 @@
 		fsm_setend(@r, end, 1);
 	@};
 
+	/* equivalent to <compile-regex>("") but with less machination */
+	<regex-empty>: () -> (r :fsm) = @{
+		fsm_state_t state;
+
+		@r = fsm_new(act_state->alloc);
+		if (@r == NULL) {
+			perror("fsm_new");
+			@!;
+		}
+
+		if (!fsm_addstate(@r, &state)) {
+			perror("fsm_addstate");
+			fsm_free(@r);
+			@!;
+		}
+
+		fsm_setstart(@r, state);
+		fsm_setend(@r, state, 1);
+	@};
+
 	<make-ast>: () -> (a :ast) = @{
 		const char *builtins[] = { "EOF", "UNKNOWN", "ERROR" };
 		struct ast_token *t;
@@ -489,6 +511,11 @@
 			}
 			nmappings++;
 		}
+
+		/* purposefully shallow pointer comparison */
+		if (@t == eof_token) {
+			@a->eof_mapping = m;
+		}
 	@};
 
 	<add-binding>: (a :ast, z :zone, n :string, r :fsm) -> () = @{
@@ -513,6 +540,10 @@
 		assert(@z != NULL);
 
 		@a->global = @z;
+	@};
+
+	<eof-token>: () -> (s :string) = @{
+		@s = eof_token;
 	@};
 
 	<no-token>: () -> (s :string) = @{

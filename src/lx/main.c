@@ -407,10 +407,12 @@ zone_minimise(void *arg)
 			}
 
 			if (!ast_setendmapping(m->fsm, m)) {
-				assert(!"failed");
+				assert(!"ast_setendmapping");
 			}
 
-			(void) fsm_getstart(m->fsm, &ms);
+			if (!fsm_getstart(m->fsm, &ms)) {
+				assert(!"fsm_getstart");
+			}
 
 			z->fsm = fsm_merge(z->fsm, m->fsm, &combine_info);
 			if (z->fsm == NULL) {
@@ -907,9 +909,12 @@ main(int argc, char *argv[])
 
 			(void) fsm_getstart(z->fsm, &start);
 
-			if (fsm_isend(z->fsm, start)) {
-				fprintf(stderr, "start state accepts\n"); /* TODO */
+			/* XXX: this is an extremely unhelpful error message,
+			 * rephrase in terms of the empty string */
+			if (fsm_endid_count(z->fsm, start) > 1) {
+				fprintf(stderr, "start state accepts\n");
 				e = 1;
+				continue;
 			}
 
 			{
