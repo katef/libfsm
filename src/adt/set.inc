@@ -170,7 +170,7 @@ set_free(struct set *set)
 	assert(set != NULL);
 	assert(set->a != NULL);
 
-	free(set->a);
-	free(set);
+	f_free(set->alloc, set->a);
+	f_free(set->alloc, set);
 }
 
