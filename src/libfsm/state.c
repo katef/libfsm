@@ -261,9 +261,11 @@ fsm_compact_states(struct fsm *fsm,
 
 	/* Remap end metadata */
 	if (!fsm_endid_compact(fsm, mapping, orig_statecount)) {
+		f_free(fsm->alloc, mapping);
 		return 0;
 	}
 	if (!fsm_eager_output_compact(fsm, mapping, orig_statecount)) {
+		f_free(fsm->alloc, mapping);
 		return 0;
 	}
 
