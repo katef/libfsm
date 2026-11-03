@@ -634,6 +634,9 @@ main(int argc, char *argv[])
 
 		r = !r;
 
+		if (fsm != NULL) {
+			fsm_free(fsm);
+		}
 		fsm = q;
 	}
 

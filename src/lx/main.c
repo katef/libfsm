@@ -298,7 +298,7 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 
 	y = fsm_clone(b->fsm);
 	if (y == NULL) {
-		fsm_free(y);
+		fsm_free(x);
 		return -1;
 	}
 
@@ -331,6 +331,8 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 			assert(m != NULL);
 		}
 	}
+
+	fsm_free(q);
 
 	return 1;
 }
