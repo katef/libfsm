@@ -1253,7 +1253,10 @@ main(int argc, char *argv[])
 				general.a[i].dialect, strict,
 				general.a[i].s, flags, general.a[i].id);
 			if (fsm == NULL) {
-				append_pattern(&declined, i, general.a[i].dialect, general.a[i].s);
+				/* we're moving ownership of .s for sake of only freeing once */
+				append_pattern(&declined, general.a[i].id, general.a[i].dialect,
+					general.a[i].s);
+				general.a[i].s = NULL;
 				continue;
 			}
 
