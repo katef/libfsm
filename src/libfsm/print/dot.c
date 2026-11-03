@@ -267,6 +267,7 @@ print_dotfrag(FILE *f,
 				&state_metadata,
 				default_accept, &s))
 			{
+				f_free(fsm->alloc, ids);
 				return -1;
 			}
 
@@ -276,6 +277,7 @@ print_dotfrag(FILE *f,
 				if (-1 == print_hook_comment(f, opt, hooks,
 					&state_metadata))
 				{
+					f_free(fsm->alloc, ids);
 					return -1;
 				}
 			}

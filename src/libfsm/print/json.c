@@ -289,6 +289,7 @@ fsm_print_json(FILE *f,
 				&state_metadata,
 				NULL, NULL))
 			{
+				f_free(fsm->alloc, ids);
 				return -1;
 			}
 
