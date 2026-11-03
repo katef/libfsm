@@ -149,6 +149,7 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm *fsm,
 
 	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
 		if (!state_set_add(&unique, fsm->alloc, e.state)) {
+			state_set_free(unique);
 			return -1;
 		}
 	}
