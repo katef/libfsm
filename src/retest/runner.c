@@ -76,6 +76,8 @@ print(const struct fsm *fsm,
 	f = fdopen(fd_src, "w");
 	if (f == NULL) {
 		perror(tmp_src);
+		close(fd_src);
+		unlinkat(-1, tmp_src, 0);
 		return 0;
 	}
 
@@ -108,6 +110,8 @@ print(const struct fsm *fsm,
 		}
 
 		if (e == -1) {
+			fclose(f);
+			unlinkat(-1, tmp_src, 0);
 			return 0;
 		}
 	}
@@ -131,6 +135,7 @@ print(const struct fsm *fsm,
 
 	if (EOF == fclose(f)) {
 		perror(tmp_src);
+		unlinkat(-1, tmp_src, 0);
 		return 0;
 	}
 
@@ -361,6 +366,8 @@ runner_init_compiled(struct fsm *fsm,
 
 		if (-1 == close(fd_so)) {
 			perror(tmp_so);
+			unlinkat(-1, tmp_so, 0);
+			unlinkat(-1, tmp_src, 0);
 			return ERROR_FILE_IO;
 		}
 
@@ -374,13 +381,16 @@ runner_init_compiled(struct fsm *fsm,
 
 		if (-1 == unlinkat(-1, tmp_so, 0)) {
 			perror(tmp_so);
+			dlclose(h);
+			unlinkat(-1, tmp_src, 0);
 			return ERROR_FILE_IO;
 		}
 	}
 
 	if (-1 == unlinkat(-1, tmp_src, 0)) {
 		perror(tmp_src);
-		return 0;
+		dlclose(h);
+		return ERROR_FILE_IO;
 	}
 
 	/* XXX: depends on IO API */
@@ -454,7 +464,6 @@ fsm_runner_initialize(struct fsm *fsm, const struct fsm_options *opt,
 	case IMPL_INTERPRET:
 		vm = fsm_vm_compile_with_options(fsm, opt, vm_opts);
 		if (vm == NULL) {
-			fsm_free(fsm);
 			return ERROR_COMPILING_BYTECODE;
 		}
 		r->impl = impl;

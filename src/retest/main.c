@@ -1142,7 +1142,7 @@ process_test_file(const char *filename,
 
 				if (max_errors > 0 && num_errors >= max_errors) {
 					fprintf(stderr, "too many errors\n");
-					goto finish;
+					goto done;
 				}
 			}
 		}
@@ -1162,9 +1162,9 @@ process_test_file(const char *filename,
 		}
 	}
 
-	fclose(f);
+done:
 
-finish:
+	fclose(f);
 
 	printf("%s: %d regexps, %d test cases\n", filename, num_regexps, num_test_cases);
 	printf("%s: %d re errors, %d errors\n", filename, num_re_errors, num_errors);
