@@ -188,7 +188,6 @@ accept_c(FILE *f, const struct fsm_options *opt,
 {
 	const struct ast *ast;
 	const struct ast_mapping *m;
-	struct lx_hook_env *env = hook_opaque;
 
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -196,6 +195,8 @@ accept_c(FILE *f, const struct fsm_options *opt,
 	assert(state_metadata->end_id_count > 0);
 	assert(lang_opaque == NULL);
 	assert(hook_opaque != NULL);
+
+	struct lx_hook_env *env = hook_opaque;
 
 	ast = env->ast;
 	m = ast_getendmappingbyendid(state_metadata->end_ids[0]);
@@ -255,17 +256,27 @@ reject_c(FILE *f, const struct fsm_options *opt,
 	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
+	const struct ast *ast;
+
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(lang_opaque == NULL);
 	assert(hook_opaque != NULL);
 
-	(void) lang_opaque;
 	struct lx_hook_env *env = hook_opaque;
+
+	ast = env->ast;
+
+	(void) lang_opaque;
 
 	const struct ast_mapping *m = state_metadata != NULL && state_metadata->end_id_count > 0
 	    ? ast_getendmappingbyendid(state_metadata->end_ids[0])
 	    : NULL;
+
+	/* a shenanigan */
+	if (m == ast->eof_mapping) {
+		m = NULL;
+	}
 
 	/* If there is an AST mapping associated with this end state,
 	 * then unget the previous character (in most cases), and
@@ -309,8 +320,6 @@ reject_c(FILE *f, const struct fsm_options *opt,
 		fprintf(f, ";");
 		return 0;
 	} else {
-		fprintf(f, "\n\t\t\t\tif (!has_consumed_input) { return %sEOF; }\n", prefix.tok);
-		fprintf(f, "\t\t\t\t");
 		unget_character(f, false, env->cur_char_var);
 	}
 
@@ -334,8 +343,6 @@ static int
 advance_c(FILE *f, const struct fsm_options *opt, const char *cur_char_var, void *hook_opaque)
 {
 	(void)hook_opaque;
-
-	fprintf(f, "\t\thas_consumed_input = 1;\n");
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
@@ -829,17 +836,6 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 	fprintf(f, "z%u(struct %slx *lx)\n", zindexof(ast, z), prefix.lx);
 	fprintf(f, "{\n");
 
-	/* This flag indicates whether the any of the input stream was
-	 * consumed before getting EOF and skipping over the state and
-	 * character logic expanded here.
-	 *
-	 * lx needs to track this for proper EOF handling. It previously
-	 * generated the state enum itself, so that it could include an
-	 * additional 'NONE' state. Inside the input loop, the default
-	 * state of NONE would be updated to the start state, but if the
-	 * input loop was skipped it would still be NONE. */
-	fprintf(f, "\tint has_consumed_input = 0;\n");
-
 	switch (opt->io) {
 	case FSM_IO_GETC:
 		fprintf(f, "\tint c;\n");
@@ -989,9 +985,6 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 			break;
 		}
 
-		fprintf(f, "\tif (!has_consumed_input) {\n");
-		fprintf(f, "\t\treturn %sEOF;\n", prefix.tok);
-		fprintf(f, "\t} \n");
 		fprintf(f, "\treturn %sERROR;", prefix.tok);
 		fprintf(f, "\n");
 	}

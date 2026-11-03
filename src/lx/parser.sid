@@ -66,6 +66,7 @@
 	<compile-regex>:   (:arr, :flags) -> (:fsm);
 
 	<regex-any>:    () -> (:fsm);
+	<regex-empty>:  () -> (:fsm);
 
 	<op-star>:        (:fsm) -> ();
 	<op-cross>:       (:fsm) -> ();
@@ -90,9 +91,10 @@
 
 	<set-globalzone>: (:ast, :zone) -> ();
 
-	<no-token>: () -> (:string);
-	<no-exit>:  () -> (:fsm);
-	<no-zone>:  () -> (:zone);
+	<eof-token>: () -> (:string);
+	<no-token>:  () -> (:string);
+	<no-exit>:   () -> (:fsm);
+	<no-zone>:   () -> (:zone);
 
 	<clone>: (:fsm) -> (:fsm);
 	<free-arr>:     (:arr)    -> ();
@@ -514,6 +516,33 @@
 		##
 			<err-expected-eof>;
 		};
+
+		/*
+		 *
+		 * EOF mid-way through a token will leave the start state and error
+		 * per usual. When in the start state EOF means no input was consumed,
+		 * and we consider this valid. So for this one case we return TOK_EOF
+		 * rather than TOK_ERROR.
+		 *
+		 * Here we're doing this exactly the same way as for user-defined
+		 * tokens; we're adding an internal mapping pretty much as if a user
+		 * had written // -> $EOF; in the source. For two reasons:
+		 *
+		 *  1. language-facing consistency; $EOF behaves like anything else
+		 *  2. we need ast->eof_mapping to pick up later
+		 *
+		 * XXX: although we only need the mapping so that we can avoid emitting it!
+		 * as a special case where we set m = NULL during codegen. so maybe
+		 * we don't need to construct a mapping after all?
+		 *
+		 *
+		 * TODO: talk about how we only do this at the global zone, because
+		 * you can only reach inner zones after consuming input.
+		 */
+
+		eof = <eof-token>;
+		r = <regex-empty>;
+		<add-mapping>(a, z, parent, r, eof);
 	##
 		a = <make-ast>;
 
