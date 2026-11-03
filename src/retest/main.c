@@ -1142,6 +1142,8 @@ process_test_file(const char *filename,
 
 				if (max_errors > 0 && num_errors >= max_errors) {
 					fprintf(stderr, "too many errors\n");
+					free(regexp);
+					fsm_runner_finalize(&runner);
 					goto done;
 				}
 			}
