@@ -25,6 +25,7 @@ fsm_determinise_with_config(struct fsm *nfa,
 	const struct fsm_determinise_config *config)
 {
 	enum fsm_determinise_with_config_res res = FSM_DETERMINISE_WITH_CONFIG_ERRNO;
+	struct fsm *dfa = NULL;
 	struct mappingstack *stack = NULL;
 
 	struct interned_state_set_pool *issp = NULL;
@@ -193,7 +194,6 @@ fsm_determinise_with_config(struct fsm *nfa,
 	{
 		struct map_iter it;
 		struct mapping *m;
-		struct fsm *dfa;
 
 		dfa = fsm_new(nfa->alloc);
 		if (dfa == NULL) {
@@ -222,7 +222,6 @@ fsm_determinise_with_config(struct fsm *nfa,
 		}
 #endif
 		if (!fsm_addstate_bulk(dfa, dfacount)) {
-			fsm_free(dfa);
 			goto cleanup;
 		}
 
@@ -262,22 +261,20 @@ fsm_determinise_with_config(struct fsm *nfa,
 			 * known to have been an end state.
 			 */
 			if (!fsm_endid_carry(nfa, ss, dfa, m->dfastate)) {
-				fsm_free(dfa);
 				goto cleanup;
 			}
 		}
 
 		if (!remap_capture_actions(&map, issp, dfa, nfa)) {
-			fsm_free(dfa);
 			goto cleanup;
 		}
 
 		if (!remap_eager_outputs(&map, issp, dfa, nfa)) {
-			fsm_free(dfa);
 			goto cleanup;
 		}
 
 		fsm_move(nfa, dfa);
+		dfa = NULL;
 	}
 
 #if EXPENSIVE_CHECKS
@@ -290,6 +287,9 @@ fsm_determinise_with_config(struct fsm *nfa,
 	res = FSM_DETERMINISE_WITH_CONFIG_OK;
 
 cleanup:
+	if (dfa != NULL) {
+		fsm_free(dfa);
+	}
 	map_free(&map);
 	stack_free(stack);
 	interned_state_set_pool_free(issp);
