@@ -459,7 +459,6 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 	return true;
 
 alloc_fail:
-	fprintf(stderr, "alloc fail\n");
 	if (eclosures != NULL) {
 		closure_free(nfa, eclosures, state_count);
 	}
