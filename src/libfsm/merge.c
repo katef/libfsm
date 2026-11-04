@@ -62,6 +62,7 @@ merge(struct fsm *dst, struct fsm *src,
 		 * or let realloc do that internally */
 		tmp = f_realloc(dst->alloc, dst->states, newalloc * sizeof *dst->states);
 		if (tmp == NULL) {
+			fsm_free(dst);
 			fsm_free(src);
 			return NULL;
 		}
@@ -145,6 +146,7 @@ error:
 	src->statecount = 0;
 
 	fsm_free(src);
+	fsm_free(dst);
 
 	return NULL;
 }
@@ -316,18 +318,12 @@ fsm_merge(struct fsm *a, struct fsm *b,
 		    &combine_info->base_b,
 		    &combine_info->capture_base_a,
 		    &combine_info->capture_base_b);
-		if (res == NULL) {
-			fsm_free(a);
-		}
 	} else {
 		res = merge(b, a,
 		    &combine_info->base_b,
 		    &combine_info->base_a,
 		    &combine_info->capture_base_b,
 		    &combine_info->capture_base_a);
-		if (res == NULL) {
-			fsm_free(b);
-		}
 	}
 
 	return res;
