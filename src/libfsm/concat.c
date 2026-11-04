@@ -48,7 +48,6 @@ fsm_concat(struct fsm *a, struct fsm *b,
 	}
 
 	if (!fsm_collate(a, &ea, fsm_isend)) {
-		goto einval;
 		fsm_free(a);
 		fsm_free(b);
 		return NULL;
