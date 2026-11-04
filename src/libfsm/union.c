@@ -102,16 +102,14 @@ fsm_union(struct fsm *a, struct fsm *b,
 	assert(b != NULL);
 
 	if (a->alloc != b->alloc) {
-		errno = EINVAL;
-		return NULL;
+		goto einval;
 	}
 
 	if (a->statecount == 0) { fsm_free(a); return b; }
 	if (b->statecount == 0) { fsm_free(b); return a; }
 
 	if (!fsm_getstart(a, &sa) || !fsm_getstart(b, &sb)) {
-		errno = EINVAL;
-		return NULL;
+		goto einval;
 	}
 
 	q = fsm_merge(a, b, combine_info);
@@ -791,7 +789,11 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 		/* Call fsm_merge; the argument order shouldn't matter. */
 		struct fsm_combine_info combine_info;
 		struct fsm *merged = fsm_merge(res, fsm, &combine_info);
-		if (merged == NULL) { goto fsm_fail; }
+		if (merged == NULL) {
+			/* a failed fsm_merge consumes both operands */
+			res = NULL;
+			goto fsm_fail;
+		}
 		res = merged;
 
 		if (log) {
@@ -988,6 +990,14 @@ ainfos_fail:
 		}
 		f_free(alloc, ainfos);
 	}
+
+	return NULL;
+
+einval:
+
+	fsm_free(a);
+	fsm_free(b);
+	errno = EINVAL;
 
 	return NULL;
 }
