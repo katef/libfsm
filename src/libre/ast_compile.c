@@ -173,8 +173,6 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 
 	q = fsm_mergeab(a, b, &base_b);
 	if (q == NULL) {
-		/* fsm_mergeab destroyed b */
-		fsm_free(a);
 		return NULL;
 	}
 
