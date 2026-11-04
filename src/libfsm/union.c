@@ -494,6 +494,7 @@ replace_labeled_edge(struct fsm *nfa, fsm_state_t from_state, fsm_state_t old_to
 		if (info.to == old_to) { *found = true; }
 		if (!edge_set_add_bulk(&new_edges, nfa->alloc, info.symbols,
 			info.to == old_to ? new_to : info.to)) {
+			edge_set_free(nfa->alloc, new_edges);
 			return false;
 		}
 	}
