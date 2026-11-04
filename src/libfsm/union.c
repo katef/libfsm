@@ -459,6 +459,7 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 	return true;
 
 alloc_fail:
+
 	if (eclosures != NULL) {
 		closure_free(nfa, eclosures, state_count);
 	}
@@ -683,14 +684,16 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 	const bool log = 0 || LOG_UNION_REPEATED_PATTERN_GROUP;
 
 	struct analysis_info *ainfos = f_calloc(alloc, nfa_count, sizeof(ainfos[0]));
-	if (ainfos == NULL) { goto fail; }
+	if (ainfos == NULL) {
+		return NULL;
+	}
 
 	size_t est_total_states = 0;
 	for (size_t i = 0; i < nfa_count; i++) {
 		assert(nfas[i]);
 		if (nfas[i]->alloc != alloc) {
 			errno = EINVAL;
-			return NULL;
+			goto ainfos_fail;
 		}
 
 		/* Any NFAs passed to this function must be built with
@@ -699,7 +702,7 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 		 * linking. */
 		if (nfas[i]->linkage_info == NULL) {
 			errno = EINVAL;
-			return NULL;
+			goto ainfos_fail;
 		}
 
 		const size_t count = fsm_countstates(nfas[i]);
@@ -729,24 +732,28 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 
 		/* Identify various states in the NFA that will be relevant to combining. */
 		if (!analyze_group_nfa(fsm, ainfo)) {
-			goto fail;
+			goto ainfos_fail;
 		}
 
 		/* Change the NFA structure so it can better link into the combined FSM,
 		 * and set endids and/or output IDs as appropriate. */
 		if (!modify_group_nfa(fsm, i, &ainfos[i], id_base)) {
-			goto fail;
+			goto ainfos_fail;
 		}
 	}
 
 	est_total_states += 5;	/* new start and end, new unanchored start and end loops */
 
 	struct fsm *res = fsm_new_statealloc(alloc, est_total_states);
-	if (res == NULL) { return NULL; }
+	if (res == NULL) {
+		goto ainfos_fail;
+	}
 
 	/* The new overall start state */
 	fsm_state_t global_start;
-	if (!fsm_addstate(res, &global_start)) { goto fail; }
+	if (!fsm_addstate(res, &global_start)) {
+		goto fsm_fail;
+	}
 
 	/* States linking to the starts of unanchored and anchored
 	 * subgraphs, respectively. Matching group NFAs with unanchored
@@ -754,13 +761,13 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 	 * patterns anchored at the start are only reachable via
 	 * global_anchored_start. */
 	fsm_state_t global_unanchored_start_loop, global_anchored_start;
-	if (!fsm_addstate(res, &global_unanchored_start_loop)) { goto fail; }
-	if (!fsm_addstate(res, &global_anchored_start)) { goto fail; }
+	if (!fsm_addstate(res, &global_unanchored_start_loop)) { goto fsm_fail; }
+	if (!fsm_addstate(res, &global_anchored_start)) { goto fsm_fail; }
 
 	/* The unanchored end loop state, and an end state with no outgoing edges. */
 	fsm_state_t global_unanchored_end_loop, global_end;
-	if (!fsm_addstate(res, &global_end)) { goto fail; }
-	if (!fsm_addstate(res, &global_unanchored_end_loop)) { goto fail; }
+	if (!fsm_addstate(res, &global_end)) { goto fsm_fail; }
+	if (!fsm_addstate(res, &global_unanchored_end_loop)) { goto fsm_fail; }
 
 	if (bases != NULL) {
 		memset(bases, 0x00, nfa_count * sizeof(bases[0]));
@@ -783,7 +790,8 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 		/* Call fsm_merge; the argument order shouldn't matter. */
 		struct fsm_combine_info combine_info;
 		struct fsm *merged = fsm_merge(res, fsm, &combine_info);
-		if (merged == NULL) { goto fail; }
+		if (merged == NULL) { goto fsm_fail; }
+		res = merged;
 
 		if (log) {
 			fprintf(stderr, "merged: bases a %d and b %d\n", combine_info.base_a, combine_info.base_b);
@@ -810,10 +818,10 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 		 * it will be retained during determinisation and minimisation. */
 		if (ainfo->eager_match_state != NO_STATE) {
 			if (!fsm_addedge_epsilon(merged, ainfo->eager_match_state, global_unanchored_end_loop)) {
-				goto fail;
+				goto fsm_fail;
 			}
 			if (!fsm_addedge_epsilon(merged, ainfo->eager_match_state, global_end)) {
-				goto fail;
+				goto fsm_fail;
 			}
 			if (log) {
 				fprintf(stderr, "eager_match_state: adding epsilon EMS %d -> global_unanchored_end_loop %d and EMS %d -> global_end %d\n",
@@ -827,7 +835,7 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 			if (ainfo->nullable) {
 				assert(ainfo->unanchored_end_loop != NO_STATE);
 				if (!fsm_addedge_epsilon(merged, global_start, ainfo->eager_match_state)) {
-					goto fail;
+					goto fsm_fail;
 				}
 				if (log) {
 					fprintf(stderr, "nullable: global_start %d -> eager_match_state %d\n",
@@ -844,7 +852,7 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 
 				while (state_set_next(&si, &anchored_end_state)) {
 					if (!fsm_addedge_epsilon(merged, global_start, anchored_end_state)) {
-						goto fail;
+						goto fsm_fail;
 					}
 					if (log) {
 						fprintf(stderr, "nullable & anchored ends: global_start %d -> anchored_end_state %d\n",
@@ -870,7 +878,7 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 			struct fsm_state *anchored_start = &merged->states[global_anchored_start];
 			if (!edge_set_add_bulk(&anchored_start->edges, merged->alloc,
 				info.symbols, info.to)) {
-				goto fail;
+				goto fsm_fail;
 			}
 			if (log) {
 				fprintf(stderr, "anchored_firsts: adding global_anchored_start %d -> info.to %d (with same labels)\n",
@@ -885,7 +893,7 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 			struct fsm_state *unanchored_start = &merged->states[global_unanchored_start_loop];
 			if (!edge_set_add_bulk(&unanchored_start->edges, merged->alloc,
 				info.symbols, info.to)) {
-				goto fail;
+				goto fsm_fail;
 			}
 
 			if (log) {
@@ -900,7 +908,7 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 		 * closure may get lost during determinisation. */
 		if (ainfo->unanchored_start_loop != NO_STATE) {
 		  	if (!fsm_addedge_epsilon(merged, global_unanchored_start_loop, ainfo->unanchored_start_loop)) {
-		  		goto fail;
+		  		goto fsm_fail;
 		  	}
 
 			if (log) {
@@ -909,7 +917,6 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 			}
 		}
 
-		res = merged;
 	}
 
 	/* Link the global start to the global unanchored start loop and anchored start states. */
@@ -917,19 +924,19 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 		fprintf(stderr, "linking: global_start %d -> global_unanchored_start_loop %d and global_anchored_start %d\n",
 		    global_start, global_unanchored_start_loop, global_anchored_start);
 	}
-	if (!fsm_addedge_epsilon(res, global_start, global_unanchored_start_loop)) { goto fail; }
-	if (!fsm_addedge_epsilon(res, global_start, global_anchored_start)) { goto fail; }
+	if (!fsm_addedge_epsilon(res, global_start, global_unanchored_start_loop)) { goto fsm_fail; }
+	if (!fsm_addedge_epsilon(res, global_start, global_anchored_start)) { goto fsm_fail; }
 
 	/* Link the global unanchored start loop to itself, so it can
 	 * consume and ignore input preceding each matching group NFA. */
-	if (!fsm_addedge_any(res, global_unanchored_start_loop, global_unanchored_start_loop)) { goto fail; }
+	if (!fsm_addedge_any(res, global_unanchored_start_loop, global_unanchored_start_loop)) { goto fsm_fail; }
 
 	/* Link the global unanchored end loop and global end. */
 	if (log) {
 		fprintf(stderr, "linking: global_unanchored_end_loop %d -> global_end %d (and -> self)\n", global_unanchored_end_loop, global_end);
 	}
-	if (!fsm_addedge_any(res, global_unanchored_end_loop, global_unanchored_end_loop)) { goto fail; }
-	if (!fsm_addedge_epsilon(res, global_unanchored_end_loop, global_end)) { goto fail; }
+	if (!fsm_addedge_any(res, global_unanchored_end_loop, global_unanchored_end_loop)) { goto fsm_fail; }
+	if (!fsm_addedge_epsilon(res, global_unanchored_end_loop, global_end)) { goto fsm_fail; }
 
 	/* Link from the global_unanchored_end_loop to the global_unanchored_start_loop,
 	 * so patterns with an unanchored start can follow other patterns with an unanchored
@@ -941,11 +948,11 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 		    __func__, global_unanchored_end_loop, global_unanchored_start_loop);
 		fprintf(stderr, "%s: setting global_start %d and end %d\n", __func__, global_start, global_end);
 	}
-	if (!fsm_addedge_epsilon(res, global_unanchored_end_loop, global_unanchored_start_loop)) { goto fail; }
+	if (!fsm_addedge_epsilon(res, global_unanchored_end_loop, global_unanchored_start_loop)) { goto fsm_fail; }
 
 	/* Link the global unanchored end loop to the global end, so
 	 * reaching the end of input there is considered a match. */
-	if (!fsm_addedge_epsilon(res, global_unanchored_end_loop, global_end)) { goto fail; }
+	if (!fsm_addedge_epsilon(res, global_unanchored_end_loop, global_end)) { goto fsm_fail; }
 
 	/* These need to be set after merging, because that clears the start state. */
 	fsm_setstart(res, global_start);
@@ -966,7 +973,14 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 
 	return res;
 
-fail:
+fsm_fail:
+
+	if (res != NULL) {
+		fsm_free(res);
+	}
+
+ainfos_fail:
+
 	if (ainfos != NULL) {
 		for (size_t i = 0; i < nfa_count; i++) {
 			free_analysis(alloc, &ainfos[i]);
