@@ -304,8 +304,6 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 
 	q = fsm_union(x, y, NULL);
 	if (q == NULL) {
-		fsm_free(x);
-		fsm_free(y);
 		return -1;
 	}
 

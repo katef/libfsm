@@ -152,6 +152,14 @@ error:
 	fsm_free(q);
 
 	return NULL;
+
+einval:
+
+	fsm_free(a);
+	fsm_free(b);
+	errno = EINVAL;
+
+	return NULL;
 }
 
 struct fsm *
@@ -990,14 +998,6 @@ ainfos_fail:
 		}
 		f_free(alloc, ainfos);
 	}
-
-	return NULL;
-
-einval:
-
-	fsm_free(a);
-	fsm_free(b);
-	errno = EINVAL;
 
 	return NULL;
 }

@@ -199,9 +199,7 @@ print_conflicts(FILE *f, const struct fsm *fsm,
 
 		ids = f_malloc(fsm->alloc, count * sizeof *ids);
 		if (ids == NULL) {
-			if (example != NULL) {
-				f_free(fsm->alloc, example);
-			}
+			f_free(fsm->alloc, example);
 			goto error;
 		}
 

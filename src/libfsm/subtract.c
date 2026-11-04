@@ -24,13 +24,13 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 
 	if (!fsm_all(a, fsm_isdfa)) {
 		if (!fsm_determinise(a)) {
-			return NULL;
+			goto error;
 		}
 	}
 
 	if (!fsm_all(b, fsm_isdfa)) {
 		if (!fsm_determinise(b)) {
-			return NULL;
+			goto error;
 		}
 	}
 
@@ -47,12 +47,19 @@ fsm_subtract(struct fsm *a, struct fsm *b)
 	 */
 	q = fsm_walk2(a, b, FSM_WALK2_ONLYA | FSM_WALK2_BOTH, FSM_WALK2_ONLYA);
 	if (q == NULL) {
-		return NULL;
+		goto error;
 	}
 
 	fsm_free(a);
 	fsm_free(b);
 
 	return q;
+
+error:
+
+	fsm_free(a);
+	fsm_free(b);
+
+	return NULL;
 }
 
