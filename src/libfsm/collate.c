@@ -50,7 +50,6 @@ fsm_collate(struct fsm *fsm, fsm_state_t *state,
 			}
 
 			if (!fsm_addedge_epsilon(fsm, i, new)) {
-				/* TODO: free new */
 				return 0;
 			}
 		}
