@@ -350,7 +350,7 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 			if (eps_i == s_i) { continue; }
 
 			if (!state_set_add(&ainfo->reachable_from_nonstart_state, nfa->alloc, eps_i)) {
-				return false;
+				goto alloc_fail;
 			}
 		}
 
@@ -362,7 +362,7 @@ analyze_group_nfa(const struct fsm *nfa, struct analysis_info *ainfo)
 			if (info.to == s_i) { continue; }
 
 			if (!state_set_add(&ainfo->reachable_from_nonstart_state, nfa->alloc, info.to)) {
-				return false;
+				goto alloc_fail;
 			}
 		}
 	}
