@@ -134,7 +134,7 @@ error:
 }
 
 /* TODO: centralise as fsm_unionxy() perhaps */
-static int
+static struct fsm *
 fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 {
 	fsm_state_t sa, sb;
@@ -150,15 +150,15 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 	assert(y < a->statecount);
 
 	if (!fsm_getstart(a, &sa)) {
-		return 0;
+		goto error;
 	}
 
 	if (!fsm_getstart(b, &sb)) {
-		return 0;
+		goto error;
 	}
 
 	if (!fsm_collate(b, &end, fsm_isend)) {
-		return 0;
+		goto error;
 	}
 
 	/* TODO: centralise as fsm_clearends() or somesuch */
@@ -173,7 +173,9 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 
 	q = fsm_mergeab(a, b, &base_b);
 	if (q == NULL) {
-		return 0;
+		/* fsm_mergeab destroyed b */
+		fsm_free(a);
+		return NULL;
 	}
 
 	sb  += base_b;
@@ -182,14 +184,23 @@ fsm_unionxy(struct fsm *a, struct fsm *b, fsm_state_t x, fsm_state_t y)
 	fsm_setstart(q, sa);
 
 	if (!fsm_addedge_epsilon(q, x, sb)) {
-		return 0;
+		fsm_free(q);
+		return NULL;
 	}
 
 	if (!fsm_addedge_epsilon(q, end, y)) {
-		return 0;
+		fsm_free(q);
+		return NULL;
 	}
 
-	return 1;
+	return q;
+
+error:
+
+	fsm_free(a);
+	fsm_free(b);
+
+	return NULL;
 }
 
 static struct fsm *
@@ -522,18 +533,18 @@ print_linkage(enum link_types t)
 }
 
 #define NEWSTATE(NAME)              \
-    if (!fsm_addstate(env->fsm, &(NAME))) { return 0; }
+    if (!fsm_addstate(env->fsm, &(NAME))) { goto error; }
 
 #define EPSILON(FROM, TO)           \
 	assert((FROM) != (TO) || ((FROM) == SKIP_EPSILON && (TO) == SKIP_EPSILON)); \
 	if ((FROM) != SKIP_EPSILON && (TO) != SKIP_EPSILON		\
-	    && !fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { return 0; }
+	    && !fsm_addedge_epsilon(env->fsm, (FROM), (TO))) { goto error; }
         
 #define ANY(FROM, TO)               \
-    if (!fsm_addedge_any(env->fsm, (FROM), (TO))) { return 0; }
+    if (!fsm_addedge_any(env->fsm, (FROM), (TO))) { goto error; }
 
 #define LITERAL(FROM, TO, C)        \
-    if (!addedge_literal(env, n->re_flags, (FROM), (TO), ((char)C))) { return 0; }
+    if (!addedge_literal(env, n->re_flags, (FROM), (TO), ((char)C))) { goto error; }
 
 #define RECURSE(FROM, TO, NODE, PARENT)		\
     if (!comp_iter(env, (FROM), (TO), (NODE), (PARENT))) { return 0; }
@@ -611,7 +622,7 @@ comp_iter_repeated(struct comp_env *env,
 				b = tail;
 
 				if (!fsm_subgraph_duplicate(env->fsm, &subgraph, &b, &a)) {
-					return 0;
+					goto error;
 				}
 
 				EPSILON(nz, a);
@@ -632,7 +643,7 @@ comp_iter_repeated(struct comp_env *env,
 				b = tail;
 
 				if (!fsm_subgraph_duplicate(env->fsm, &subgraph, &b, &a)) {
-					return 0;
+					goto error;
 				}
 
 				EPSILON(nz, a);
@@ -650,6 +661,13 @@ comp_iter_repeated(struct comp_env *env,
 	}
 
 	return 1;
+
+error:
+
+	fsm_free(env->fsm);
+	env->fsm = NULL;
+
+	return 0;
 }
 
 static int
@@ -684,7 +702,7 @@ comp_iter(struct comp_env *env,
 		break;
 	case LINK_GLOBAL_SELF_LOOP:
 		if (!intern_start_any_loop(env)) {
-			return 0;
+			goto error;
 		}
 		assert(env->has_start_any_loop);
 
@@ -704,7 +722,7 @@ comp_iter(struct comp_env *env,
 	case LINK_GLOBAL:
 		if (env->re_flags & RE_END_NL && (n->flags & AST_FLAG_END_NL)) {
 			if (!intern_end_nl(env)) {
-				return 0;
+				goto error;
 			}
 			y = env->end_nl;
 		} else if (n->type == AST_EXPR_ANCHOR
@@ -713,7 +731,7 @@ comp_iter(struct comp_env *env,
 			/* the start anchor is constrained, so only
 			 * link directly to '\n''s end here */
 			if (!intern_end_nl(env)) {
-				return 0;
+				goto error;
 			}
 			y = env->end_nl;
 		} else {
@@ -722,7 +740,7 @@ comp_iter(struct comp_env *env,
 		break;
 	case LINK_GLOBAL_SELF_LOOP:
 		if (!intern_end_any_loop(env)) {
-			return 0;
+			goto error;
 		}
 		assert(env->has_end_any_loop);
 
@@ -758,7 +776,7 @@ comp_iter(struct comp_env *env,
 		assert(count >= 1);
 
 		if (!fsm_addstate_bulk(env->fsm, count - 1)) {
-			return 0;
+			goto error;
 		}
 
 		for (i = 0; i < count; i++) {
@@ -782,7 +800,7 @@ comp_iter(struct comp_env *env,
 			fsm_state_t z;
 			if (i + 1 < count) {
 				if (!fsm_addstate(env->fsm, &z)) {
-					return 0;
+					goto error;
 				}
 #if LOG_LINKAGE
 				fprintf(stderr, "%s: added state z %d\n", __func__, z);
@@ -850,7 +868,7 @@ comp_iter(struct comp_env *env,
 				env->err->cp = n->u.codepoint.u;
 			}
 
-			return 0;
+			goto error;
 		}
 
 		a = x;
@@ -901,7 +919,7 @@ comp_iter(struct comp_env *env,
 #endif
 			if (!state_set_add(&env->fsm->linkage_info->anchored_starts,
 				env->fsm->alloc, y)) {
-				return 0;
+				goto error;
 			}
 		}
 		break;
@@ -919,19 +937,19 @@ comp_iter(struct comp_env *env,
 		a = expr_compile(n->u.subtract.a, re_flags,
 			env->fsm->alloc, env->err);
 		if (a == NULL) {
-			return 0;
+			goto error;
 		}
 
 		b = expr_compile(n->u.subtract.b, re_flags,
 			env->fsm->alloc, env->err);
 		if (b == NULL) {
 			fsm_free(a);
-			return 0;
+			goto error;
 		}
 
 		q = fsm_subtract(a, b);
 		if (q == NULL) {
-			return 0;
+			goto error;
 		}
 
 		/*
@@ -947,7 +965,8 @@ comp_iter(struct comp_env *env,
 			break;
 		}
 
-		if (!fsm_unionxy(env->fsm, q, x, y)) {
+		env->fsm = fsm_unionxy(env->fsm, q, x, y);
+		if (env->fsm == NULL) {
 			return 0;
 		}
 
@@ -959,7 +978,7 @@ comp_iter(struct comp_env *env,
 
 		if (n->u.range.from.type != AST_ENDPOINT_LITERAL || n->u.range.to.type != AST_ENDPOINT_LITERAL) {
 			/* not yet supported */
-			return 0;
+			goto error;
 		}
 
 		assert(n->u.range.from.u.literal.c <= n->u.range.to.u.literal.c);
@@ -983,6 +1002,12 @@ comp_iter(struct comp_env *env,
 	}
 
 	return 1;
+
+error:
+
+	fsm_free(env->fsm);
+
+	return 0;
 }
 
 #undef EPSILON
@@ -1042,7 +1067,8 @@ ast_compile(const struct ast *ast,
 		env.end = y;
 
 		if (!comp_iter(&env, x, y, ast->expr, NULL)) {
-			goto error;
+			/* comp_iter destroys the fsm on error */
+			return NULL;
 		}
 	}
 
