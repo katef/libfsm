@@ -57,6 +57,68 @@ contains_child(struct ast_expr **child, struct ast_expr **children, size_t count
 	return bsearch(child, children, count, sizeof(children[0]), cmp_uintptr_desc) != NULL;
 }
 
+/*
+ * AST analysis computes AST_FLAG_NULLABLE for this,
+ * but our rewriting runs before analysis annotates the tree.
+ *
+ * XXX: i don't like this, i think it should be unneccessary.
+ * because we're recurring up leaves-first, we can bubble up
+ * nullableness by rewriting, and only need a shallow check
+ * for nullableness here.
+ */
+static int
+is_nullable(const struct ast_expr *n)
+{
+	size_t i;
+
+	switch (n->type) {
+	case AST_EXPR_EMPTY:
+		return 1;
+
+	case AST_EXPR_CONCAT:
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (!is_nullable(n->u.concat.n[i])) {
+				return 0;
+			}
+		}
+		return 1;
+
+	case AST_EXPR_ALT:
+		for (i = 0; i < n->u.alt.count; i++) {
+			if (is_nullable(n->u.alt.n[i])) {
+				return 1;
+			}
+		}
+		return 0;
+
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+		return 0;
+
+	case AST_EXPR_REPEAT:
+		return n->u.repeat.min == 0 || is_nullable(n->u.repeat.e);
+
+	case AST_EXPR_GROUP:
+		return is_nullable(n->u.group.e);
+
+	case AST_EXPR_ANCHOR:
+// XXX: anchors consume no input but only match in context, so (?:^a?){2} is must not treated as nullable
+		return 0;
+
+	case AST_EXPR_SUBTRACT:
+// XXX: we can't introspect about this
+		return 0;
+
+	case AST_EXPR_RANGE:
+	case AST_EXPR_TOMBSTONE:
+		return 0;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
+}
+
 static int
 deduplicate_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 {
@@ -329,6 +391,7 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flag
 	 * they affect the anchoring. So we cannot remove those in general here.
 	 */
 	/* TODO: multiple redundant empty nodes can be removed though, leaving just one */
+	/* TODO: we should be able to use is_nullable for this too */
 
 	/* Fold in alt children; these do not have to be in-situ, because
 	 * order doesn't matter here. But we do it anyway to be tidy */
@@ -445,6 +508,22 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 		ast_expr_free(*poolp, dead);
 
 		return 1;
+	}
+
+    /*
+	 * When the child is nullable, repeats under the minimum can always
+	 * be padded out to reach the minimum by matching the empty string.
+	 * Formally the language for every n < min, the language of e{n}
+	 * is a subset of the language of e{min}, when e is nullable.
+	 * So when e is nullable, having a minimum over 0 doesn't actually
+	 * change the language for the expression.
+	 *
+	 * So we rewrite (?:a?){2,3} to (?:a?}{0,3} which is morally
+	 * (though not structurally) simpler. But this also helps feed cases
+	 * into the coverage for folding for nested repetitions below.
+	 */
+	if (n->u.repeat.min > 0 && is_nullable(n->u.repeat.e)) {
+		n->u.repeat.min = 0;
 	}
 
 	/*
