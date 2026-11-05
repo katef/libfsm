@@ -748,7 +748,7 @@ comp_iter(struct comp_env *env,
 
 	case AST_EXPR_CONCAT:
 	{
-		fsm_state_t curr_x;
+		fsm_state_t base, curr_x;
 		size_t i;
 
 		const size_t count  = n->u.concat.count;
@@ -756,6 +756,8 @@ comp_iter(struct comp_env *env,
 		curr_x = x;
 
 		assert(count >= 1);
+
+		base = fsm_countstates(env->fsm);
 
 		if (!fsm_addstate_bulk(env->fsm, count - 1)) {
 			return 0;
@@ -781,9 +783,7 @@ comp_iter(struct comp_env *env,
 
 			fsm_state_t z;
 			if (i + 1 < count) {
-				if (!fsm_addstate(env->fsm, &z)) {
-					return 0;
-				}
+				z = base + i;
 #if LOG_LINKAGE
 				fprintf(stderr, "%s: added state z %d\n", __func__, z);
 #endif
