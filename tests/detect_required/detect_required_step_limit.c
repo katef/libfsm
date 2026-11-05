@@ -6,7 +6,7 @@
 #include <fsm/walk.h>
 #include <fsm/print.h>
 
-int main()
+int main(void)
 {
 	enum re_flags flags = 0;
 	struct re_err err;
