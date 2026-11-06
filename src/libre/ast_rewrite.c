@@ -32,9 +32,6 @@ mul_overflow(unsigned x, unsigned y, unsigned *res)
 #endif
 
 static int
-rewrite(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags);
-
-static int
 cmp(const void *_a, const void *_b)
 {
 	const struct ast_expr *a = * (const struct ast_expr * const *) _a;
@@ -221,7 +218,7 @@ compile_subexpr(struct ast_expr *e, const struct fsm_alloc *alloc,
 }
 
 static int
-rewrite_concat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
+rewrite_concat(struct ast_expr_pool **poolp, struct ast_expr *n)
 {
 	static const struct ast_expr zero;
 	size_t i;
@@ -229,12 +226,6 @@ rewrite_concat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 	assert(n != NULL);
 	assert(n->type == AST_EXPR_CONCAT);
 	assert(n->flags == 0x0);
-
-	for (i = 0; i < n->u.concat.count; i++) {
-		if (!rewrite(poolp, n->u.concat.n[i], flags)) {
-			return 0;
-		}
-	}
 
 	/* Eliminate consecutive, redundant anchors */
 	for (i = 0; i < n->u.concat.count; i++) {
@@ -371,7 +362,7 @@ tombstone:
 }
 
 static int
-rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
+rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 {
 	static const struct ast_expr zero;
 	size_t i;
@@ -379,12 +370,6 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flag
 	assert(n != NULL);
 	assert(n->type == AST_EXPR_ALT);
 	assert(n->flags == 0x0);
-
-	for (i = 0; i < n->u.alt.count; i++) {
-		if (!rewrite(poolp, n->u.alt.n[i], flags)) {
-			return 0;
-		}
-	}
 
 	/*
 	 * Empty children do have a semantic effect; for dialects with anchors,
@@ -471,15 +456,11 @@ empty:
 }
 
 static int
-rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
+rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 {
 	assert(n != NULL);
 	assert(n->type == AST_EXPR_REPEAT);
 	assert(n->flags == 0x0);
-
-	if (!rewrite(poolp, n->u.repeat.e, flags)) {
-		return 0;
-	}
 
 	if (n->u.repeat.e->type == AST_EXPR_EMPTY) {
 		ast_expr_free(*poolp, n->u.repeat.e);
@@ -654,22 +635,6 @@ rewrite_subtract(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags
 	assert(n->type == AST_EXPR_SUBTRACT);
 	assert(n->flags == 0x0);
 
-	if (!rewrite(poolp, n->u.subtract.a, flags)) {
-		return 0;
-	}
-
-	/* If the lhs operand is empty, the result is always empty */
-	if (n->u.subtract.a->type == AST_EXPR_EMPTY) {
-		ast_expr_free(*poolp, n->u.subtract.a);
-		ast_expr_free(*poolp, n->u.subtract.b);
-
-		goto empty;
-	}
-
-	if (!rewrite(poolp, n->u.subtract.b, flags)) {
-		return 0;
-	}
-
 	/* TODO: If the rhs operand is 00-ff, the result is always empty
 	 * (unless RE_UNICODE is set) */
 
@@ -731,12 +696,6 @@ rewrite_subtract(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags
 
 	return 1;
 
-empty:
-
-	n->type = AST_EXPR_EMPTY;
-
-	return 1;
-
 tombstone:
 
 	n->type = AST_EXPR_TOMBSTONE;
@@ -755,21 +714,39 @@ rewrite(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
 	assert(n->flags == 0x0);
 
 	switch (n->type) {
+		size_t i;
+
 	case AST_EXPR_EMPTY:
 		return 1;
 
 	case AST_EXPR_CONCAT:
-		return rewrite_concat(poolp, n, flags);
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (!rewrite(poolp, n->u.concat.n[i], flags)) {
+				return 0;
+			}
+		}
+
+		return rewrite_concat(poolp, n);
 
 	case AST_EXPR_ALT:
-		return rewrite_alt(poolp, n, flags);
+		for (i = 0; i < n->u.alt.count; i++) {
+			if (!rewrite(poolp, n->u.alt.n[i], flags)) {
+				return 0;
+			}
+		}
+
+		return rewrite_alt(poolp, n);
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
 		return 1;
 
 	case AST_EXPR_REPEAT:
-		return rewrite_repeat(poolp, n, flags);
+		if (!rewrite(poolp, n->u.repeat.e, flags)) {
+			return 0;
+		}
+
+		return rewrite_repeat(poolp, n);
 
 	case AST_EXPR_GROUP:
 		if (!rewrite(poolp, n->u.group.e, flags)) {
@@ -788,6 +765,22 @@ rewrite(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
 		return 1;
 
 	case AST_EXPR_SUBTRACT:
+		if (!rewrite(poolp, n->u.subtract.a, flags)) {
+			return 0;
+		}
+
+		/* If the lhs operand is empty, the result is always empty */
+		if (n->u.subtract.a->type == AST_EXPR_EMPTY) {
+			ast_expr_free(*poolp, n->u.subtract.a);
+			ast_expr_free(*poolp, n->u.subtract.b);
+
+			goto empty;
+		}
+
+		if (!rewrite(poolp, n->u.subtract.b, flags)) {
+			return 0;
+		}
+
 		return rewrite_subtract(poolp, n, flags);
 
 	case AST_EXPR_RANGE:
@@ -801,6 +794,12 @@ rewrite(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
 tombstone:
 
 	n->type = AST_EXPR_TOMBSTONE;
+
+	return 1;
+
+empty:
+
+	n->type = AST_EXPR_EMPTY;
 
 	return 1;
 }
