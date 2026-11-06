@@ -488,7 +488,7 @@ interned_state_set_get_state_set(struct interned_state_set_pool *pool,
 		struct state_set *dst = NULL;
 		const fsm_state_t s = MASK_SINGLETON(iss_id);
 		if (!state_set_add(&dst, pool->alloc, s)) {
-			return false;
+			return NULL;
 		}
 		return dst;	/* also a singleton */
 	}
