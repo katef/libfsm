@@ -28,3 +28,13 @@ R pcre
 #-a\0bcd # -k str
 #+a\0bcd # -k pair
 
+# for most codegen languages, examples output as "..." with escaping
+# for the quotes, as if that were a string within the language.
+# however these are within comments, and when these aren't single-line
+# comments, we also need to handle ending the comment somehow.
+R pcre
+~x*/ case S0: exit(-2); /*
++/ case S0: exit-2; 
++xxxx/ case S0: exit-2; ////
+-x
+
