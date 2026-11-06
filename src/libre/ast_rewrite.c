@@ -117,7 +117,7 @@ is_nullable(const struct ast_expr *n)
 
 	case AST_EXPR_SUBTRACT:
 		/*
-		 * TODO: we could compile_expr() to find out. Alternately:
+		 * TODO: we could expr_compile() to find out. Alternately:
 		 * Classify definitely-yes/definitely-not/maybe-nullable and:
 		 *  - n is definitely nullable if
 		 *        n->u.subtract.a is definitely nullable
