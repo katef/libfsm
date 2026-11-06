@@ -412,7 +412,6 @@ literal_strings(const struct literal *a, size_t n, enum re_strings_flags flags)
 
 	g = re_strings_new();
 	if (g == NULL) {
-		return NULL;
 		perror("re_strings_new");
 		exit(EXIT_FAILURE);
 	}
