@@ -173,11 +173,11 @@ usage(void)
 	fprintf(stderr, "             sets implementation type:\n");
 	fprintf(stderr, "                 vm        interpret vm instructions (default)\n");
 	fprintf(stderr, "                 asm/goasm generate assembly and assemble\n");
-	fprintf(stderr, "                 c         compile as per fsm_print_c()\n");
-	fprintf(stderr, "                 vmc       compile as per fsm_print_vmc()\n");
-	fprintf(stderr, "                 vmops     compile as per fsm_print_vmops_{c,h,main}()\n");
-	fprintf(stderr, "                 rust      compile as per fsm_print_rust()\n");
-	fprintf(stderr, "                 llvm      compile as per fsm_print_llvm()\n");
+	fprintf(stderr, "                 c         compile as per FSM_PRINT_C()\n");
+	fprintf(stderr, "                 vmc       compile as per FSM_PRINT_VMC()\n");
+	fprintf(stderr, "                 vmops     compile as per FSM_PRINT_VMOPS_{C,H,MAIN}()\n");
+	fprintf(stderr, "                 rust      compile as per FSM_PRINT_RUST()\n");
+	fprintf(stderr, "                 llvm      compile as per FSM_PRINT_LLVM()\n");
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "        -x <encoding>\n");

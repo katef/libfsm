@@ -739,6 +739,13 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 			linkage_info->anchored_ends = NULL;
 		}
 
+		/* We permit an FSM with 0 states for fsm_union, so we allow them
+		 * here too. This is possible e.g. for an unsatisfiable regex */
+		if (fsm_countstates(fsm) == 0) {
+			ainfo->start = NO_STATE;
+			continue;
+		}
+
 		/* Identify various states in the NFA that will be relevant to combining. */
 		if (!analyze_group_nfa(fsm, ainfo)) {
 			goto ainfos_fail;

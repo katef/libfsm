@@ -351,7 +351,9 @@ comment_c(FILE *f, const struct fsm_options *opt,
 	for (i = 0; i < state_metadata->end_id_count; i++) {
 		assert(state_metadata->end_ids[i] < matchc);
 
-		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
+		fprintf(f, "\"");
+		escputs(f, opt, c_escputc_str, matchv[state_metadata->end_ids[i]]);
+		fprintf(f, "\"");
 
 		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
@@ -381,7 +383,11 @@ comment_rust(FILE *f, const struct fsm_options *opt,
 	for (i = 0; i < state_metadata->end_id_count; i++) {
 		assert(state_metadata->end_ids[i] < matchc);
 
-		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
+		// borrowing C's string (and comment) ecaping for rust
+		// in rust I hear we like to borrow things
+		fprintf(f, "\"");
+		escputs(f, opt, c_escputc_str, matchv[state_metadata->end_ids[i]]);
+		fprintf(f, "\"");
 
 		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
@@ -409,7 +415,10 @@ comment_llvm(FILE *f, const struct fsm_options *opt,
 	for (i = 0; i < state_metadata->end_id_count; i++) {
 		assert(state_metadata->end_ids[i] < matchc);
 
-		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
+		// borrowing C's string (and comment) ecaping for llvm
+		fprintf(f, "\"");
+		escputs(f, opt, c_escputc_str, matchv[state_metadata->end_ids[i]]);
+		fprintf(f, "\"");
 
 		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
@@ -437,7 +446,9 @@ comment_dot(FILE *f, const struct fsm_options *opt,
 	for (i = 0; i < state_metadata->end_id_count; i++) {
 		assert(state_metadata->end_ids[i] < matchc);
 
-		fprintf(f, "\"%s\"", matchv[state_metadata->end_ids[i]]); /* XXX: escape string (and comment) */
+		fprintf(f, "\"");
+		escputs(f, opt, dot_escputc_html, matchv[state_metadata->end_ids[i]]);
+		fprintf(f, "\"");
 
 		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
