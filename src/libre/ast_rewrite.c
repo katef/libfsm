@@ -116,7 +116,16 @@ is_nullable(const struct ast_expr *n)
 		return 0;
 
 	case AST_EXPR_SUBTRACT:
-		/* TODO: we could compile_expr() to find out */
+		/*
+		 * TODO: we could compile_expr() to find out. Alternately:
+		 * Classify definitely-yes/definitely-not/maybe-nullable and:
+		 *  - n is definitely nullable if
+		 *        n->u.subtract.a is definitely nullable
+		 *    and n->u.subtract.b is definitely not nullable
+		 *  - n is definitely not nullable if
+		 *        n->u.subtract.a is definitely not nullable
+		 *     or n->u.subtract.b is definitely nullable
+		 */
 		return 0;
 
 	case AST_EXPR_RANGE:
@@ -515,6 +524,16 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 	 * So we rewrite (?:a?){2,3} to (?:a?}{0,3} which is morally
 	 * (though not structurally) simpler. But this also helps feed cases
 	 * into the coverage for folding for nested repetitions below.
+	 *
+	 * XXX: this is expensive for nested repeats because we first rewrite
+	 * an outer repeat's operand, which means rewriting the inner repeat
+	 * as part of the depth-first traversal, and that includes the walk
+	 * to find nullability. Then we do the same nullability walk when
+	 * rewriting for the inner repeat's operand. We could first annotate
+	 * the tree in the style of the AST analysis with AST_FLAG_NULLABLE,
+	 * but i don't want to mix the analysis-style flag annotation during
+	 * rewriting, I think it's confusing having to take flags into account
+	 * for unrelated transformations.
 	 */
 	if (n->u.repeat.min > 0 && is_nullable(n->u.repeat.e)) {
 		n->u.repeat.min = 0;
