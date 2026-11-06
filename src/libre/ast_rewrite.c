@@ -324,7 +324,6 @@ rewrite_concat(struct ast_expr_pool **poolp, struct ast_expr *n)
 				n->u.concat.alloc = req_count;
 			}
 
-			/* move along our existing tail to make space */
 			if (i + 1 < n->u.concat.count) {
 				memmove(&n->u.concat.n[i + dead->u.concat.count], &n->u.concat.n[i + 1],
 					(n->u.concat.count - i - 1) * sizeof *n->u.concat.n);
@@ -423,7 +422,6 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 				n->u.alt.alloc = n->u.alt.count + dead->u.alt.count - 1;
 			}
 
-			/* move along our existing tail to make space */
 			if (i + 1 < n->u.alt.count) {
 				memmove(&n->u.alt.n[i + dead->u.alt.count], &n->u.alt.n[i + 1],
 					(n->u.alt.count - i - 1) * sizeof *n->u.alt.n);
@@ -444,6 +442,35 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 		i++;
 	}
 
+	/*
+	 * Formally the language of the alt node itself is not influenced
+	 * by a tombstone child, so it can be removed.
+	 * So we rewrite xyz|[^\x00-\xff] to just xyz.
+	 *
+	 * When every child is a tombstone, so is the alt node itself.
+	 */
+	for (i = 0; i < n->u.alt.count; ) {
+		if (n->u.alt.n[i]->type == AST_EXPR_TOMBSTONE) {
+			ast_expr_free(*poolp, n->u.alt.n[i]);
+
+			if (i + 1 < n->u.alt.count) {
+				memmove(&n->u.alt.n[i], &n->u.alt.n[i + 1],
+					(n->u.alt.count - i - 1) * sizeof *n->u.alt.n);
+			}
+
+			n->u.alt.count--;
+			continue;
+		}
+
+		i++;
+	}
+
+	if (n->u.alt.count == 0) {
+		free(n->u.alt.n);
+		n->u.alt.n = NULL;
+
+		goto tombstone;
+	}
 
 	/* de-duplicate children */
 	if (n->u.alt.count > 1) {
@@ -473,6 +500,12 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 empty:
 
 	n->type = AST_EXPR_EMPTY;
+
+	return 1;
+
+tombstone:
+
+	n->type = AST_EXPR_TOMBSTONE;
 
 	return 1;
 }
