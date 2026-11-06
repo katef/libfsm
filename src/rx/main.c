@@ -426,6 +426,10 @@ literal_strings(const struct literal *a, size_t n, enum re_strings_flags flags)
 
 	fsm = re_strings_build(g, alloc, flags);
 	re_strings_free(g);
+	if (fsm == NULL) {
+		perror("re_strings_build");
+		exit(EXIT_FAILURE);
+	}
 
 	/* this is already a DFA, courtesy of re_strings() */
 	assert(fsm_all(fsm, fsm_isdfa));
