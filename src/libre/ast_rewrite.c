@@ -55,20 +55,31 @@ contains_child(struct ast_expr **child, struct ast_expr **children, size_t count
 }
 
 /*
- * AST analysis computes AST_FLAG_NULLABLE for this,
- * but our rewriting runs before analysis annotates the tree.
+ * AST analysis computes AST_FLAG_NULLABLE for deep nullability
+ * (including subtrees of children), but our rewriting runs before
+ * analysis annotates the tree.
  *
- * XXX: i don't like this, i think it should be unneccessary.
- * because we're recurring up leaves-first, we can bubble up
- * nullableness by rewriting, and only need a shallow check
- * for nullableness here.
+ * I had thought that we only need shallow analysis here, because
+ * we're always using this after recurring depth-first rewriting
+ * as we go. So we know if any subtrees of children were rewritable,
+ * they will have been rewritten already by the time we're looking
+ * at them for our current pass. That's true, but it doesn't account
+ * for e.g. /a?b?/ which is a concat of two nullable children which
+ * aren't individually rewritten to AST_EXPR_EMPTY.
+ *
+ * This is a long-winded way of saying that nullable doesn't mean
+ * the same thing as empty.
+ *
+ * We're conservative about this: it's always okay to decline
+ * to rewrite a subtree. Which means it's always okay to say
+ * something is not nullable when we're not sure.
  */
 static int
 is_nullable(const struct ast_expr *n)
 {
-	size_t i;
-
 	switch (n->type) {
+		size_t i;
+
 	case AST_EXPR_EMPTY:
 		return 1;
 
@@ -96,14 +107,16 @@ is_nullable(const struct ast_expr *n)
 		return n->u.repeat.min == 0 || is_nullable(n->u.repeat.e);
 
 	case AST_EXPR_GROUP:
+		/* TODO: not for capturing groups */
 		return is_nullable(n->u.group.e);
 
 	case AST_EXPR_ANCHOR:
-// XXX: anchors consume no input but only match in context, so (?:^a?){2} is must not treated as nullable
+		/* anchors consume no input but only match in context,
+		 * so e.g. (?:^a?){2} is treated as not nullable */
 		return 0;
 
 	case AST_EXPR_SUBTRACT:
-// XXX: we can't introspect about this
+		/* TODO: we could compile_expr() to find out */
 		return 0;
 
 	case AST_EXPR_RANGE:
