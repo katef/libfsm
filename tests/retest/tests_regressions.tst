@@ -38,3 +38,28 @@ R pcre
 +xxxx/ case S0: exit-2; ////
 -x
 
+
+# a tombstone alt means the whole subexpression matches nothing.
+# we have test coverage for [^\x00-\xff] elsewhere, here it's
+# important that we get it in an alt.
+R pcre
+~^(?:a|[^\x00-\xff])$
++a
+-
+
+R pcre
+~^(?:[^\x00-\xff]|a|b)$
++a
++b
+-
+
+R pcre
+~^x(?:a|[^\x00-\xff])*y$
++xy
++xaay
+-x
+
+R pcre
+~^(?:[^\x00-\xff]|)$
++
+-a
