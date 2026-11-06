@@ -56,7 +56,9 @@ fsm_concat(struct fsm *a, struct fsm *b,
 	fsm_setend(a, ea, 1);
 
 	q = fsm_merge(a, b, combine_info);
-	assert(q != NULL);
+	if (q == NULL) {
+		return NULL;
+	}
 
 	sq += combine_info->base_a;
 	ea += combine_info->base_a;

@@ -113,7 +113,9 @@ fsm_union(struct fsm *a, struct fsm *b,
 	}
 
 	q = fsm_merge(a, b, combine_info);
-	assert(q != NULL);
+	if (q == NULL) {
+		return NULL;
+	}
 
 	sa += combine_info->base_a;
 	sb += combine_info->base_b;
