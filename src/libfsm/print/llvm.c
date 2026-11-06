@@ -31,6 +31,14 @@
 #include "libfsm/vm/retlist.h"
 #include "libfsm/vm/vm.h"
 
+/*
+ * This should really be a runtime option, because it's about codegen
+ * for our target, not for whatever compiler we're built with.
+ * However this is transitional for llvm, support for opaque pointers
+ * is mandatory from llvm 17 onwards. So I don't want to complicate
+ * our codegen options for this; if you care to use llvm codegen,
+ * you have already updated llvm.
+ */
 #define OPAQUE_POINTERS 1
 
 #if OPAQUE_POINTERS // llvm >= 15
@@ -476,7 +484,7 @@ fsm_print_llvmfrag(FILE *f,
 		 *        [1, %ret1],
 		 *        [2, %ret2],
 		 *        [3, %fail]
-		 *      %p = getelementptr inbounds [4 x %rt], [4 x %rt]* @fsm.r, i64 0, i64 %i
+		 *      %p = getelementptr inbounds [4 x %rt], ptr @fsm.r, i64 0, i64 %i
 		 *      %ret = load %rt, ptr %p
 		 *      ret %rt %ret
 		 *  fail:
@@ -511,8 +519,13 @@ fsm_print_llvmfrag(FILE *f,
 		}
 		fprintf(f, "\t  [%zu, %%fail]\n", retlist->count);
 
+#if OPAQUE_POINTERS
+		fprintf(f, "\t%%p = getelementptr inbounds [%zu x %%rt], ptr @%sr, i64 0, i64 %%i\n",
+			retlist->count + 1, prefix);
+#else
 		fprintf(f, "\t%%p = getelementptr inbounds [%zu x %%rt], [%zu x %%rt]* @%sr, i64 0, i64 %%i\n",
 			retlist->count + 1, retlist->count + 1, prefix);
+#endif
 		fprintf(f, "\t%%ret = load %%rt, %s %%p\n", ptr_rt);
 		fprintf(f, "\tret %%rt %%ret\n");
 
@@ -687,8 +700,13 @@ fsm_print_llvm(FILE *f,
 	for (size_t i = 0; i < retlist->count; i++) {
 		fprintf(f, "\t  ");
 		if (opt->ambig == AMBIG_MULTIPLE) {
+#if OPAQUE_POINTERS
+			fprintf(f, "%%rt { ptr @%sr%zu, i64 %zu }",
+				prefix, i, retlist->a[i].count);
+#else
 			fprintf(f, "%%rt { %s bitcast ([%zu x i32]* @%sr%zu to %s), i64 %zu }",
 				ptr_i32, retlist->a[i].count, prefix, i, ptr_i32, retlist->a[i].count);
+#endif
 			fprintf(f, ",");
 		} else {
 			const struct fsm_state_metadata state_metadata = {
@@ -723,11 +741,12 @@ fsm_print_llvm(FILE *f,
 
 	switch (opt->io) {
 	case FSM_IO_GETC:
-#ifdef OPAQUE_POINTERS
+#if OPAQUE_POINTERS
+		fprintf(f, "(ptr nocapture noundef readonly %%fsm_getc, ptr noundef %%getc_opaque)");
+		(void) ptr_void;
+#else
 		fprintf(f, "(i32 (%s)* nocapture noundef readonly %%fsm_getc, %s noundef %%getc_opaque)",
 			ptr_i8, ptr_void);
-#else
-		fprintf(f, "(ptr nocapture noundef readonly %%fsm_getc, ptr noundef %%getc_opaque)");
 #endif
 		break;
 
