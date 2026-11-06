@@ -247,6 +247,9 @@ fsm_determinise_with_config(struct fsm *nfa,
 			 * states are end states.
 			 */
 			ss = interned_state_set_get_state_set(ac_env.issp, iss_id);
+			if (ss == NULL) {
+				goto cleanup;
+			}
 			if (!state_set_has(nfa, ss, fsm_isend)) {
 				continue;
 			}
@@ -729,6 +732,9 @@ build_reverse_mappings(const struct map *map, struct interned_state_set_pool *is
 		interned_state_set_id iss_id = m->iss;
 		assert(m->dfastate < dst_dfa->statecount);
 		ss = interned_state_set_get_state_set(issp, iss_id);
+		if (ss == NULL) {
+			goto cleanup;
+		}
 
 		fsm_state_t state;
 		for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
@@ -912,6 +918,9 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 	INIT_TIMERS();
 	TIME(&pre);
 	struct state_set *ss = interned_state_set_get_state_set(env->issp, iss_id);
+	if (ss == NULL) {
+		return 0;
+	}
 	const size_t set_count = state_set_count(ss);
 
 #if LOG_DETERMINISE_STATE_SETS || LOG_GROUPING > 1
@@ -2623,7 +2632,9 @@ remap_eager_outputs(const struct map *map, struct interned_state_set_pool *issp,
 	struct map_iter iter;
 	for (struct mapping *b = map_first(map, &iter); b != NULL; b = map_next(&iter)) {
 		struct state_set *ss = interned_state_set_get_state_set(issp, b->iss);
-		assert(ss != NULL);
+		if (ss == NULL) {
+			return 0;
+		}
 
 		struct state_iter it;
 		fsm_state_t s;
