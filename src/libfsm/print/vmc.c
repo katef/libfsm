@@ -477,7 +477,7 @@ fsm_print_cfrag(FILE *f,
 				fprintf(f, "p += %zu;\n", n);
 
 				op = tail;
-			} else if (n > 1 && opt->io == FSM_IO_STR) {
+			} else if (n > 1 && opt->io == FSM_IO_STR && !memchr(buf, '\0', n)) {
 				fprintf(f, "if (0 != strncmp(p, \"");
 				escputbuf(f, opt, c_escputc_str, buf, n);
 				fprintf(f, "\", %zu)) ", n);
