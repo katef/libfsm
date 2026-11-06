@@ -32,9 +32,6 @@ mul_overflow(unsigned x, unsigned y, unsigned *res)
 #endif
 
 static int
-rewrite(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags);
-
-static int
 cmp(const void *_a, const void *_b)
 {
 	const struct ast_expr *a = * (const struct ast_expr * const *) _a;
@@ -55,6 +52,90 @@ static int
 contains_child(struct ast_expr **child, struct ast_expr **children, size_t count)
 {
 	return bsearch(child, children, count, sizeof(children[0]), cmp_uintptr_desc) != NULL;
+}
+
+/*
+ * AST analysis computes AST_FLAG_NULLABLE for deep nullability
+ * (including subtrees of children), but our rewriting runs before
+ * analysis annotates the tree.
+ *
+ * I had thought that we only need shallow analysis here, because
+ * we're always using this after recurring depth-first rewriting
+ * as we go. So we know if any subtrees of children were rewritable,
+ * they will have been rewritten already by the time we're looking
+ * at them for our current pass. That's true, but it doesn't account
+ * for e.g. /a?b?/ which is a concat of two nullable children which
+ * aren't individually rewritten to AST_EXPR_EMPTY.
+ *
+ * This is a long-winded way of saying that nullable doesn't mean
+ * the same thing as empty.
+ *
+ * We're conservative about this: it's always okay to decline
+ * to rewrite a subtree. Which means it's always okay to say
+ * something is not nullable when we're not sure.
+ */
+static int
+is_nullable(const struct ast_expr *n)
+{
+	switch (n->type) {
+		size_t i;
+
+	case AST_EXPR_EMPTY:
+		return 1;
+
+	case AST_EXPR_CONCAT:
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (!is_nullable(n->u.concat.n[i])) {
+				return 0;
+			}
+		}
+		return 1;
+
+	case AST_EXPR_ALT:
+		for (i = 0; i < n->u.alt.count; i++) {
+			if (is_nullable(n->u.alt.n[i])) {
+				return 1;
+			}
+		}
+		return 0;
+
+	case AST_EXPR_LITERAL:
+	case AST_EXPR_CODEPOINT:
+		return 0;
+
+	case AST_EXPR_REPEAT:
+		return n->u.repeat.min == 0 || is_nullable(n->u.repeat.e);
+
+	case AST_EXPR_GROUP:
+		/* TODO: not for capturing groups */
+		return is_nullable(n->u.group.e);
+
+	case AST_EXPR_ANCHOR:
+		/* anchors consume no input but only match in context,
+		 * so e.g. (?:^a?){2} is treated as not nullable */
+		return 0;
+
+	case AST_EXPR_SUBTRACT:
+		/*
+		 * TODO: we could expr_compile() to find out. Alternately:
+		 * Classify definitely-yes/definitely-not/maybe-nullable and:
+		 *  - n is definitely nullable if
+		 *        n->u.subtract.a is definitely nullable
+		 *    and n->u.subtract.b is definitely not nullable
+		 *  - n is definitely not nullable if
+		 *        n->u.subtract.a is definitely not nullable
+		 *     or n->u.subtract.b is definitely nullable
+		 */
+		return 0;
+
+	case AST_EXPR_RANGE:
+	case AST_EXPR_TOMBSTONE:
+		return 0;
+
+	default:
+		assert(!"unreached");
+		abort();
+	}
 }
 
 static int
@@ -159,7 +240,7 @@ compile_subexpr(struct ast_expr *e, const struct fsm_alloc *alloc,
 }
 
 static int
-rewrite_concat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
+rewrite_concat(struct ast_expr_pool **poolp, struct ast_expr *n)
 {
 	static const struct ast_expr zero;
 	size_t i;
@@ -167,12 +248,6 @@ rewrite_concat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 	assert(n != NULL);
 	assert(n->type == AST_EXPR_CONCAT);
 	assert(n->flags == 0x0);
-
-	for (i = 0; i < n->u.concat.count; i++) {
-		if (!rewrite(poolp, n->u.concat.n[i], flags)) {
-			return 0;
-		}
-	}
 
 	/* Eliminate consecutive, redundant anchors */
 	for (i = 0; i < n->u.concat.count; i++) {
@@ -309,7 +384,7 @@ tombstone:
 }
 
 static int
-rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
+rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 {
 	static const struct ast_expr zero;
 	size_t i;
@@ -318,17 +393,12 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flag
 	assert(n->type == AST_EXPR_ALT);
 	assert(n->flags == 0x0);
 
-	for (i = 0; i < n->u.alt.count; i++) {
-		if (!rewrite(poolp, n->u.alt.n[i], flags)) {
-			return 0;
-		}
-	}
-
 	/*
 	 * Empty children do have a semantic effect; for dialects with anchors,
 	 * they affect the anchoring. So we cannot remove those in general here.
 	 */
 	/* TODO: multiple redundant empty nodes can be removed though, leaving just one */
+	/* TODO: we should be able to use is_nullable for this too */
 
 	/* Fold in alt children; these do not have to be in-situ, because
 	 * order doesn't matter here. But we do it anyway to be tidy */
@@ -408,15 +478,11 @@ empty:
 }
 
 static int
-rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
+rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 {
 	assert(n != NULL);
 	assert(n->type == AST_EXPR_REPEAT);
 	assert(n->flags == 0x0);
-
-	if (!rewrite(poolp, n->u.repeat.e, flags)) {
-		return 0;
-	}
 
 	if (n->u.repeat.e->type == AST_EXPR_EMPTY) {
 		ast_expr_free(*poolp, n->u.repeat.e);
@@ -445,6 +511,32 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags f
 		ast_expr_free(*poolp, dead);
 
 		return 1;
+	}
+
+    /*
+	 * When the child is nullable, repeats under the minimum can always
+	 * be padded out to reach the minimum by matching the empty string.
+	 * Formally the language for every n < min, the language of e{n}
+	 * is a subset of the language of e{min}, when e is nullable.
+	 * So when e is nullable, having a minimum over 0 doesn't actually
+	 * change the language for the expression.
+	 *
+	 * So we rewrite (?:a?){2,3} to (?:a?}{0,3} which is morally
+	 * (though not structurally) simpler. But this also helps feed cases
+	 * into the coverage for folding for nested repetitions below.
+	 *
+	 * XXX: this is expensive for nested repeats because we first rewrite
+	 * an outer repeat's operand, which means rewriting the inner repeat
+	 * as part of the depth-first traversal, and that includes the walk
+	 * to find nullability. Then we do the same nullability walk when
+	 * rewriting for the inner repeat's operand. We could first annotate
+	 * the tree in the style of the AST analysis with AST_FLAG_NULLABLE,
+	 * but i don't want to mix the analysis-style flag annotation during
+	 * rewriting, I think it's confusing having to take flags into account
+	 * for unrelated transformations.
+	 */
+	if (n->u.repeat.min > 0 && is_nullable(n->u.repeat.e)) {
+		n->u.repeat.min = 0;
 	}
 
 	/*
@@ -575,22 +667,6 @@ rewrite_subtract(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags
 	assert(n->type == AST_EXPR_SUBTRACT);
 	assert(n->flags == 0x0);
 
-	if (!rewrite(poolp, n->u.subtract.a, flags)) {
-		return 0;
-	}
-
-	/* If the lhs operand is empty, the result is always empty */
-	if (n->u.subtract.a->type == AST_EXPR_EMPTY) {
-		ast_expr_free(*poolp, n->u.subtract.a);
-		ast_expr_free(*poolp, n->u.subtract.b);
-
-		goto empty;
-	}
-
-	if (!rewrite(poolp, n->u.subtract.b, flags)) {
-		return 0;
-	}
-
 	/* TODO: If the rhs operand is 00-ff, the result is always empty
 	 * (unless RE_UNICODE is set) */
 
@@ -652,12 +728,6 @@ rewrite_subtract(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags
 
 	return 1;
 
-empty:
-
-	n->type = AST_EXPR_EMPTY;
-
-	return 1;
-
 tombstone:
 
 	n->type = AST_EXPR_TOMBSTONE;
@@ -676,21 +746,39 @@ rewrite(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
 	assert(n->flags == 0x0);
 
 	switch (n->type) {
+		size_t i;
+
 	case AST_EXPR_EMPTY:
 		return 1;
 
 	case AST_EXPR_CONCAT:
-		return rewrite_concat(poolp, n, flags);
+		for (i = 0; i < n->u.concat.count; i++) {
+			if (!rewrite(poolp, n->u.concat.n[i], flags)) {
+				return 0;
+			}
+		}
+
+		return rewrite_concat(poolp, n);
 
 	case AST_EXPR_ALT:
-		return rewrite_alt(poolp, n, flags);
+		for (i = 0; i < n->u.alt.count; i++) {
+			if (!rewrite(poolp, n->u.alt.n[i], flags)) {
+				return 0;
+			}
+		}
+
+		return rewrite_alt(poolp, n);
 
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
 		return 1;
 
 	case AST_EXPR_REPEAT:
-		return rewrite_repeat(poolp, n, flags);
+		if (!rewrite(poolp, n->u.repeat.e, flags)) {
+			return 0;
+		}
+
+		return rewrite_repeat(poolp, n);
 
 	case AST_EXPR_GROUP:
 		if (!rewrite(poolp, n->u.group.e, flags)) {
@@ -709,6 +797,22 @@ rewrite(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
 		return 1;
 
 	case AST_EXPR_SUBTRACT:
+		if (!rewrite(poolp, n->u.subtract.a, flags)) {
+			return 0;
+		}
+
+		/* If the lhs operand is empty, the result is always empty */
+		if (n->u.subtract.a->type == AST_EXPR_EMPTY) {
+			ast_expr_free(*poolp, n->u.subtract.a);
+			ast_expr_free(*poolp, n->u.subtract.b);
+
+			goto empty;
+		}
+
+		if (!rewrite(poolp, n->u.subtract.b, flags)) {
+			return 0;
+		}
+
 		return rewrite_subtract(poolp, n, flags);
 
 	case AST_EXPR_RANGE:
@@ -722,6 +826,12 @@ rewrite(struct ast_expr_pool **poolp, struct ast_expr *n, enum re_flags flags)
 tombstone:
 
 	n->type = AST_EXPR_TOMBSTONE;
+
+	return 1;
+
+empty:
+
+	n->type = AST_EXPR_EMPTY;
 
 	return 1;
 }

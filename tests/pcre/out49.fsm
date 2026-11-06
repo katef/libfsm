@@ -1,0 +1,6 @@
+# because (?:|^a)+ is nullable and so rewrites to (?:|^a)*
+0 -> 1 "b";
+1 -> 1 ?;
+
+start: 0;
+end: 1;
