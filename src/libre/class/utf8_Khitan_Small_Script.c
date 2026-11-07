@@ -4,7 +4,7 @@
 
 static const struct range ranges[] = {
 	{ 0x16FE4UL, 0x16FE4UL },
-	{ 0x18B00UL, 0x18CD5UL },
+	{ 0x18B00UL, 0x18CDAUL },
 	{ 0x18CFFUL, 0x18CFFUL }
 };
 

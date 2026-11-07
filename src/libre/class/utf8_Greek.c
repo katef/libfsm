@@ -38,7 +38,8 @@ static const struct range ranges[] = {
 	{ 0xAB65UL, 0xAB65UL },
 	{ 0x10140UL, 0x1018EUL },
 	{ 0x101A0UL, 0x101A0UL },
-	{ 0x1D200UL, 0x1D245UL }
+	{ 0x1D200UL, 0x1D245UL },
+	{ 0x1DFF3UL, 0x1DFF4UL }
 };
 
 const struct class utf8_Greek = {
