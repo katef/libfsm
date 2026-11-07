@@ -84,7 +84,7 @@ interned_state_set_pool_alloc(const struct fsm_alloc *a)
 	if (sets == NULL) { goto cleanup; }
 
 	buf = f_malloc(a, DEF_BUF * sizeof(buf[0]));
-	if (sets == NULL) { goto cleanup; }
+	if (buf == NULL) { goto cleanup; }
 
 	buckets = f_malloc(a, DEF_BUCKETS * sizeof(buckets[0]));
 	if (buckets == NULL) { goto cleanup; }
@@ -488,7 +488,7 @@ interned_state_set_get_state_set(struct interned_state_set_pool *pool,
 		struct state_set *dst = NULL;
 		const fsm_state_t s = MASK_SINGLETON(iss_id);
 		if (!state_set_add(&dst, pool->alloc, s)) {
-			return false;
+			return NULL;
 		}
 		return dst;	/* also a singleton */
 	}

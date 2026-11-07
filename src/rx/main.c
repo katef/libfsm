@@ -412,7 +412,6 @@ literal_strings(const struct literal *a, size_t n, enum re_strings_flags flags)
 
 	g = re_strings_new();
 	if (g == NULL) {
-		return NULL;
 		perror("re_strings_new");
 		exit(EXIT_FAILURE);
 	}
@@ -426,6 +425,10 @@ literal_strings(const struct literal *a, size_t n, enum re_strings_flags flags)
 
 	fsm = re_strings_build(g, alloc, flags);
 	re_strings_free(g);
+	if (fsm == NULL) {
+		perror("re_strings_build");
+		exit(EXIT_FAILURE);
+	}
 
 	/* this is already a DFA, courtesy of re_strings() */
 	assert(fsm_all(fsm, fsm_isdfa));
@@ -1253,7 +1256,10 @@ main(int argc, char *argv[])
 				general.a[i].dialect, strict,
 				general.a[i].s, flags, general.a[i].id);
 			if (fsm == NULL) {
-				append_pattern(&declined, i, general.a[i].dialect, general.a[i].s);
+				/* we're moving ownership of .s for sake of only freeing once */
+				append_pattern(&declined, general.a[i].id, general.a[i].dialect,
+					general.a[i].s);
+				general.a[i].s = NULL;
 				continue;
 			}
 

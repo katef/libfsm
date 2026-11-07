@@ -1068,7 +1068,11 @@ fsm_endid_compact(struct fsm *fsm, fsm_state_t *mapping, size_t mapping_count)
 
 		assert(ob->state < mapping_count);
 		const fsm_state_t nstate = mapping[ob->state];
-		if (nstate == FSM_STATE_REMAP_NO_STATE) { continue; }
+		if (nstate == FSM_STATE_REMAP_NO_STATE) {
+			f_free(fsm->alloc, ob->ids);
+			ei->buckets_used--;
+			continue;
+		}
 
 		const uint64_t hash = hash_id(nstate);
 

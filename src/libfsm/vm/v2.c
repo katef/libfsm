@@ -158,6 +158,8 @@ encode_opasm_v2(const struct dfavm_vm_op *instr, size_t ninstr)
 
 error:
 	if (ret != NULL) {
+		free(ret->u.v2.ops);
+		free(ret->u.v2.abuf);
 		free(ret);
 	}
 

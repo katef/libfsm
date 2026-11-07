@@ -62,6 +62,8 @@ merge(struct fsm *dst, struct fsm *src,
 		 * or let realloc do that internally */
 		tmp = f_realloc(dst->alloc, dst->states, newalloc * sizeof *dst->states);
 		if (tmp == NULL) {
+			fsm_free(dst);
+			fsm_free(src);
 			return NULL;
 		}
 
@@ -109,17 +111,17 @@ merge(struct fsm *dst, struct fsm *src,
 
 	if (!copy_capture_actions(dst, src)) {
 		/* non-recoverable -- destructive operation */
-		return NULL;
+		goto error;
 	}
 
 	if (!copy_end_ids(dst, src, *base_src)) {
 		/* non-recoverable -- destructive operation */
-		return NULL;
+		goto error;
 	}
 
 	if (!copy_eager_output_ids(dst, src, *base_src)) {
 		/* non-recoverable -- destructive operation */
-		return NULL;
+		goto error;
 	}
 
 	f_free(src->alloc, src->states);
@@ -133,6 +135,20 @@ merge(struct fsm *dst, struct fsm *src,
 	fsm_free(src);
 
 	return dst;
+
+error:
+
+	f_free(src->alloc, src->states);
+
+	/* for free_contents(); the guts moved over to dst */
+	src->states = NULL;
+	src->statealloc = 0;
+	src->statecount = 0;
+
+	fsm_free(src);
+	fsm_free(dst);
+
+	return NULL;
 }
 
 static int
@@ -249,6 +265,8 @@ fsm_mergeab(struct fsm *a, struct fsm *b,
 	assert(base_b != NULL);
 
 	if (a->alloc != b->alloc) {
+		fsm_free(a);
+		fsm_free(b);
 		errno = EINVAL;
 		return NULL;
 	}

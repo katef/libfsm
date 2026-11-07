@@ -371,12 +371,14 @@ fsm_print_fsm(FILE *f,
 			default_accept,
 			NULL))
 		{
+			f_free(fsm->alloc, ids);
 			return -1;
 		}
 
 		if (-1 == print_hook_comment(f, opt, hooks,
 			&state_metadata))
 		{
+			f_free(fsm->alloc, ids);
 			return -1;
 		}
 

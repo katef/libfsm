@@ -500,11 +500,16 @@ main(int argc, char *argv[])
 		struct timespec pre, post;
 		struct fsm *a, *b;
 		struct fsm *q;
+		FILE *f;
 
 		if ((op & OP_ARITY) == 1) {
 			/* argc < 1 is okay */
 
-			q = fsm_parse((argc == 0) ? stdin : xopen(argv[0]), alloc);
+			f = (argc == 0) ? stdin : xopen(argv[0]);
+			q = fsm_parse(f, alloc);
+			if (f != stdin) {
+				fclose(f);
+			}
 			if (q == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -514,12 +519,16 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 
-			a = fsm_parse(xopen(argv[0]), alloc);
+			f = xopen(argv[0]);
+			a = fsm_parse(f, alloc);
+			fclose(f);
 			if (a == NULL) {
 				exit(EXIT_FAILURE);
 			}
 
-			b = fsm_parse(xopen(argv[1]), alloc);
+			f = xopen(argv[1]);
+			b = fsm_parse(f, alloc);
+			fclose(f);
 			if (b == NULL) {
 				exit(EXIT_FAILURE);
 			}
@@ -625,6 +634,9 @@ main(int argc, char *argv[])
 
 		r = !r;
 
+		if (fsm != NULL) {
+			fsm_free(fsm);
+		}
 		fsm = q;
 	}
 

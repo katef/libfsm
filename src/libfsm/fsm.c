@@ -134,8 +134,9 @@ fsm_move(struct fsm *dst, struct fsm *src)
 	assert(dst != NULL);
 
 	if (dst->alloc != src->alloc) {
+		fsm_free(src);
 		errno = EINVAL;
-		return; /* XXX */
+		return; /* XXX: failure is destructive to src */
 	}
 
 	free_contents(dst);

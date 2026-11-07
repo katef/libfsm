@@ -220,6 +220,7 @@ encode_opasm_v1(const struct dfavm_vm_op *instr, size_t ninstr, size_t total_byt
 
 error:
 	if (ret != NULL) {
+		free(ret->u.v1.ops);
 		free(ret);
 	}
 	return NULL;

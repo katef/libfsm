@@ -394,5 +394,7 @@ trie_dump(struct trie_graph *g, FILE *f)
 	}
 
 	dump_state(g->root,f,0, buf);
+
+	free(buf);
 }
 

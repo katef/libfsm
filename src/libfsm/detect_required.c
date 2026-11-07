@@ -98,6 +98,8 @@ enum fsm_detect_required_characters_res
 fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
 	uint64_t charmap[4], size_t *count)
 {
+	enum fsm_detect_required_characters_res res;
+
 	assert(dfa != NULL);
 	assert(charmap != NULL);
 
@@ -106,8 +108,6 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
 		return FSM_DETECT_REQUIRED_CHARACTERS_ERROR_MISUSE;
 	}
 	#endif
-
-	enum fsm_detect_required_characters_res res = FSM_DETECT_REQUIRED_CHARACTERS_ERROR_ALLOC;
 
 	struct dr_env env = {
 		.dfa = dfa,
@@ -142,7 +142,10 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
 	}
 
 	env.stack.frames = f_malloc(dfa->alloc, DEF_STACK_FRAMES * sizeof(env.stack.frames[0]));
-	if (env.stack.frames == NULL) { goto cleanup; }
+	if (env.stack.frames == NULL) {
+		res = FSM_DETECT_REQUIRED_CHARACTERS_ERROR_ALLOC;
+		goto cleanup;
+	}
 	env.stack.ceil = DEF_STACK_FRAMES;
 
 	{			/* set up start state's stack frame */
@@ -181,7 +184,8 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
 				struct stack_frame *nframes = f_realloc(dfa->alloc,
 				    env.stack.frames, nceil * sizeof(nframes[0]));
 				if (nframes == NULL) {
-					return FSM_DETECT_REQUIRED_CHARACTERS_ERROR_ALLOC;
+					res = FSM_DETECT_REQUIRED_CHARACTERS_ERROR_ALLOC;
+					goto cleanup;
 				}
 
 				env.stack.frames = nframes;

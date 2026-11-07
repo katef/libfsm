@@ -33,31 +33,32 @@ fsm_concat(struct fsm *a, struct fsm *b,
 	assert(b != NULL);
 
 	if (a->alloc != b->alloc) {
-		errno = EINVAL;
-		return NULL;
+		goto einval;
 	}
 
-	if (a->statecount == 0) { return b; }
-	if (b->statecount == 0) { return a; }
+	if (a->statecount == 0) { fsm_free(a); return b; }
+	if (b->statecount == 0) { fsm_free(b); return a; }
 
 	if (!fsm_has(a, fsm_isend)) {
-		errno = EINVAL;
-		return NULL;
+		goto einval;
 	}
 
 	if (!fsm_getstart(a, &sq) || !fsm_getstart(b, &sb)) {
-		errno = EINVAL;
-		return NULL;
+		goto einval;
 	}
 
 	if (!fsm_collate(a, &ea, fsm_isend)) {
+		fsm_free(a);
+		fsm_free(b);
 		return NULL;
 	}
 
 	fsm_setend(a, ea, 1);
 
 	q = fsm_merge(a, b, combine_info);
-	assert(q != NULL);
+	if (q == NULL) {
+		return NULL;
+	}
 
 	sq += combine_info->base_a;
 	ea += combine_info->base_a;
@@ -90,6 +91,14 @@ error:
 
 	fsm_free(q);
 
+	return NULL;
+
+einval:
+
+	fsm_free(a);
+	fsm_free(b);
+
+	errno = EINVAL;
 	return NULL;
 }
 
