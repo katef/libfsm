@@ -29,33 +29,6 @@ struct lx_hook_env {
 	const char *cur_char_var;
 };
 
-
-static int
-skip(const struct fsm *fsm, fsm_state_t state)
-{
-	struct ast_mapping *m;
-
-	assert(fsm != NULL);
-	assert(state < fsm_countstates(fsm));
-
-	if (!fsm_isend(fsm, state)) {
-		return 1;
-	}
-
-	m = ast_getendmapping(fsm, state);
-	if (LOG()) {
-		fprintf(stderr, "fsm_print_cfrag: ast_getendmapping for state %d: %p\n",
-		    state, (void *)m);
-	}
-	assert(m != NULL);
-
-	if (m->token == NULL) {
-		return 1;
-	}
-
-	return 0;
-}
-
 static unsigned int
 zindexof(const struct ast *ast, const struct ast_zone *zone)
 {
@@ -896,73 +869,6 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		hooks.hook_opaque = &hook_env;
 
 		fsm_print(f, z->fsm, opt, &hooks, FSM_PRINT_C);
-	}
-
-	if (~api_exclude & API_BUF) {
-		int has_skips;
-		fsm_state_t i;
-
-		has_skips = 0;
-
-		const size_t statecount = fsm_countstates(z->fsm);
-		for (i = 0; i < statecount; i++) {
-			int r;
-
-			r = fsm_reachableall(z->fsm, i, skip);
-			if (r == -1) {
-				return -1;
-			}
-
-			if (r) {
-				has_skips = 1;
-				break;
-			}
-		}
-
-		/*
-		 * An optimisation to avoid pushing to the token buffer, where all
-		 * states reachable henceforth skip, rather than emitting a token.
-		 */
-		if (has_skips) {
-			fprintf(f, "\n");
-			fprintf(f, "\t\tswitch (state) {\n");
-
-			for (i = 0; i < statecount; i++) {
-				int r;
-
-				r = fsm_reachableall(z->fsm, i, skip);
-				if (r == -1) {
-					return -1;
-				}
-
-				if (!r) {
-					continue;
-				}
-
-				fprintf(f, "\t\tcase S%u:\n", (unsigned) i);
-			}
-
-			fprintf(f, "\t\t\tbreak;\n");
-			fprintf(f, "\n");
-
-			fprintf(f, "\t\tdefault:\n");
-			fprintf(f, "\t\t\tif (lx->push != NULL) {\n");
-			fprintf(f, "\t\t\t\tif (-1 == lx->push(lx->buf_opaque, (char)%s)) {\n", cur_char_var);
-			fprintf(f, "\t\t\t\t\treturn %sERROR;\n", prefix.tok);
-			fprintf(f, "\t\t\t\t}\n");
-			fprintf(f, "\t\t\t}\n");
-			fprintf(f, "\t\t\tbreak;\n");
-			fprintf(f, "\n");
-
-			fprintf(f, "\t\t}\n");
-		} else {
-			fprintf(f, "\n");
-			fprintf(f, "\t\tif (lx->push != NULL) {\n");
-			fprintf(f, "\t\t\tif (-1 == lx->push(lx->buf_opaque, (char)%s)) {\n", cur_char_var);
-			fprintf(f, "\t\t\t\treturn %sERROR;\n", prefix.tok);
-			fprintf(f, "\t\t\t}\n");
-			fprintf(f, "\t\t}\n");
-		}
 	}
 
 	fprintf(f, "\n");
