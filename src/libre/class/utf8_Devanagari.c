@@ -7,7 +7,7 @@ static const struct range ranges[] = {
 	{ 0x0955UL, 0x0963UL },
 	{ 0x0966UL, 0x097FUL },
 	{ 0xA8E0UL, 0xA8FFUL },
-	{ 0x11B00UL, 0x11B09UL }
+	{ 0x11B00UL, 0x11B0AUL }
 };
 
 const struct class utf8_Devanagari = {

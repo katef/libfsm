@@ -195,7 +195,10 @@ static const struct range ranges[] = {
 	{ 0x16F51UL, 0x16F87UL },
 	{ 0x16FF0UL, 0x16FF1UL },
 	{ 0x1D165UL, 0x1D166UL },
-	{ 0x1D16DUL, 0x1D172UL }
+	{ 0x1D16DUL, 0x1D172UL },
+	{ 0x1D250UL, 0x1D252UL },
+	{ 0x1D25FUL, 0x1D25FUL },
+	{ 0x1D280UL, 0x1D281UL }
 };
 
 const struct class utf8_Mc = {
