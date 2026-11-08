@@ -513,9 +513,13 @@ fsm_print_cfrag(FILE *f,
 
 			/*
 			 * If the following instruction is an unconditional return,
+			 * or if it's an unconditional branch back to this fetch,
 			 * we won't be using this value.
 			 */
-			if (op->next != NULL && op->next->instr == VM_OP_STOP && op->next->cmp == VM_CMP_ALWAYS) {
+			if (op->next != NULL && op->next->cmp == VM_CMP_ALWAYS
+				&& (op->next->instr == VM_OP_STOP
+				|| (op->next->instr == VM_OP_BRANCH && op->next->u.br.dest_arg == op)))
+			{
 				fprintf(f, "\n\t(void) c;\n");
 			}
 			break;
