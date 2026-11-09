@@ -169,7 +169,12 @@ compile(enum implementation impl,
 		break;
 
 	case IMPL_LLVM:
-		if (0 != systemf("clang %s -shared -fPIC -mllvm -opaque-pointers %s -o %s",
+		/* Opaque pointers became the default in llvm 15,
+		 * the flag to enable them was removed in llvm 16. */
+		if (0 != systemf("clang %s -shared -fPIC "
+			"$(v=$(clang -dumpversion | cut -d. -f1); "
+				"[ \"${v:-1}\" -lt 15 ] && echo -mllvm -opaque-pointers) "
+				"%s -o %s",
 				cflags ? cflags : "-pedantic -Wall -Werror -Wno-override-module -O3",
 				tmp_src, tmp_so))
 		{
