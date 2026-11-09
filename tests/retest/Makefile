@@ -8,11 +8,14 @@ DIR += ${TEST_OUTDIR.tests/retest}
 
 RETEST=${BUILD}/bin/retest
 
-.for lang in vm asm c vmc llvm
+.for lang in rust vm asm c vmc llvm
 .for io in pair str
 
 # XXX: we don't have FSM_IO_STR for asm yet
 .if ${lang} != asm || ${io} != str
+
+# XXX: retest's rust trampoline only supports FSM_IO_PAIR
+.if ${lang} != rust || ${io} != str
 
 .for n in ${TEST.tests/retest:T:R:C/^tests_//}
 
@@ -25,6 +28,7 @@ test:: ${TEST_OUTDIR.tests/retest}/res-${lang}-${io}${n}
 
 .endfor
 
+.endif
 .endif
 
 .endfor

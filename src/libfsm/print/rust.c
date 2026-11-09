@@ -390,13 +390,20 @@ fsm_print_rustfrag(FILE *f,
 			const char *c, *ref;
 
 			/*
-			 * If the following instruction is an unconditional return,
-			 * or if it's an unconditional branch back to this fetch,
-			 * we won't be using this value.
+			 * We won't be using this value if the following instruction
+			 * starts another match arm, or if it doesn't make a comparison.
+			 * That happens for an unconditional return, an unconditional
+			 * branch back to this fetch, or for another fetch.
+			 *
+			 * This differs to the similar unused variable criteria for
+			 * the vmc codegen because over there the equivalent variable
+			 * is declared at function scope. For the Rust codegen,
+			 * c is scoped to each match arm.
 			 */
 			if (op->next != NULL && op->next->cmp == VM_CMP_ALWAYS
 				&& (op->next->instr == VM_OP_STOP
-				|| (op->next->instr == VM_OP_BRANCH && op->next->u.br.dest_arg == op)))
+				|| (op->next->instr == VM_OP_BRANCH && op->next->u.br.dest_arg == op)
+				|| (op->next->instr == VM_OP_FETCH)))
 			{
 				c =  "_c";
 			} else {
