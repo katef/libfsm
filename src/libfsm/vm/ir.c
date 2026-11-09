@@ -752,7 +752,7 @@ initial_translate_error(struct dfavm_assembler_ir *a, const struct ret_list *ret
 static struct dfavm_op_ir *
 initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir,
 	const struct ret_list *retlist,
-	size_t ind, int lazy)
+	size_t ind, int greedy)
 {
 	struct ir_state *st;
 	struct dfavm_op_ir **opp;
@@ -763,9 +763,9 @@ initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir,
 	/*
 	 * Every subsequent symbol from here on until EOT is accepted by this
 	 * same state (because IR_SAME), so we could stop reading input here
-	 * and accept. Our default is to consume all input to EOT; this corresponds
-	 * to the behaviour for fsm_exec() and for our non-VM DFA codegen.
-	 * The lazy flag here means to instead leave the input in the input
+	 * and accept. The greedy flag means to consume all input to EOT;
+	 * this corresponds to the behaviour for fsm_exec() and for our non-VM
+	 * DFA codegen. The default is to instead leave the input in the input
 	 * stream un-fetched.
 	 *
 	 * There is no difference to the language being matched.
@@ -774,7 +774,7 @@ initial_translate_state(struct dfavm_assembler_ir *a, const struct ir *ir,
 	 * this may matter for e.g. a lexer-style use-case where you're matching
 	 * subsequent tokens from the same input stream.
 	 */
-	if (lazy && st->isend && st->strategy == IR_SAME && st->u.same.to == ind) {
+	if (!greedy && st->isend && st->strategy == IR_SAME && st->u.same.to == ind) {
 		*opp = opasm_new_stop(a, retlist, VM_CMP_ALWAYS, 0, VM_END_SUCC, st);
 		return a->ops[ind];
 	}
@@ -1102,7 +1102,8 @@ dfavm_compile_ir(struct dfavm_assembler_ir *a, const struct ir *ir, const struct
 	}
 
 	for (i=0; i < a->nstates; i++) {
-		a->ops[i] = initial_translate_state(a, ir, retlist, i, 0);
+		a->ops[i] = initial_translate_state(a, ir, retlist, i,
+			opts.flags & FSM_VM_COMPILE_GREEDY);
 	}
 
 	fixup_dests(a);

@@ -14,7 +14,8 @@ enum fsm_vm_compile_flags {
 
 	FSM_VM_COMPILE_PRINT_ENC       = 0x0004,
 
-	FSM_VM_COMPILE_OPTIM           = 0X0008
+	FSM_VM_COMPILE_OPTIM           = 0X0008,
+	FSM_VM_COMPILE_GREEDY          = 0X0010,
 };
 
 #define FSM_VM_COMPILE_DEFAULT_FLAGS FSM_VM_COMPILE_OPTIM
