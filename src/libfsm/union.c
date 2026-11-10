@@ -181,13 +181,7 @@ fsm_union_array(size_t fsm_count,
 		struct fsm *combined = fsm_union(res, fsms[i], &ci);
 		fsms[i] = NULL;
 		if (combined == NULL) {
-			while (i < fsm_count) {
-				fsm_free(fsms[i]);
-				i++;
-			}
-
-			fsm_free(res);
-			return NULL;
+			goto error;
 		}
 
 		res = combined;
@@ -221,6 +215,16 @@ fsm_union_array(size_t fsm_count,
 #endif
 
 	return res;
+
+error:
+
+	for (i = 0; i < fsm_count; i++) {
+		if (fsms[i] != NULL) {
+			fsm_free(fsms[i]);
+		}
+	}
+
+	return NULL;
 }
 
 #if LOG_ANALYZE_GROUP_NFA_RESULTS
