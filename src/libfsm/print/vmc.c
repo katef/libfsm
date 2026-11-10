@@ -85,6 +85,15 @@ print_ids(FILE *f,
 		 * So I'm emitting a static const variable declaration instead.
 		 */
 
+		if (state_metadata->end_id_count == 0) {
+			fprintf(f, "{\n");
+			fprintf(f, "\t\t*ids = NULL;\n");
+			fprintf(f, "\t\t*count = 0;\n");
+			fprintf(f, "\t\treturn 1;\n");
+			fprintf(f, "\t}");
+			break;
+		}
+
 		fprintf(f, "{\n");
 		fprintf(f, "\t\tstatic const unsigned a[] = { ");
 		for (fsm_end_id_t i = 0; i < state_metadata->end_id_count; i++) {
