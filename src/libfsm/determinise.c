@@ -25,6 +25,7 @@ fsm_determinise_with_config(struct fsm *nfa,
 	const struct fsm_determinise_config *config)
 {
 	enum fsm_determinise_with_config_res res = FSM_DETERMINISE_WITH_CONFIG_ERRNO;
+	struct fsm *dfa = NULL;
 	struct mappingstack *stack = NULL;
 
 	struct interned_state_set_pool *issp = NULL;
@@ -193,7 +194,6 @@ fsm_determinise_with_config(struct fsm *nfa,
 	{
 		struct map_iter it;
 		struct mapping *m;
-		struct fsm *dfa;
 
 		dfa = fsm_new(nfa->alloc);
 		if (dfa == NULL) {
@@ -247,6 +247,9 @@ fsm_determinise_with_config(struct fsm *nfa,
 			 * states are end states.
 			 */
 			ss = interned_state_set_get_state_set(ac_env.issp, iss_id);
+			if (ss == NULL) {
+				goto cleanup;
+			}
 			if (!state_set_has(nfa, ss, fsm_isend)) {
 				continue;
 			}
@@ -274,6 +277,7 @@ fsm_determinise_with_config(struct fsm *nfa,
 		}
 
 		fsm_move(nfa, dfa);
+		dfa = NULL;
 	}
 
 #if EXPENSIVE_CHECKS
@@ -286,6 +290,9 @@ fsm_determinise_with_config(struct fsm *nfa,
 	res = FSM_DETERMINISE_WITH_CONFIG_OK;
 
 cleanup:
+	if (dfa != NULL) {
+		fsm_free(dfa);
+	}
 	map_free(&map);
 	stack_free(stack);
 	interned_state_set_pool_free(issp);
@@ -725,6 +732,9 @@ build_reverse_mappings(const struct map *map, struct interned_state_set_pool *is
 		interned_state_set_id iss_id = m->iss;
 		assert(m->dfastate < dst_dfa->statecount);
 		ss = interned_state_set_get_state_set(issp, iss_id);
+		if (ss == NULL) {
+			goto cleanup;
+		}
 
 		fsm_state_t state;
 		for (state_set_reset(ss, &si); state_set_next(&si, &state); ) {
@@ -908,6 +918,9 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 	INIT_TIMERS();
 	TIME(&pre);
 	struct state_set *ss = interned_state_set_get_state_set(env->issp, iss_id);
+	if (ss == NULL) {
+		return 0;
+	}
 	const size_t set_count = state_set_count(ss);
 
 #if LOG_DETERMINISE_STATE_SETS || LOG_GROUPING > 1
@@ -936,12 +949,12 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 		    env->pbuf[0],
 		    nceil * sizeof(env->pbuf[0]));
 		if (a == NULL) { return 0; }
+		env->pbuf[0] = a;
 		fsm_state_t *b = f_realloc(env->alloc,
 		    env->pbuf[1],
 		    nceil * sizeof(env->pbuf[1]));
 		if (b == NULL) { return 0; }
 		env->pbuf_ceil = nceil;
-		env->pbuf[0] = a;
 		env->pbuf[1] = b;
 	}
 
@@ -2619,7 +2632,9 @@ remap_eager_outputs(const struct map *map, struct interned_state_set_pool *issp,
 	struct map_iter iter;
 	for (struct mapping *b = map_first(map, &iter); b != NULL; b = map_next(&iter)) {
 		struct state_set *ss = interned_state_set_get_state_set(issp, b->iss);
-		assert(ss != NULL);
+		if (ss == NULL) {
+			return 0;
+		}
 
 		struct state_iter it;
 		fsm_state_t s;

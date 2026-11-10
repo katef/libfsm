@@ -38,6 +38,7 @@ fsm_intersect_charset(struct fsm *a, size_t n, const char *charset)
 
 		b = fsm_new_statealloc(a->alloc, 1);
 		if (b == NULL) {
+			fsm_free(a);
 			return NULL;
 		}
 
@@ -73,7 +74,7 @@ fsm_intersect_charset(struct fsm *a, size_t n, const char *charset)
 	 */
 	q = fsm_walk2(a, b, FSM_WALK2_BOTH, FSM_WALK2_BOTH);
 	if (q == NULL) {
-		return NULL;
+		goto error;
 	}
 
 	fsm_free(a);
@@ -86,6 +87,7 @@ fsm_intersect_charset(struct fsm *a, size_t n, const char *charset)
 
 error:
 
+	fsm_free(a);
 	fsm_free(b);
 
 	return NULL;

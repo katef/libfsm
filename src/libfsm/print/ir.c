@@ -144,7 +144,6 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 
 		p = f_malloc(fsm->alloc, sizeof *p * (n - i)); /* worst case */
 		if (p == NULL) {
-			j++;
 			goto error;
 		}
 
@@ -166,7 +165,7 @@ make_groups(const struct fsm *fsm, fsm_state_t state,
 
 			tmp = f_realloc(fsm->alloc, p, sizeof *p * k);
 			if (tmp == NULL) {
-				j++;
+				f_free(fsm->alloc, p);
 				goto error;
 			}
 
@@ -546,6 +545,7 @@ make_ir(const struct fsm *fsm, const struct fsm_options *opt)
 		ir->states[i].endids.count = 0;
 
 		ir->states[i].eager_outputs = NULL;
+		ir->states[i].example = NULL;
 
 		if (fsm_isend(fsm, i)) {
 			fsm_end_id_t *ids;
@@ -624,13 +624,20 @@ empty:
 
 	return ir;
 
-error_example:
-
-	i++;
-
 error:
 
+	f_free(fsm->alloc, (void *) ir->states[i].endids.ids);
+	f_free(fsm->alloc, (void *) ir->states[i].eager_outputs);
+
 	ir->n = i;
+	free_ir(fsm, ir);
+
+	return NULL;
+
+error_example:
+
+	/* ir->states[i] is constructed except that .example is NULL */
+	ir->n = i + 1;
 	free_ir(fsm, ir);
 
 	return NULL;

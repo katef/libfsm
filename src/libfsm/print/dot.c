@@ -136,6 +136,7 @@ print_state(FILE *f,
 
 	for (edge_set_reset(fsm->states[s].edges, &it); edge_set_next(&it, &e); ) {
 		if (!state_set_add(&unique, fsm->alloc, e.state)) {
+			state_set_free(unique);
 			return -1;
 		}
 	}
@@ -267,6 +268,7 @@ print_dotfrag(FILE *f,
 				&state_metadata,
 				default_accept, &s))
 			{
+				f_free(fsm->alloc, ids);
 				return -1;
 			}
 
@@ -276,6 +278,7 @@ print_dotfrag(FILE *f,
 				if (-1 == print_hook_comment(f, opt, hooks,
 					&state_metadata))
 				{
+					f_free(fsm->alloc, ids);
 					return -1;
 				}
 			}

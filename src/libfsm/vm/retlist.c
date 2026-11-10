@@ -106,6 +106,7 @@ build_retlist(struct ret_list *list, const struct ir *ir)
 		}
 
 		if (!append_ret(list, ir->states[i].endids.ids, ir->states[i].endids.count)) {
+			free_retlist(list);
 			return false;
 		}
 	}

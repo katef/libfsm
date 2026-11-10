@@ -164,7 +164,7 @@ fsm_reverse(struct fsm *fsm)
 
 				for (state_set_reset(fsm->states[i].epsilons, &jt); state_set_next(&jt, &se); ) {
 					if (!state_set_add(&epsilons[se], fsm->alloc, i)) {
-						goto error1;
+						goto error;
 					}
 				}
 			}
@@ -172,7 +172,7 @@ fsm_reverse(struct fsm *fsm)
 				assert(e.state < fsm->statecount);
 
 				if (!edge_set_add(&edges[e.state], fsm->alloc, e.symbol, i)) {
-					return 0;
+					goto error;
 				}
 			}
 		}
@@ -208,7 +208,7 @@ fsm_reverse(struct fsm *fsm)
 			}
 
 			if (!state_set_add(&epsilons[start], fsm->alloc, s)) {
-				goto error1;
+				goto error;
 			}
 		}
 	} else {
@@ -279,7 +279,7 @@ fsm_reverse(struct fsm *fsm)
 
 	return 1;
 
-error1:
+error:
 
 	{
 		fsm_state_t i;
@@ -292,8 +292,6 @@ error1:
 			fsm->states[i].edges = edges[i];
 		}
 	}
-
-error:
 
 	state_set_free(endset);
 

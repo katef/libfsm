@@ -193,6 +193,7 @@ state_set_create(const struct fsm_alloc *a)
 
 	set->a = f_malloc(a, SET_INITIAL * sizeof *set->a);
 	if (set->a == NULL) {
+		f_free(a, set);
 		return NULL;
 	}
 

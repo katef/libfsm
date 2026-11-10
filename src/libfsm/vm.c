@@ -120,9 +120,6 @@ fsm_vm_compile_with_options(const struct fsm *fsm,
 	free_ir(fsm, ir);
 
 	vm = dfavm_compile_vm(&a, vmopts);
-	if (vm == NULL) {
-		return NULL;
-	}
 
 	free_retlist(&retlist);
 	dfavm_opasm_finalize_op(&a);

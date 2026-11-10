@@ -72,16 +72,11 @@ fsm_consolidate(const struct fsm *src,
 {
 	struct fsm *dst;
 	fsm_state_t src_i;
-	uint64_t *seen = NULL;
+	uint64_t *seen;
 	struct mapping_closure closure;
 	size_t max_used = 0;
 
 	assert(src != NULL);
-
-	dst = fsm_new(src->alloc);
-	if (dst == NULL) {
-		goto cleanup;
-	}
 
 	for (src_i = 0; src_i < mapping_count; src_i++) {
 #if LOG_MAPPING
@@ -93,15 +88,22 @@ fsm_consolidate(const struct fsm *src,
 		}
 	}
 
+	dst = fsm_new(src->alloc);
+	if (dst == NULL) {
+		return NULL;
+	}
+
 	if (!fsm_addstate_bulk(dst, max_used + 1)) {
-		goto cleanup;
+		fsm_free(dst);
+		return NULL;
 	}
 	assert(dst->statecount == max_used + 1);
 
 	seen = f_calloc(src->alloc,
 	    mapping_count/64 + 1, sizeof(seen[0]));
 	if (seen == NULL) {
-		goto cleanup;
+		fsm_free(dst);
+		return NULL;
 	}
 
 #define DST_SEEN(I) (seen[I/64] & ((uint64_t)1 << (I&63)))
@@ -123,7 +125,7 @@ fsm_consolidate(const struct fsm *src,
 
 			if (!state_set_copy(&dst->states[dst_i].epsilons,
 				dst->alloc, src->states[src_i].epsilons)) {
-				goto cleanup;
+				goto error;
 			}
 			state_set_compact(&dst->states[dst_i].epsilons,
 			    mapping_cb, &closure);
@@ -131,7 +133,7 @@ fsm_consolidate(const struct fsm *src,
 			if (!edge_set_copy(&dst->states[dst_i].edges,
 				dst->alloc,
 				src->states[src_i].edges)) {
-				goto cleanup;
+				goto error;
 			}
 			edge_set_compact(&dst->states[dst_i].edges,
 			    dst->alloc, mapping_cb, &closure);
@@ -143,11 +145,11 @@ fsm_consolidate(const struct fsm *src,
 	}
 
 	if (!consolidate_copy_capture_actions(dst, src, mapping, mapping_count)) {
-		goto cleanup;
+		goto error;
 	}
 
 	if (!consolidate_end_ids(dst, src, mapping, mapping_count)) {
-		goto cleanup;
+		goto error;
 	}
 
 	{
@@ -160,16 +162,18 @@ fsm_consolidate(const struct fsm *src,
 	}
 
 	if (!consolidate_eager_output_ids(dst, src, mapping, mapping_count)) {
-		goto cleanup;
+		goto error;
 	}
 
 	f_free(src->alloc, seen);
 
 	return dst;
 
-cleanup:
+error:
 
-	if (seen != NULL) { f_free(src->alloc, seen); }
+	f_free(src->alloc, seen);
+	fsm_free(dst);
+
 	return NULL;
 }
 
