@@ -167,7 +167,9 @@ analysis_iter(struct ast_expr *n)
 		for (i = 0; i < n->u.alt.count; i++) {
 			struct ast_expr *child = n->u.alt.n[i];
 			enum ast_analysis_res child_res = analysis_iter(child);
-                        if (child_res != AST_ANALYSIS_OK) { return child_res; }
+			if (child_res != AST_ANALYSIS_OK && child_res != AST_ANALYSIS_UNSATISFIABLE) {
+				return child_res;
+			}
 
 			/* spread nullability upward */
 			if (is_nullable(child)) {
