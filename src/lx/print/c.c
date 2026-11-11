@@ -24,9 +24,7 @@
 
 struct lx_hook_env {
 	const struct ast *ast;
-	/* Name of variable for the current character of input in the
-	 * current scope, which depends on the IO options. */
-	const char *cur_char_var;
+	const char *cp;
 };
 
 static unsigned int
@@ -123,9 +121,9 @@ buf_op_prefix(void)
 }
 
 static void
-unget_character(FILE *f, bool pop, const char *cur_char_var)
+unget_character(FILE *f, bool pop, const char *cp)
 {
-	fprintf(f, "%sungetc(lx, %s); ", prefix.api, cur_char_var);
+	fprintf(f, "%sungetc(lx, %s); ", prefix.api, cp);
 	if (pop && (~api_exclude & API_BUF)) {
 		fprintf(f, "%s%spop(lx->buf_opaque); ",
 		    prefix.api, buf_op_prefix());
@@ -257,16 +255,16 @@ reject_c(FILE *f, const struct fsm_options *opt,
 	if (m != NULL) {
 		const bool has_endids = state_metadata && state_metadata->end_id_count > 0;
 		if (m->token == NULL && m->to == NULL && !has_endids) {
-			unget_character(f, true, env->cur_char_var);
+			unget_character(f, true, env->cp);
 		} else if (m->token == NULL && m->to == NULL && has_endids) {
-			unget_character(f, true, env->cur_char_var);
+			unget_character(f, true, env->cp);
 		} else if (m->token == NULL && m->to != NULL) {
-		  	unget_character(f, true, env->cur_char_var);
+		  	unget_character(f, true, env->cp);
 		} else if (m->token != NULL && m->to == NULL) {
 			assert(has_endids);
-		  	unget_character(f, true, env->cur_char_var);
+		  	unget_character(f, true, env->cp);
 		} else if (m->token != NULL && m->to != NULL) {
-		  	unget_character(f, true, env->cur_char_var);
+		  	unget_character(f, true, env->cp);
 		}
 
 		/* re-sync before new call into zone */
@@ -293,7 +291,7 @@ reject_c(FILE *f, const struct fsm_options *opt,
 		fprintf(f, ";");
 		return 0;
 	} else {
-		unget_character(f, false, env->cur_char_var);
+		unget_character(f, false, env->cp);
 	}
 
 	/* XXX: don't need this if complete */
@@ -313,7 +311,7 @@ reject_c(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-advance_c(FILE *f, const struct fsm_options *opt, const char *cur_char_var, void *hook_opaque)
+advance_c(FILE *f, const struct fsm_options *opt, const char *cp, void *hook_opaque)
 {
 	(void)hook_opaque;
 
@@ -327,7 +325,7 @@ advance_c(FILE *f, const struct fsm_options *opt, const char *cur_char_var, void
 		 * lx's token name buffer and position bookkeeping. */
 		if (~api_exclude & API_POS) {
 			fprintf(f, "\t\tif (!%sadvance_end(lx, %s)) { return %sERROR; }\n",
-			    prefix.api, cur_char_var, prefix.tok);
+			    prefix.api, cp, prefix.tok);
 		}
 		break;
 	}
@@ -793,14 +791,14 @@ print_buf(FILE *f, const struct fsm_options *opt)
 
 static int
 print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
-	const struct fsm_options *opt, const char *cur_char_var)
+	const struct fsm_options *opt, const char *cp)
 {
 	assert(f != NULL);
 	assert(z != NULL);
 	assert(z->fsm != NULL);
 	assert(fsm_all(z->fsm, fsm_isdfa));
 	assert(ast != NULL);
-	assert(cur_char_var != NULL);
+	assert(cp != NULL);
 
 	/* prerequisite that the FSM is a DFA */
 	assert(fsm_all(z->fsm, fsm_isdfa));
@@ -860,7 +858,7 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 
 		struct lx_hook_env hook_env = {
 			.ast = ast,
-			.cur_char_var = cur_char_var,
+			.cp = cp,
 		};
 
 		hooks.accept      = accept_c;
