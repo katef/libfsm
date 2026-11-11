@@ -10,8 +10,9 @@ RETEST=${BUILD}/bin/retest
 
 RETEST_ARGS.v1 = -l vm -x v1
 RETEST_ARGS.v2 = -l vm -x v2
+RETEST_ARGS.vmc-greedy = -l vmc -L greedy
 
-.for lang in rust v1 v2 asm c vmc llvm
+.for lang in rust v1 v2 asm c vmc vmc-greedy llvm
 .for io in pair str
 
 # XXX: we don't have FSM_IO_STR for asm yet
