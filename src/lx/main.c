@@ -607,6 +607,7 @@ main(int argc, char *argv[])
 	opt.comments          = 1;
 	opt.io                = FSM_IO_GETC;
 	opt.prefix            = NULL;
+	opt.vm_greedy         = 1;
 
 	{
 		int c;
