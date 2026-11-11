@@ -806,16 +806,6 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 	fprintf(f, "static enum %stoken\n", prefix.api);
 	fprintf(f, "z%u(struct %slx *lx)\n", zindexof(ast, z), prefix.lx);
 	fprintf(f, "{\n");
-
-	switch (opt->io) {
-	case FSM_IO_GETC:
-		fprintf(f, "\tint c;\n");
-		break;
-	case FSM_IO_STR:
-	case FSM_IO_PAIR:
-		break;
-	}
-
 	fprintf(f, "\n");
 
 	fprintf(f, "\tassert(lx != NULL);\n");
@@ -843,12 +833,11 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		break;
 
 	case FSM_IO_STR:
-		fprintf(f, "const char *s = lx->p;\n");
-		fprintf(f, "const char *p;\n");
+		fprintf(f, "\tconst char *s = lx->p;\n");
 		break;
 
 	case FSM_IO_PAIR:
-		fprintf(f, "\tconst char *p, *b = lx->p, *e = lx->e;\n");
+		fprintf(f, "\tconst char *b = lx->p, *e = lx->e;\n");
 		break;
 	}
 
@@ -866,7 +855,10 @@ print_zone(FILE *f, const struct ast *ast, const struct ast_zone *z,
 		hooks.advance     = advance_c;
 		hooks.hook_opaque = &hook_env;
 
-		fsm_print(f, z->fsm, opt, &hooks, FSM_PRINT_C);
+		fprintf(f, "\n");
+		fprintf(f, "\t{\n");
+		fsm_print(f, z->fsm, opt, &hooks, FSM_PRINT_VMC);
+		fprintf(f, "\t}\n");
 	}
 
 	fprintf(f, "\n");
@@ -1007,19 +999,12 @@ print_example(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 void
 lx_print_c(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 {
-	const char *cp;
 	const struct ast_zone *z;
 	unsigned int zn;
 
 	assert(f != NULL);
 	assert(ast != NULL);
 	assert(opt != NULL);
-
-	switch (opt->io) {
-	case FSM_IO_GETC: cp = "c"; break;
-	case FSM_IO_STR:  cp = "*p"; break;
-	case FSM_IO_PAIR: cp = "*p"; break;
-	}
 
 	for (z = ast->zl; z != NULL; z = z->next) {
 		if (!fsm_all(z->fsm, fsm_isdfa)) {
@@ -1072,7 +1057,7 @@ lx_print_c(FILE *f, const struct ast *ast, const struct fsm_options *opt)
 			zn++;
 		}
 
-		if (-1 == print_zone(f, ast, z, opt, cp)) {
+		if (-1 == print_zone(f, ast, z, opt, "c")) {
 			return; /* XXX: handle error */
 		}
 	}
