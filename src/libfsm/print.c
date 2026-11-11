@@ -255,7 +255,7 @@ fsm_print(FILE *f, const struct fsm *fsm,
 	int r;
 
 	static const struct dfavm_assembler_ir zero;
-	static const struct fsm_vm_compile_opts vm_opts = {
+	static struct fsm_vm_compile_opts vm_opts = {
 		FSM_VM_COMPILE_DEFAULT_FLAGS,
 		FSM_VM_COMPILE_VM_V1,
 		NULL
@@ -385,6 +385,10 @@ fsm_print(FILE *f, const struct fsm *fsm,
 	}
 
 	a = zero;
+
+	if (opt->vm_greedy) {
+		vm_opts.flags |= FSM_VM_COMPILE_GREEDY;
+	}
 
 	/* TODO: non-const a */
 	if (!dfavm_compile_ir(&a, ir, &retlist, vm_opts)) {

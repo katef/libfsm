@@ -81,6 +81,11 @@ struct fsm_options {
 	 */
 	unsigned int group_edges:1;
 
+	/* boolean: true indicates to use FSM_VM_COMPILE_GREEDY for fetching input
+	 * when matching in the generated code. This affects vm-based codegen only.
+	 */
+	unsigned int vm_greedy:1;
+
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 
