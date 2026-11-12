@@ -131,7 +131,7 @@ struct state_set **
 epsilon_closure(const struct fsm *fsm)
 {
 	struct state_set **closures;
-	fsm_state_t s;
+	fsm_state_t s, n;
 
 	assert(fsm != NULL);
 	assert(fsm->statecount > 0);
@@ -141,12 +141,11 @@ epsilon_closure(const struct fsm *fsm)
 		return NULL;
 	}
 
-	for (s = 0; s < fsm->statecount; s++) {
-		closures[s] = NULL;
-	}
-
-	for (s = 0; s < fsm->statecount; s++) {
+	for (s = 0, n = 0; s < fsm->statecount; s++) {
 		fsm->states[s].visited = 0;
+
+		closures[s] = NULL;
+		n++;
 
 		/*
 		 * In the simplest case of having no epsilon transitions, the
@@ -184,11 +183,9 @@ epsilon_closure(const struct fsm *fsm)
 
 error:
 
-	for (s = 0; s < fsm->statecount; s++) {
+	for (s = 0; s < n; s++) {
 		fsm->states[s].visited = 0;
-		if (closures[s] != NULL) {
-			state_set_free(closures[s]);
-		}
+		state_set_free(closures[s]);
 	}
 
 	f_free(fsm->alloc, closures);
