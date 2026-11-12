@@ -229,7 +229,10 @@ fsm_compact_states(struct fsm *fsm,
 #endif
 		state_set_compact(&s->epsilons, mapping_cb, mapping);
 		if (fsm->states[i].edges != NULL) {
-			edge_set_compact(&s->edges, fsm->alloc, mapping_cb, mapping);
+			if (!edge_set_compact(&s->edges, fsm->alloc, mapping_cb, mapping)) {
+				f_free(fsm->alloc, mapping);
+				return 0;
+			}
 		}
 	}
 

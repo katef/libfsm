@@ -124,7 +124,7 @@ fsm_reverse(struct fsm *fsm)
 	}
 
 	epsilons = f_malloc(fsm->alloc, sizeof *epsilons * fsm->statecount);
-	if (edges == NULL) {
+	if (epsilons == NULL) {
 		state_set_free(endset);
 		f_free(fsm->alloc, edges);
 		return 0;
