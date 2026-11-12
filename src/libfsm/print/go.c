@@ -444,7 +444,7 @@ fsm_print_go(FILE *f,
 			break;
 
 		case AMBIG_MULTIPLE:
-			fprintf(stdout, "(bool, []uint)");
+			fprintf(f, "(bool, []uint)");
 			break;
 
 		default:
