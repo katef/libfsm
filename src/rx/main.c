@@ -524,6 +524,14 @@ build_pattern_fsm(bool show_stats,
 	}
 
 	/*
+	 * re_is_literal() doesn't find every unsatisfiable regex,
+	 * sometimes we can get an empty fsm here.
+	 */
+	if (fsm_empty(fsm)) {
+		return fsm;
+	}
+
+	/*
 	 * There's no need to minimise here, we only need a DFA in order
 	 * to fsm_intersect_charset(). We'd want to minimise again anyway.
 	 */

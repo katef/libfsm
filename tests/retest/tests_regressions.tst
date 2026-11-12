@@ -72,3 +72,30 @@ R pcre
 +xa
 -a
 -xb
+
+# regression for \z and $ comparing equal in AST deduplication
+# this caused \z|$ to be constructed as just \z
+R pcre
+~^(\z|$)
++\n
++
+-a
+-b
+
+R pcre
+~a(\z|$)
++a\n
++aa\n
++ba\n
++a
++aa
+-
+-b
+
+R pcre
+~(\z|$)^
++\n
++
+-a
+-b
+

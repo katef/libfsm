@@ -135,8 +135,10 @@ fsm_consolidate(const struct fsm *src,
 				src->states[src_i].edges)) {
 				goto error;
 			}
-			edge_set_compact(&dst->states[dst_i].edges,
-			    dst->alloc, mapping_cb, &closure);
+			if (!edge_set_compact(&dst->states[dst_i].edges,
+			    dst->alloc, mapping_cb, &closure)) {
+				goto error;
+			}
 
 			if (fsm_isend(src, src_i)) {
 				fsm_setend(dst, dst_i, 1);
