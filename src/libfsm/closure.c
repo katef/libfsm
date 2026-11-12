@@ -34,7 +34,7 @@ epsilon_closure_single(const struct fsm *fsm, struct state_set **closures, fsm_s
 
 	q = queue_new(fsm->alloc, fsm->statecount);
 	if (q == NULL) {
-		return 1;
+		return 0;
 	}
 
 	fsm->states[s].visited = 1;
@@ -173,7 +173,9 @@ epsilon_closure(const struct fsm *fsm)
 			continue;
 		}
 
-		epsilon_closure_single(fsm, closures, s);
+		if (!epsilon_closure_single(fsm, closures, s)) {
+			goto error;
+		}
 	}
 
 	return closures;
