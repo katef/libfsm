@@ -94,17 +94,17 @@ fsm_new_statealloc(const struct fsm_alloc *alloc, size_t statealloc)
 	}
 
 	if (!fsm_endid_init(new)) {
+		fsm_capture_free(new);
 		f_free(new->alloc, new->states);
 		f_free(new->alloc, new);
-		fsm_capture_free(new);
 		return NULL;
 	}
 
 	if (!fsm_eager_output_init(new)) {
-		f_free(new->alloc, new->states);
-		f_free(new->alloc, new);
 		fsm_capture_free(new);
 		fsm_endid_free(new);
+		f_free(new->alloc, new->states);
+		f_free(new->alloc, new);
 		return NULL;
 	}
 
