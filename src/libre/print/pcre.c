@@ -22,7 +22,8 @@
 #include "../print.h"
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const struct ast_expr *n);
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
+	const struct ast_expr *group0, const struct ast_expr *n);
 
 static int
 prec(const struct ast_expr *n)
@@ -95,23 +96,24 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 
 static void
 pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
-	struct ast_expr *n, const struct ast_expr *parent)
+	const struct ast_expr *group0, struct ast_expr *n, const struct ast_expr *parent)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
 
 	if (prec(n) <= prec(parent)) {
-		pp_iter(f, opt, re_flags, n);
+		pp_iter(f, opt, re_flags, group0, n);
 	} else {
 		enum re_flags local_flags = *re_flags;
 		fprintf(f, "(?:");
-		pp_iter(f, opt, &local_flags, n);
+		pp_iter(f, opt, &local_flags, group0, n);
 		fprintf(f, ")");
 	}
 }
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const struct ast_expr *n)
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
+	const struct ast_expr *group0, const struct ast_expr *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -139,7 +141,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const s
 		size_t i;
 
 		for (i = 0; i < n->u.concat.count; i++) {
-			pp_atomic(f, opt, re_flags, n->u.concat.n[i], n);
+			pp_atomic(f, opt, re_flags, group0, n->u.concat.n[i], n);
 		}
 
 		break;
@@ -149,7 +151,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const s
 		size_t i;
 
 		for (i = 0; i < n->u.alt.count; i++) {
-			pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
+			pp_atomic(f, opt, re_flags, group0, n->u.alt.n[i], n);
 			if (i + 1 < n->u.alt.count) {
 				fprintf(f, "|");
 			}
@@ -183,7 +185,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const s
 #undef _
 		};
 
-		pp_atomic(f, opt, re_flags, n->u.repeat.e, n);
+		pp_atomic(f, opt, re_flags, group0, n->u.repeat.e, n);
 
 		assert(n->u.repeat.max == AST_COUNT_UNBOUNDED || n->u.repeat.max >= n->u.repeat.min);
 
@@ -214,9 +216,13 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const s
 
 	case AST_EXPR_GROUP: {
 		enum re_flags local_flags = *re_flags;
-		fprintf(f, "(");
-		pp_iter(f, opt, &local_flags, n->u.group.e);
-		fprintf(f, ")");
+		if (n != group0) {
+			fprintf(f, "(");
+		}
+		pp_iter(f, opt, &local_flags, group0, n->u.group.e);
+		if (n != group0) {
+			fprintf(f, ")");
+		}
 		break;
 	}
 
@@ -227,9 +233,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const s
 
 	case AST_EXPR_SUBTRACT:
 		assert(!"unimplemented");
-		pp_iter(f, opt, re_flags, n->u.subtract.a);
+		pp_iter(f, opt, re_flags, group0, n->u.subtract.a);
 		fprintf(f, "-");
-		pp_iter(f, opt, re_flags, n->u.subtract.b);
+		pp_iter(f, opt, re_flags, group0, n->u.subtract.b);
 		break;
 
 	case AST_EXPR_RANGE:
@@ -260,11 +266,15 @@ void
 ast_print_pcre(FILE *f, const struct fsm_options *opt,
 	enum re_flags re_flags, const struct ast *ast)
 {
+	const struct ast_expr *group0;
+
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(ast != NULL);
 
-	pp_iter(f, opt, &re_flags, ast->expr);
+	group0 = ast->expr->type == AST_EXPR_GROUP ? ast->expr : NULL;
+
+	pp_iter(f, opt, &re_flags, group0, ast->expr);
 
 	fprintf(f, "\n");
 }
