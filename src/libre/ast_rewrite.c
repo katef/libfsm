@@ -513,6 +513,8 @@ tombstone:
 static int
 rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 {
+	int child_is_nullable;
+
 	assert(n != NULL);
 	assert(n->type == AST_EXPR_REPEAT);
 	assert(n->flags == 0x0);
@@ -546,6 +548,23 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 		return 1;
 	}
 
+	child_is_nullable = is_nullable(n->u.repeat.e);
+
+	/*
+	 * When the child is nullable, repeats of e{0,1} are just e.
+	 * That is, the nullability serves as the min == 0 case.
+	 */
+	if (n->u.repeat.min == 0 && n->u.repeat.max == 1 && child_is_nullable) {
+		struct ast_expr *dead = n->u.repeat.e;
+
+		*n = *n->u.repeat.e;
+
+		dead->type = AST_EXPR_EMPTY;
+		ast_expr_free(*poolp, dead);
+
+		return 1;
+	}
+
     /*
 	 * When the child is nullable, repeats under the minimum can always
 	 * be padded out to reach the minimum by matching the empty string.
@@ -568,7 +587,7 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 	 * rewriting, I think it's confusing having to take flags into account
 	 * for unrelated transformations.
 	 */
-	if (n->u.repeat.min > 0 && is_nullable(n->u.repeat.e)) {
+	if (n->u.repeat.min > 0 && child_is_nullable) {
 		n->u.repeat.min = 0;
 	}
 
