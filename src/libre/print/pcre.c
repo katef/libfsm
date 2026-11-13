@@ -22,7 +22,7 @@
 #include "../print.h"
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n);
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const struct ast_expr *n);
 
 static int
 prec(const struct ast_expr *n)
@@ -111,7 +111,7 @@ pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 }
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n)
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, const struct ast_expr *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
