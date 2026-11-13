@@ -27,7 +27,7 @@ jobs:
 
     - name: Checkout
       if: steps.cache-checkout.outputs.cache-hit != 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         submodules: recursive
         path: ${{ env.wc }}
@@ -190,7 +190,7 @@ jobs:
 
     - name: Get number of CPU cores
       if: steps.cache-build.outputs.cache-hit != 'true'
-      uses: SimenB/github-actions-cpu-cores@v2
+      uses: SimenB/github-actions-cpu-cores@v3
       id: cpu-cores
 
     - name: Make
@@ -284,7 +284,7 @@ jobs:
         ${{ matrix.cc }} --version
 
     - name: Get number of CPU cores
-      uses: SimenB/github-actions-cpu-cores@v2
+      uses: SimenB/github-actions-cpu-cores@v3
       id: cpu-cores
 
     - name: Make
@@ -303,7 +303,7 @@ jobs:
     # kmkf duplicate install targets, it's not interesting for libfsm's CI,
     # so I'm retrying on error here. # github.com/katef/kmkf/issues/14
     - name: Install
-      uses: nick-fields/retry@v3
+      uses: nick-fields/retry@v4
       with:
         timeout_seconds: 10 # required, but not a problem for the kmkf bug
         max_attempts: 3
@@ -364,7 +364,7 @@ jobs:
         fail-on-cache-miss: true
 
     - name: Get number of CPU cores
-      uses: SimenB/github-actions-cpu-cores@v2
+      uses: SimenB/github-actions-cpu-cores@v3
       id: cpu-cores
 
     - name: Test
@@ -444,7 +444,7 @@ jobs:
       run: mkdir -p ${{ env.seeds }}-${{ matrix.mode }}
 
     - name: Get number of CPU cores
-      uses: SimenB/github-actions-cpu-cores@v2
+      uses: SimenB/github-actions-cpu-cores@v3
       id: cpu-cores
 
     - name: Fuzz
@@ -478,7 +478,7 @@ jobs:
 
     # nothing to do with the caching, I'm uploading the seeds so a developer can grab them to fuzz locally
     - name: Upload seeds (mode ${{ matrix.mode }}-${{ matrix.debug }})
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: seeds-${{ matrix.mode }}-${{ matrix.debug }}
         path: ${{ env.seeds }}-${{ matrix.mode }}
@@ -590,7 +590,7 @@ jobs:
 
     - name: Get number of CPU cores
       if: steps.cache-docs.outputs.cache-hit != 'true'
-      uses: SimenB/github-actions-cpu-cores@v2
+      uses: SimenB/github-actions-cpu-cores@v3
       id: cpu-cores
 
     - name: Test docs
@@ -663,7 +663,7 @@ jobs:
 
     - name: Get number of CPU cores
       if: steps.cache-prefix.outputs.cache-hit != 'true'
-      uses: SimenB/github-actions-cpu-cores@v2
+      uses: SimenB/github-actions-cpu-cores@v3
       id: cpu-cores
 
     - name: Install
@@ -723,7 +723,7 @@ jobs:
         printf "package_file=%s\n" $(basename pkg/*) >> $GITHUB_ENV
 
     - name: Upload
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ env.package_file }}
         path: pkg/${{ env.package_file }}
