@@ -408,7 +408,7 @@ literal_strings(const struct literal *a, size_t n, enum re_strings_flags flags)
 	struct re_strings *g;
 	struct fsm *fsm;
 
-	assert(a != NULL || n == 0);
+	assert(n == 0 || a != NULL);
 
 	g = re_strings_new();
 	if (g == NULL) {
@@ -1046,6 +1046,7 @@ main(int argc, char *argv[])
 
 	for (size_t i = 0; i < sizeof literals / sizeof *literals; i++) {
 		literals[i].count = 0;
+		literals[i].a = NULL; /* appease msan */
 	}
 
 	/*
