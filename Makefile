@@ -149,6 +149,7 @@ SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
 SUBDIR += tests/retest
 SUBDIR += tests/re_interpolate
+SUBDIR += tests/rx
 SUBDIR += tests
 .if make(theft) || make(${BUILD}/theft/theft)
 SUBDIR += theft
