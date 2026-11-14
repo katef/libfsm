@@ -216,8 +216,20 @@ analysis_iter(struct ast_expr *n)
 			set_flags(n, AST_FLAG_NULLABLE);
 		}
 
-                enum ast_analysis_res child_res = analysis_iter(e);
-                if (child_res != AST_ANALYSIS_OK) { return child_res; }
+		enum ast_analysis_res child_res = analysis_iter(e);
+		if (child_res != AST_ANALYSIS_OK && child_res != AST_ANALYSIS_UNSATISFIABLE) {
+			return child_res;
+		}
+
+		/*
+		 * When it's possible to repeat an unsatisfiable node 0 times,
+		 * we skip over the unsatisfiableness. Otherwise we must treat
+		 * the entire repeat as unsatisfiable.
+		 */
+		if (child_res == AST_ANALYSIS_UNSATISFIABLE && n->u.repeat.min > 0) {
+			return AST_ANALYSIS_UNSATISFIABLE;
+		}
+
 		set_flags(n, e->flags & AST_FLAG_CAN_CONSUME);
 
 		if (n->u.repeat.min > 0 && e->flags & AST_FLAG_ALWAYS_CONSUMES) {
