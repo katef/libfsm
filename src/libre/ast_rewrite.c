@@ -73,6 +73,16 @@ contains_child(struct ast_expr **child, struct ast_expr **children, size_t count
  * We're conservative about this: it's always okay to decline
  * to rewrite a subtree. Which means it's always okay to say
  * something is not nullable when we're not sure.
+ *
+ * XXX: this is expensive for nested repeats because we first rewrite
+ * an outer repeat's operand, which means rewriting the inner repeat
+ * as part of the depth-first traversal, and that includes the walk
+ * to find nullability. We already do the same nullability walk when
+ * rewriting for the inner repeat's operand. We could first annotate
+ * the tree in the style of the AST analysis with AST_FLAG_NULLABLE,
+ * but i don't want to mix the analysis-style flag annotation during
+ * rewriting, I think it's confusing having to take flags into account
+ * for unrelated transformations.
  */
 static int
 is_nullable(const struct ast_expr *n)
@@ -533,7 +543,34 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 	}
 
 	/*
-	 * Should never be constructed, but just in case.
+	 * When the child is nullable, repeats under the minimum can always
+	 * be padded out to reach the minimum by matching the empty string.
+	 * Formally the language for every n < min, the language of e{n}
+	 * is a subset of the language of e{min}, when e is nullable.
+	 * So when e is nullable, having a minimum over 0 doesn't actually
+	 * change the language for the expression.
+	 *
+	 * This also helps feed cases into the coverage for folding for nested
+	 * repetitions below, because rewriting e.g. (?:a?){2,3} to (?:a?){3}
+	 * produces a single block.
+	 *
+	 * We can't set min = max when max is ubounded, and we arbitrarily
+	 * pick a minimum of 0. So we rewrite (?:a?){2,} to (?:a?}{0,}
+	 * which is morally (though not structurally) simpler.
+	 */
+	if (is_nullable(n->u.repeat.e)) {
+		if (n->u.repeat.max == AST_COUNT_UNBOUNDED) {
+			n->u.repeat.min = 0;
+		} else {
+			assert(n->u.repeat.min <= n->u.repeat.max);
+			n->u.repeat.min = n->u.repeat.max;
+		}
+	}
+
+	/*
+	 * When the child is nullable, repeats of e{0,1} are just e.
+	 * That is, the nullability already serves as the min == 0 case.
+	 * We rewrote e{0,1} to e{1,1} in the block above.
 	 */
 	if (n->u.repeat.min == 1 && n->u.repeat.max == 1) {
 		struct ast_expr *dead = n->u.repeat.e;
@@ -544,32 +581,6 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 		ast_expr_free(*poolp, dead);
 
 		return 1;
-	}
-
-    /*
-	 * When the child is nullable, repeats under the minimum can always
-	 * be padded out to reach the minimum by matching the empty string.
-	 * Formally the language for every n < min, the language of e{n}
-	 * is a subset of the language of e{min}, when e is nullable.
-	 * So when e is nullable, having a minimum over 0 doesn't actually
-	 * change the language for the expression.
-	 *
-	 * So we rewrite (?:a?){2,3} to (?:a?}{0,3} which is morally
-	 * (though not structurally) simpler. But this also helps feed cases
-	 * into the coverage for folding for nested repetitions below.
-	 *
-	 * XXX: this is expensive for nested repeats because we first rewrite
-	 * an outer repeat's operand, which means rewriting the inner repeat
-	 * as part of the depth-first traversal, and that includes the walk
-	 * to find nullability. Then we do the same nullability walk when
-	 * rewriting for the inner repeat's operand. We could first annotate
-	 * the tree in the style of the AST analysis with AST_FLAG_NULLABLE,
-	 * but i don't want to mix the analysis-style flag annotation during
-	 * rewriting, I think it's confusing having to take flags into account
-	 * for unrelated transformations.
-	 */
-	if (n->u.repeat.min > 0 && is_nullable(n->u.repeat.e)) {
-		n->u.repeat.min = 0;
 	}
 
 	/*
