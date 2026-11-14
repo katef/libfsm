@@ -11,6 +11,8 @@ TEST_OUTDIR.tests/pcre-pcregrep = ${BUILD}/tests/pcre-pcregrep
 DIR += ${TEST_OUTDIR.tests/pcre-pcregrep}
 
 RE=${BUILD}/bin/re
+
+.if !defined(SKIP_PCREGREP)
 PCREGREP ?= pcregrep
 
 .for n in ${TEST.tests/pcre-pcregrep:T:R:C/^out//}
@@ -35,6 +37,8 @@ test:: ${TEST_OUTDIR.tests/pcre-pcregrep}/res${n}
 .endif
 
 .endfor
+
+.endif
 
 .for n in ${TEST.tests/pcre:T:Mout*.fsm:R:C/^out//}
 
