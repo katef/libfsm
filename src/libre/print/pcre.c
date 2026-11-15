@@ -32,7 +32,6 @@ prec(const struct ast_expr *n)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_RANGE:
-	case AST_EXPR_SUBTRACT:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_TOMBSTONE:
 		return 0;
@@ -50,6 +49,7 @@ prec(const struct ast_expr *n)
 		return 2;
 
 	case AST_EXPR_CONCAT:
+	case AST_EXPR_SUBTRACT:
 		return 3;
 
 	case AST_EXPR_ALT:
@@ -218,6 +218,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	}
 
 	case AST_EXPR_GROUP: {
+		/* XXX: local_flags is wrong here when we don't emit a group hm */
 		enum re_flags local_flags = *re_flags;
 		if (n != group0) {
 			fprintf(f, "(");
@@ -240,12 +241,16 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 		}
 		break;
 
-	case AST_EXPR_SUBTRACT:
-		assert(!"unimplemented");
-		pp_iter(f, opt, re_flags, group0, n->u.subtract.a);
-		fprintf(f, "-");
+	case AST_EXPR_SUBTRACT: {
+		/* this is a best effort; the idea here is that lookaround is close enough.
+		 * is it exactly equivalent to subtraction? i don't know */
+		enum re_flags local_flags = *re_flags;
+		fprintf(f, "(?!");
+		pp_iter(f, opt, &local_flags, group0, n->u.subtract.a);
+		fprintf(f, ")");
 		pp_iter(f, opt, re_flags, group0, n->u.subtract.b);
 		break;
+	}
 
 	case AST_EXPR_RANGE:
 		if (n->u.range.from.u.literal.c == 0x00 &&
