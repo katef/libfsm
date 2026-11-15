@@ -153,6 +153,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	case AST_EXPR_ALT: {
 		size_t i;
 
+		/* TODO: if all the children are single-character literals, construct a bitmap */
 		for (i = 0; i < n->u.alt.count; i++) {
 			pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
 			if (i + 1 < n->u.alt.count) {
@@ -248,7 +249,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	}
 
 	case AST_EXPR_RANGE:
-		if (n->u.range.from.u.literal.c == 0x00 &&
+		if ((n->re_flags & RE_SINGLE) &&
+			n->u.range.from.u.literal.c == 0x00 &&
 			n->u.range.to.u.literal.c == 0xff)
 		{
 			fprintf(f, ".");
