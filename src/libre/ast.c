@@ -843,17 +843,19 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 		} else {
 			struct ast_endpoint from, to;
 
-			from.type = AST_ENDPOINT_LITERAL;
 			if (class->ranges[i].a <= UCHAR_MAX) {
+				from.type = AST_ENDPOINT_LITERAL;
 				from.u.literal.c = (unsigned char) class->ranges[i].a;
 			} else {
+				from.type = AST_ENDPOINT_CODEPOINT;
 				from.u.codepoint.u = class->ranges[i].a;
 			}
 
-			to.type = AST_ENDPOINT_LITERAL;
 			if (class->ranges[i].b <= UCHAR_MAX) {
+				to.type = AST_ENDPOINT_LITERAL;
 				to.u.literal.c = (unsigned char) class->ranges[i].b;
 			} else {
+				to.type = AST_ENDPOINT_CODEPOINT;
 				to.u.codepoint.u = class->ranges[i].b;
 			}
 
