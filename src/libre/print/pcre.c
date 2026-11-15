@@ -101,7 +101,10 @@ pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	assert(f != NULL);
 	assert(opt != NULL);
 
-	if (prec(n) <= prec(parent)) {
+	if (prec(n) < prec(parent)) {
+		pp_iter(f, opt, re_flags, group0, n);
+	} else if (prec(n) == prec(parent) && n->type != AST_EXPR_REPEAT) {
+		/* a{1}{2} would be a syntax error, we need (?:a{1}){2} */
 		pp_iter(f, opt, re_flags, group0, n);
 	} else {
 		enum re_flags local_flags = *re_flags;
