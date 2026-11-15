@@ -173,9 +173,6 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 
 		/* end of range */
 		hi = bm_next(bm, lo, mode == MODE_INVERT);
-		if (hi > UCHAR_MAX && lo < UCHAR_MAX) {
-			hi = UCHAR_MAX;
-		}
 
 		if (!isalnum((unsigned char) lo) && isalnum((unsigned char) hi)) {
 			r = escputc(f, opt, lo);
@@ -247,6 +244,12 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 				return -1;
 			}
 			n += r;
+
+			/* hi may have been moved down within the set,
+			 * this is a cheesy way to ensure we include it
+			 * for bm_next() on the next iteration */
+			hi--;
+
 			break;
 		}
 	}
