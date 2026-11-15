@@ -158,7 +158,9 @@ pp_iter(FILE *f, const struct fsm_options *opt, size_t indent, enum re_flags re_
 	}
 
 	case AST_EXPR_LITERAL:
-		fprintf(f, "LITERAL '%c'\n", n->u.literal.c);
+		fprintf(f, "LITERAL '");
+		print_char_or_esc(f, n->u.literal.c);
+		fprintf(f, "'\n");
 		break;
 
 	case AST_EXPR_CODEPOINT:
