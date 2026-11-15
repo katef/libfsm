@@ -562,6 +562,91 @@ ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_
 	return 0;
 }
 
+int
+ast_expr_char_range(const struct ast_expr *n, enum re_flags re_flags,
+	unsigned char *from, unsigned char *to)
+{
+	assert(n != NULL);
+	assert(from != NULL);
+	assert(to   != NULL);
+
+	/* not a single character */
+	if ((re_flags & RE_ICASE) && !(n->re_flags & RE_ICASE)) {
+		return 0;
+	}
+
+	switch (n->type) {
+	case AST_EXPR_EMPTY:
+	case AST_EXPR_CONCAT:
+	case AST_EXPR_ALT:
+		return 0;
+
+	case AST_EXPR_LITERAL:
+		*from = (unsigned char) n->u.literal.c;
+		*to   = (unsigned char) n->u.literal.c;
+		return 1;
+
+	case AST_EXPR_CODEPOINT:
+		if (n->u.codepoint.u > UCHAR_MAX) {
+			return 0;
+		}
+
+		*from = (unsigned char) n->u.codepoint.u;
+		*to   = (unsigned char) n->u.codepoint.u;
+		return 1;
+
+	case AST_EXPR_RANGE:
+		if (!ast_endpoint_char(&n->u.range.from, from)) {
+			return 0;
+		}
+
+		if (!ast_endpoint_char(&n->u.range.to, to)) {
+			return 0;
+		}
+
+		return 1;
+
+	case AST_EXPR_TOMBSTONE:
+		return 0;
+
+	case AST_EXPR_SUBTRACT:
+		/* TODO: we could at least handle the case where both sides are themselves ast_expr_char_range() */
+		return 0;
+
+	default:
+		assert(!"unreached");
+		return 0;
+	}
+}
+
+int
+ast_endpoint_char(const struct ast_endpoint *e, unsigned char *c)
+{
+	assert(e != NULL);
+	assert(c != NULL);
+
+	switch (e->type) {
+	case AST_ENDPOINT_LITERAL:
+		*c = e->u.literal.c;
+		return 1;
+
+	case AST_ENDPOINT_CODEPOINT:
+		if (e->u.codepoint.u > UCHAR_MAX) {
+			return 0;
+		}
+
+		*c = (unsigned char) e->u.codepoint.u;
+		return 1;
+
+	case AST_ENDPOINT_NAMED:
+		return 0;
+
+	default:
+		assert(!"unreached");
+		return 0;
+	}
+}
+
 struct ast_expr *
 ast_make_expr_empty(struct ast_expr_pool **poolp, enum re_flags re_flags)
 {

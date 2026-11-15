@@ -270,6 +270,13 @@ ast_expr_equal(const struct ast_expr *a, const struct ast_expr *b);
 int
 ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_t n);
 
+int
+ast_expr_char_range(const struct ast_expr *n, enum re_flags re_flags,
+	unsigned char *from, unsigned char *to);
+
+int
+ast_endpoint_char(const struct ast_endpoint *e, unsigned char *c);
+
 struct ast_expr *
 ast_make_expr_empty(struct ast_expr_pool **poolp, enum re_flags re_flags);
 
