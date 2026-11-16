@@ -124,7 +124,8 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 		MODE_INVERT,
 		MODE_SINGLE,
 		MODE_ANY,
-		MODE_MANY
+		MODE_MANY,
+		MODE_NONE
 	} mode;
 
 	assert(f != NULL);
@@ -133,11 +134,13 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 
 	count = bm_count(bm);
 
-	if (count == 1 && !boxed) {
+	if (count == 0) {
+		mode = MODE_NONE;
+	} else if (count == 1 && !boxed) {
 		mode = MODE_SINGLE;
 	} else if (bm_next(bm, UCHAR_MAX, 1) != UCHAR_MAX + 1) {
 		mode = MODE_MANY;
-	} else if (count == UCHAR_MAX + 1 && !boxed) {
+	} else if (count == UCHAR_MAX + 1) {
 		mode = MODE_ANY;
 	} else if (count <= UCHAR_MAX / 2) {
 		mode = MODE_MANY;
@@ -149,8 +152,13 @@ bm_print(FILE *f, const struct fsm_options *opt, const struct bm *bm,
 	 * maybe best to do that by splitting the bitmap, and using two passes */
 	/* XXX: all literal characters here really should go through escputc */
 
-	if (mode == MODE_ANY) {
+	if (mode == MODE_ANY && !boxed) {
 		return fputs("/./", f);
+	} else if (mode == MODE_ANY || mode == MODE_NONE) {
+		return fprintf(f, "%s%s\\x00-\\xff%s",
+			boxed ? "[" : "",
+			mode == MODE_NONE ? "^" : "",
+			boxed ? "]" : "");
 	}
 
 	n = 0;
