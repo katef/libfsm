@@ -302,6 +302,16 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 		break;
 
 	case AST_EXPR_SUBTRACT: {
+		{
+			struct bm bm;
+
+			bm_clear(&bm);
+			if (ast_expr_charset(n, *re_flags, &bm)) {
+				(void) bm_print(f, opt, &bm, 1, pcre_escputc_class);
+				break;
+			}
+		}
+
 		/* this is a best effort; the idea here is that lookaround is close enough.
 		 * is it exactly equivalent to subtraction? i don't know */
 		enum re_flags local_flags = *re_flags;

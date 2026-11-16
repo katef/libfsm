@@ -1,1 +1,1 @@
-x(?![\x00-\xff])[abc]y
+x[^abc]y

@@ -663,7 +663,25 @@ ast_expr_charset(const struct ast_expr *n, enum re_flags re_flags, struct bm *bm
 		break;
 
 	case AST_EXPR_SUBTRACT:
-		/* TODO: do this by bitmap construction */
+		{
+			struct bm a, b;
+
+			bm_clear(&a);
+			if (!ast_expr_charset(n->u.subtract.a, re_flags, &a)) {
+				return 0;
+			}
+
+			bm_clear(&b);
+			if (!ast_expr_charset(n->u.subtract.b, re_flags, &b)) {
+				return 0;
+			}
+
+			bm_invert(&b);
+			bm_intersect(&a, &b);
+			bm_union(bm, &a);
+
+			return 1;
+		}
 
 		/*
 		 * Another option would be to compile just this subtree to an FSM,
