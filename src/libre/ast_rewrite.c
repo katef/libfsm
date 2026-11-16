@@ -413,7 +413,7 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 	/* Fold in alt children; these do not have to be in-situ, because
 	 * order doesn't matter here. But we do it anyway to be tidy */
 	for (i = 0; i < n->u.alt.count; ) {
-		if (n->u.alt.n[i]->type == AST_EXPR_ALT) {
+		if (n->u.alt.n[i]->type == AST_EXPR_ALT && n->u.alt.count > 1) {
 			struct ast_expr *dead = n->u.alt.n[i];
 
 			/* because of depth-first simplification */
