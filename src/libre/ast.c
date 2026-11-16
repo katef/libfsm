@@ -573,8 +573,10 @@ ast_expr_charset(const struct ast_expr *n, enum re_flags re_flags, struct bm *bm
 	assert(n != NULL);
 	assert(bm != NULL);
 
-	/* not a single character */
-	if ((re_flags & RE_ICASE) && !(n->re_flags & RE_ICASE)) {
+	/* not a single character: case-sensitive characters
+	 * can't be members of a case-insensitive set */
+	if ((n->type == AST_EXPR_LITERAL || n->type == AST_EXPR_CODEPOINT || n->type == AST_EXPR_RANGE)
+		&& (re_flags & RE_ICASE) && !(n->re_flags & RE_ICASE)) {
 		return 0;
 	}
 
