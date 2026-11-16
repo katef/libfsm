@@ -79,6 +79,22 @@ enum {
 };
 
 static void
+print_flags(FILE *f, enum re_flags re_flags, enum re_flags fl)
+{
+	if (((fl ^ re_flags) & RE_FLAGS_PRINTABLE) == 0U) {
+		return;
+	}
+
+	fprintf(f, "(?");
+	re_flags_print(f, fl & ~re_flags);
+	if (re_flags & ~fl & RE_FLAGS_PRINTABLE) {
+		fprintf(f, "-");
+		re_flags_print(f, re_flags & ~fl);
+	}
+	fprintf(f, ")");
+}
+
+static void
 print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint *e)
 {
 	switch (e->type) {
@@ -108,9 +124,7 @@ print_charset(FILE *f, const struct fsm_options *opt, enum re_flags fl,
 
 	if ((fl & RE_ICASE)) {
 		char s[1 + 1 + (UCHAR_MAX + 1) * (sizeof "\\x00" - 1) + 1 + 1]; /* "[^...]" worst case */
-
 		unsigned c;
-		int invert;
 
 		/*
 		 * For a complemented form, [^...] folding case must also be inverted.
@@ -130,15 +144,22 @@ print_charset(FILE *f, const struct fsm_options *opt, enum re_flags fl,
 
 		bm_copy(&tmp, bm);
 
-		invert = s[1] == '^';
-
 		for (c = 0; c <= UCHAR_MAX; c++) {
 			if (isupper(c)) {
-				(invert ? bm_set : bm_unset)(&tmp, c);
+				(s[1] == '^' ? bm_set : bm_unset)(&tmp, c);
 			}
 		}
 
 		bm = &tmp;
+	}
+
+	/*
+	 * Avoid printing [x] for a single character. This is after case folding,
+	 * so (?i)[aA] prints as just `a`. Note pcre_escputc here, because this
+	 * isn't inside boxed output.
+	 */
+	if (bm_count(bm) == 1) {
+		return bm_print(f, opt, bm, 0, pcre_escputc);
 	}
 
 	return bm_print(f, opt, bm, 1, pcre_escputc_class);
@@ -175,16 +196,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 		return;
 	}
 
-	if ((n->re_flags ^ *re_flags) & RE_FLAGS_PRINTABLE) {
-		fprintf(f, "(?");
-		re_flags_print(f, n->re_flags & ~*re_flags);
-		if (*re_flags & ~n->re_flags & RE_FLAGS_PRINTABLE) {
-			fprintf(f, "-");
-			re_flags_print(f, *re_flags & ~n->re_flags);
-		}
-		fprintf(f, ")");
-		*re_flags = n->re_flags;
-	}
+	print_flags(f, *re_flags, n->re_flags);
+	*re_flags = n->re_flags;
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
@@ -201,78 +214,69 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	}
 
 	case AST_EXPR_ALT: {
-		size_t k;
+		struct bm bm;
+		size_t i;
 		int sep;
 
-		/* first whatever we can collect into a bitmap */
+		sep = 0;
+
+		/*
+		 * The general idea here is to run through all alts and pick up
+		 * single characters for a bitmap, printing non-bitmappable children
+		 * as we go. Then after iteration, print the bitmap in [xyz] form.
+		 */
 		/* TODO: not in utf8 mode, [^xyz] would be incorrect */
-		{
-			struct bm bm;
-			size_t i;
+		bm_clear(&bm);
 
-			bm_clear(&bm);
+		for (i = 0; i < n->u.alt.count; i++) {
+			struct bm tmp;
 
-			for (i = 0, k = 0; i < n->u.alt.count; i++) {
-				struct bm tmp;
-
-				bm_clear(&tmp);
-
-				/*
-				 * This is not the same as nullability of the alt node itself.
-				 * see ast_expr_charset() for explanation of the same situation.
-				 *
-				 * We're reproducing the same idea here because here we're
-				 * going to some effort to merge each child into one set where
-				 * possible, and handling the others separately. So we don't just
-				 * decline the bitmap construction for the entire alt node.
-				 */
-				if (ast_expr_is_nullable(n->u.alt.n[i])) {
-					continue;
-				}
-
-				if (!ast_expr_charset(n->u.alt.n[i], n->re_flags, &tmp)) {
-					continue;
-				}
-
-				bm_union(&bm, &tmp);
-
-				k++;
-			}
-
-			sep = 0;
-
-			/* TODO: instead of k, bm_count() */
-			if (k > 1) {
-				(void) print_charset(f, opt, n->re_flags, &bm);
-				sep = 1;
-			}
-		}
-
-		/* then any other nodes */
-		{
-			size_t i;
-
-			for (i = 0; i < n->u.alt.count; i++) {
-				struct bm tmp;
-
-				/* awful */
-				if (k > 1) {
-					bm_clear(&tmp);
-
-					/* same as above, by demorgan */
-					if (!ast_expr_is_nullable(n->u.alt.n[i]) && ast_expr_charset(n->u.alt.n[i], n->re_flags, &tmp)) {
-						continue;
-					}
-				}
-
+			/*
+			 * This is not the same as nullability of the alt node itself.
+			 * see ast_expr_charset() for explanation of the same situation.
+			 *
+			 * We're reproducing the same idea here because here we're
+			 * going to some effort to merge each child into one set where
+			 * possible, and handling the others separately. So we don't just
+			 * decline the bitmap construction for the entire alt node.
+			 */
+			if (ast_expr_is_nullable(n->u.alt.n[i])) {
 				if (sep) {
 					fprintf(f, "|");
 				}
 
 				pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
-
 				sep = 1;
+				continue;
 			}
+
+			/* ast_expr_charset() may add members before failing */
+			bm_clear(&tmp);
+
+			if (!ast_expr_charset(n->u.alt.n[i], n->re_flags, &tmp)) {
+				if (sep) {
+					fprintf(f, "|");
+				}
+
+				pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
+				sep = 1;
+				continue;
+			}
+
+			bm_union(&bm, &tmp);
+		}
+
+		if (bm_any(&bm)) {
+			if (sep) {
+				fprintf(f, "|");
+			}
+
+			/* the bitmap was collected under the alt's flags,
+			 * which the children printed above may have changed */
+			print_flags(f, *re_flags, n->re_flags);
+			*re_flags = n->re_flags;
+
+			(void) print_charset(f, opt, n->re_flags, &bm);
 		}
 
 		break;
