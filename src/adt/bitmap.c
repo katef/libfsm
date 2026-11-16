@@ -82,7 +82,7 @@ bm_count(const struct bm *bm)
 
 	count = 0;
 
-	for (n = 0; n < sizeof(sizeof(bm->map)/sizeof(bm->map[0])); n++) {
+	for (n = 0; n < sizeof(bm->map)/sizeof(bm->map[0]); n++) {
 		count += u64bitset_popcount(bm->map[n]);
 	}
 
