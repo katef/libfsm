@@ -230,7 +230,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 					continue;
 				}
 
-				if (!ast_expr_charset(n->u.alt.n[i], *re_flags, &tmp)) {
+				if (!ast_expr_charset(n->u.alt.n[i], n->re_flags, &tmp)) {
 					continue;
 				}
 
@@ -259,7 +259,11 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 				if (k > 1) {
 					bm_clear(&tmp);
 
-					if (ast_expr_charset(n->u.alt.n[i], *re_flags, &tmp)) {
+					if (ast_expr_is_nullable(n->u.alt.n[i])) {
+						continue;
+					}
+
+					if (ast_expr_charset(n->u.alt.n[i], n->re_flags, &tmp)) {
 						continue;
 					}
 				}
