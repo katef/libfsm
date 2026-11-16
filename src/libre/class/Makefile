@@ -2,13 +2,15 @@
 
 AWK ?= awk
 SED ?= sed
+SORT ?= LC_ALL=C sort
+UNIQ ?= uniq
 
 UCD ?= share/ucd
 CODEPOINTS ?= ${AWK} -f share/bin/codepoints.awk
 CLASS ?= ${AWK} -f share/bin/class.awk
 
 UNI_SCRIPT != cat ${UCD}/Scripts.txt \
-	| ${SED} 's/\#.*//' | cut -d';' -f2 | sort | uniq
+	| ${SED} 's/\#.*//' | cut -d';' -f2 | ${SORT} | ${UNIQ}
 
 .for script in ${UNI_SCRIPT}
 
@@ -27,10 +29,10 @@ SRC += src/libre/class/utf8_${script}.c
 
 # XXX: Cc excluded
 UNI_CAT != cat ${UCD}/UnicodeData.txt \
-	| cut -d';' -f3 | sort | uniq | grep -v 'Cc'
+	| cut -d';' -f3 | ${SORT} | ${UNIQ} | grep -v 'Cc'
 
 # some awkwardness to avoid :O:u for OpenBSD make(1)
-UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | sort | uniq
+UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | ${SORT} | ${UNIQ}
 
 .for group in ${UNI_CAT_UNIQ}
 
