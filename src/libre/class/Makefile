@@ -126,7 +126,7 @@ SRC += src/libre/class/${class}.c
 
 .if make(gen)
 gen:: src/libre/class.h
-src/libre/class.h:
+src/libre/class.h: src/libre/class/Makefile ${UCD}/Scripts.txt ${UCD}/UnicodeData.txt
 	printf "/* generated */\n" > ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#ifndef RE_CLASS_H\n" >> ${.TARGET}
@@ -161,6 +161,7 @@ src/libre/class.h:
 .if make(gen)
 .for src in ${SRC:Msrc/libre/class/*.c}
 gen:: ${src}
+${src}: src/libre/class/Makefile share/bin/codepoints.awk share/bin/class.awk ${UCD}/Scripts.txt ${UCD}/UnicodeData.txt
 .endfor
 .endif
 
@@ -188,7 +189,7 @@ CFLAGS.${src} += -Wno-overflow
 
 .if make(gen)
 gen:: src/libre/class_name.c
-src/libre/class_name.c:
+src/libre/class_name.c: src/libre/class/Makefile ${UCD}/Scripts.txt ${UCD}/UnicodeData.txt
 	printf "/* generated */\n" > ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#include <assert.h>\n" >> ${.TARGET}
