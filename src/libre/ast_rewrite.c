@@ -84,8 +84,9 @@ contains_child(struct ast_expr **child, struct ast_expr **children, size_t count
  * rewriting, I think it's confusing having to take flags into account
  * for unrelated transformations.
  */
-static int
-is_nullable(const struct ast_expr *n)
+// TODO: move out to ast_expr.c
+int
+ast_expr_is_nullable(const struct ast_expr *n)
 {
 	switch (n->type) {
 		size_t i;
@@ -95,7 +96,7 @@ is_nullable(const struct ast_expr *n)
 
 	case AST_EXPR_CONCAT:
 		for (i = 0; i < n->u.concat.count; i++) {
-			if (!is_nullable(n->u.concat.n[i])) {
+			if (!ast_expr_is_nullable(n->u.concat.n[i])) {
 				return 0;
 			}
 		}
@@ -103,7 +104,7 @@ is_nullable(const struct ast_expr *n)
 
 	case AST_EXPR_ALT:
 		for (i = 0; i < n->u.alt.count; i++) {
-			if (is_nullable(n->u.alt.n[i])) {
+			if (ast_expr_is_nullable(n->u.alt.n[i])) {
 				return 1;
 			}
 		}
@@ -114,11 +115,11 @@ is_nullable(const struct ast_expr *n)
 		return 0;
 
 	case AST_EXPR_REPEAT:
-		return n->u.repeat.min == 0 || is_nullable(n->u.repeat.e);
+		return n->u.repeat.min == 0 || ast_expr_is_nullable(n->u.repeat.e);
 
 	case AST_EXPR_GROUP:
 		/* TODO: not for capturing groups */
-		return is_nullable(n->u.group.e);
+		return ast_expr_is_nullable(n->u.group.e);
 
 	case AST_EXPR_ANCHOR:
 		/* anchors consume no input but only match in context,
@@ -407,7 +408,7 @@ rewrite_alt(struct ast_expr_pool **poolp, struct ast_expr *n)
 	 * they affect the anchoring. So we cannot remove those in general here.
 	 */
 	/* TODO: multiple redundant empty nodes can be removed though, leaving just one */
-	/* TODO: we should be able to use is_nullable for this too */
+	/* TODO: we should be able to use ast_expr_is_nullable for this too */
 
 	/* Fold in alt children; these do not have to be in-situ, because
 	 * order doesn't matter here. But we do it anyway to be tidy */
@@ -558,7 +559,7 @@ rewrite_repeat(struct ast_expr_pool **poolp, struct ast_expr *n)
 	 * pick a minimum of 0. So we rewrite (?:a?){2,} to (?:a?}{0,}
 	 * which is morally (though not structurally) simpler.
 	 */
-	if (is_nullable(n->u.repeat.e)) {
+	if (ast_expr_is_nullable(n->u.repeat.e)) {
 		if (n->u.repeat.max == AST_COUNT_UNBOUNDED) {
 			n->u.repeat.min = 0;
 		} else {

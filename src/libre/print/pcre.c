@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <inttypes.h>
 
@@ -96,31 +95,6 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 	}
 }
 
-static int
-charset(struct bm *bm, const struct ast_expr *n, enum re_flags re_flags)
-{
-	unsigned char from, to;
-	unsigned c;
-
-	if (!ast_expr_char_range(n, re_flags, &from, &to)) {
-		return 0;
-	}
-
-	bm_clear(bm);
-
-	for (c = from; c <= to; c++) {
-		if (n->re_flags & RE_ICASE) {
-			bm_set(bm, tolower(c));
-			bm_set(bm, toupper(c));
-			continue;
-		}
-
-		bm_set(bm, c);
-	}
-
-	return 1;
-}
-
 static void
 pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	struct ast_expr *n, const struct ast_expr *parent)
@@ -192,7 +166,22 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 			for (i = 0, k = 0; i < n->u.alt.count; i++) {
 				struct bm tmp;
 
-				if (!charset(&tmp, n->u.alt.n[i], *re_flags)) {
+				bm_clear(&tmp);
+
+				/*
+				 * This is not the same as nullability of the alt node itself.
+				 * see ast_expr_charset() for explanation of the same situation.
+				 *
+				 * We're reproducing the same idea here because here we're
+				 * going to some effort to merge each child into one set where
+				 * possible, and handling the others separately. So we don't just
+				 * decline the bitmap construction for the entire alt node.
+				 */
+				if (ast_expr_is_nullable(n->u.alt.n[i])) {
+					continue;
+				}
+
+				if (!ast_expr_charset(n->u.alt.n[i], *re_flags, &tmp)) {
 					continue;
 				}
 
@@ -218,8 +207,12 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 				struct bm tmp;
 
 				/* awful */
-				if (k > 1 && charset(&tmp, n->u.alt.n[i], *re_flags)) {
-					continue;
+				if (k > 1) {
+					bm_clear(&tmp);
+
+					if (ast_expr_charset(n->u.alt.n[i], *re_flags, &tmp)) {
+						continue;
+					}
 				}
 
 				if (sep) {
