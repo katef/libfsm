@@ -36,7 +36,6 @@ UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | ${SORT} | ${UNIQ}
 
 .for group in ${UNI_CAT_UNIQ}
 
-# This could be faster if we kept the minimized DFA for each category
 src/libre/class/utf8_${group}.c:
 	cat ${UCD}/UnicodeData.txt \
 	| ${AWK} -F';' -v group='^${group}' '$$3 ~ group { print $$1 }' \
