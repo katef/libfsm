@@ -20,6 +20,7 @@ escputc dot_escputc_html_record;
 escputc fsm_escputc;
 escputc json_escputc;
 escputc pcre_escputc;
+escputc pcre_escputc_class;
 escputc rust_escputc_char;
 escputc rust_escputc_str;
 escputc llvm_escputc_char;

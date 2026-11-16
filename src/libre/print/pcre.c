@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
+#include <adt/bitmap.h>
+
 #include <re/re.h>
 
 #include <print/esc.h>
@@ -94,6 +96,31 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 	}
 }
 
+static int
+charset(struct bm *bm, const struct ast_expr *n, enum re_flags re_flags)
+{
+	unsigned char from, to;
+	unsigned c;
+
+	if (!ast_expr_char_range(n, re_flags, &from, &to)) {
+		return 0;
+	}
+
+	bm_clear(bm);
+
+	for (c = from; c <= to; c++) {
+		if (n->re_flags & RE_ICASE) {
+			bm_set(bm, tolower(c));
+			bm_set(bm, toupper(c));
+			continue;
+		}
+
+		bm_set(bm, c);
+	}
+
+	return 1;
+}
+
 static void
 pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	struct ast_expr *n, const struct ast_expr *parent)
@@ -151,13 +178,57 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	}
 
 	case AST_EXPR_ALT: {
-		size_t i;
+		size_t k;
+		int sep;
 
-		/* TODO: if all the children are single-character literals, construct a bitmap */
-		for (i = 0; i < n->u.alt.count; i++) {
-			pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
-			if (i + 1 < n->u.alt.count) {
-				fprintf(f, "|");
+		/* first whatever we can collect into a bitmap */
+		/* TODO: not in utf8 mode, [^xyz] would be incorrect */
+		{
+			struct bm bm;
+			size_t i;
+
+			bm_clear(&bm);
+
+			for (i = 0, k = 0; i < n->u.alt.count; i++) {
+				struct bm tmp;
+
+				if (!charset(&tmp, n->u.alt.n[i], *re_flags)) {
+					continue;
+				}
+
+				bm_union(&bm, &tmp);
+
+				k++;
+			}
+
+			sep = 0;
+
+			/* TODO: instead of k, bm_count() */
+			if (k > 1) {
+				(void) bm_print(f, opt, &bm, 1, pcre_escputc_class);
+				sep = 1;
+			}
+		}
+
+		/* then any other nodes */
+		{
+			size_t i;
+
+			for (i = 0; i < n->u.alt.count; i++) {
+				struct bm tmp;
+
+				/* awful */
+				if (k > 1 && charset(&tmp, n->u.alt.n[i], *re_flags)) {
+					continue;
+				}
+
+				if (sep) {
+					fprintf(f, "|");
+				}
+
+				pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
+
+				sep = 1;
 			}
 		}
 

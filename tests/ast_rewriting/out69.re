@@ -1,1 +1,1 @@
-x(?![\x00-\xff])a|b|cy
+x(?![\x00-\xff])[abc]y

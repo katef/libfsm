@@ -579,6 +579,9 @@ ast_expr_char_range(const struct ast_expr *n, enum re_flags re_flags,
 	case AST_EXPR_EMPTY:
 	case AST_EXPR_CONCAT:
 	case AST_EXPR_ALT:
+	case AST_EXPR_REPEAT:
+	case AST_EXPR_GROUP:
+	case AST_EXPR_ANCHOR:
 		return 0;
 
 	case AST_EXPR_LITERAL:

@@ -61,3 +61,13 @@ pcre_escputc(FILE *f, const struct fsm_options *opt, char c)
 	return fprintf(f, "%c", c);
 }
 
+int
+pcre_escputc_class(FILE *f, const struct fsm_options *opt, char c)
+{
+	if (c == '-') {
+		return fprintf(f, "\\-");
+	}
+
+	return pcre_escputc(f, opt, c);
+}
+
