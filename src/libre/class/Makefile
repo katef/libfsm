@@ -19,7 +19,7 @@ src/libre/class/utf8_${script}.c:
 	| ${SED} 's/\#.*//' \
 	| tr -d ' ' \
 	| grep -v '^$$' \
-	| ${AWK} -F';' -v script='^${script}' '$$2 ~ script { print $$1 }' \
+	| ${AWK} -F';' -v script='${script}' '$$2 == script { print $$1 }' \
 	| ${CLASS} -v class=utf8_${script} \
 	> ${.TARGET}
 
