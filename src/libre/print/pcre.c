@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <ctype.h>
 
 #include <adt/bitmap.h>
 
@@ -93,6 +94,54 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 		assert(!"unreached");
 		break;
 	}
+}
+
+static int
+print_charset(FILE *f, const struct fsm_options *opt, enum re_flags fl,
+	const struct bm *bm)
+{
+	struct bm tmp;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(bm != NULL);
+
+	if ((fl & RE_ICASE)) {
+		char s[1 + 1 + (UCHAR_MAX + 1) * (sizeof "\\x00" - 1) + 1 + 1]; /* "[^...]" worst case */
+
+		unsigned c;
+		int invert;
+
+		/*
+		 * For a complemented form, [^...] folding case must also be inverted.
+		 *
+		 * bm_print() decides whether to emit [^...] or [...] based on the
+		 * number of elements, it does whatever seems most compact.
+		 * So whether to set or unset depends on an internal decision in
+		 * bm_print().
+		 *
+		 * My solution here is to bm_snprint() and look at what happens.
+		 * This is hella expensive (it tmpfile()s), but I prefer it over
+		 * reproducing internal logic here and drifting later.
+		 */
+		if (-1 == bm_snprint(bm, opt, s, sizeof s, 1, pcre_escputc_class)) {
+			return -1;
+		}
+
+		bm_copy(&tmp, bm);
+
+		invert = s[1] == '^';
+
+		for (c = 0; c <= UCHAR_MAX; c++) {
+			if (isupper(c)) {
+				(invert ? bm_set : bm_unset)(&tmp, c);
+			}
+		}
+
+		bm = &tmp;
+	}
+
+	return bm_print(f, opt, bm, 1, pcre_escputc_class);
 }
 
 static void
@@ -194,7 +243,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 
 			/* TODO: instead of k, bm_count() */
 			if (k > 1) {
-				(void) bm_print(f, opt, &bm, 1, pcre_escputc_class);
+				(void) print_charset(f, opt, n->re_flags, &bm);
 				sep = 1;
 			}
 		}
@@ -307,7 +356,7 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 
 			bm_clear(&bm);
 			if (ast_expr_charset(n, *re_flags, &bm)) {
-				(void) bm_print(f, opt, &bm, 1, pcre_escputc_class);
+				(void) print_charset(f, opt, n->re_flags, &bm);
 				break;
 			}
 		}
