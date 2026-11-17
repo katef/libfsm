@@ -756,6 +756,14 @@ comp_iter(struct comp_env *env,
 	fprintf(stderr, " ---> x: %d, y: %d, type: %s\n", x, y, ast_node_type_name(n->type));
 #endif
 
+	/*
+	 * TODO: use ast_expr_char_range() here to pick up literals.
+	 * This would save us some recursion here where we're making
+	 * general FSM constructions. By recurring there looking for
+	 * just one case instead (literal bytes), we can potentially
+	 * save some linkage work in the FSM construction.
+	 */
+
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
 		/* skip these, when possible */

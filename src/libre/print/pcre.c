@@ -8,9 +8,11 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <ctype.h>
+
+#include <adt/bitmap.h>
 
 #include <re/re.h>
 
@@ -22,7 +24,8 @@
 #include "../print.h"
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n);
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
+	const struct ast_expr *n);
 
 static int
 prec(const struct ast_expr *n)
@@ -31,7 +34,6 @@ prec(const struct ast_expr *n)
 	case AST_EXPR_LITERAL:
 	case AST_EXPR_CODEPOINT:
 	case AST_EXPR_RANGE:
-	case AST_EXPR_SUBTRACT:
 	case AST_EXPR_GROUP:
 	case AST_EXPR_TOMBSTONE:
 		return 0;
@@ -49,6 +51,7 @@ prec(const struct ast_expr *n)
 		return 2;
 
 	case AST_EXPR_CONCAT:
+	case AST_EXPR_SUBTRACT:
 		return 3;
 
 	case AST_EXPR_ALT:
@@ -76,6 +79,22 @@ enum {
 };
 
 static void
+print_flags(FILE *f, enum re_flags re_flags, enum re_flags fl)
+{
+	if (((fl ^ re_flags) & RE_FLAGS_PRINTABLE) == 0U) {
+		return;
+	}
+
+	fprintf(f, "(?");
+	re_flags_print(f, fl & ~re_flags);
+	if (re_flags & ~fl & RE_FLAGS_PRINTABLE) {
+		fprintf(f, "-");
+		re_flags_print(f, re_flags & ~fl);
+	}
+	fprintf(f, ")");
+}
+
+static void
 print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint *e)
 {
 	switch (e->type) {
@@ -93,6 +112,59 @@ print_endpoint(FILE *f, const struct fsm_options *opt, const struct ast_endpoint
 	}
 }
 
+static int
+print_charset(FILE *f, const struct fsm_options *opt, enum re_flags fl,
+	const struct bm *bm)
+{
+	struct bm tmp;
+
+	assert(f != NULL);
+	assert(opt != NULL);
+	assert(bm != NULL);
+
+	if ((fl & RE_ICASE)) {
+		char s[1 + 1 + (UCHAR_MAX + 1) * (sizeof "\\x00" - 1) + 1 + 1]; /* "[^...]" worst case */
+		unsigned c;
+
+		/*
+		 * For a complemented form, [^...] folding case must also be inverted.
+		 *
+		 * bm_print() decides whether to emit [^...] or [...] based on the
+		 * number of elements, it does whatever seems most compact.
+		 * So whether to set or unset depends on an internal decision in
+		 * bm_print().
+		 *
+		 * My solution here is to bm_snprint() and look at what happens.
+		 * This is hella expensive (it tmpfile()s), but I prefer it over
+		 * reproducing internal logic here and drifting later.
+		 */
+		if (-1 == bm_snprint(bm, opt, s, sizeof s, 1, pcre_escputc_class)) {
+			return -1;
+		}
+
+		bm_copy(&tmp, bm);
+
+		for (c = 0; c <= UCHAR_MAX; c++) {
+			if (isupper(c)) {
+				(s[1] == '^' ? bm_set : bm_unset)(&tmp, c);
+			}
+		}
+
+		bm = &tmp;
+	}
+
+	/*
+	 * Avoid printing [x] for a single character. This is after case folding,
+	 * so (?i)[aA] prints as just `a`. Note pcre_escputc here, because this
+	 * isn't inside boxed output.
+	 */
+	if (bm_count(bm) == 1) {
+		return bm_print(f, opt, bm, 0, pcre_escputc);
+	}
+
+	return bm_print(f, opt, bm, 1, pcre_escputc_class);
+}
+
 static void
 pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	struct ast_expr *n, const struct ast_expr *parent)
@@ -100,7 +172,10 @@ pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 	assert(f != NULL);
 	assert(opt != NULL);
 
-	if (prec(n) <= prec(parent)) {
+	if (prec(n) < prec(parent)) {
+		pp_iter(f, opt, re_flags, n);
+	} else if (prec(n) == prec(parent) && n->type != AST_EXPR_REPEAT) {
+		/* a{1}{2} would be a syntax error, we need (?:a{1}){2} */
 		pp_iter(f, opt, re_flags, n);
 	} else {
 		enum re_flags local_flags = *re_flags;
@@ -111,7 +186,8 @@ pp_atomic(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
 }
 
 static void
-pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct ast_expr *n)
+pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags,
+	const struct ast_expr *n)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
@@ -120,16 +196,8 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 		return;
 	}
 
-	if ((n->re_flags ^ *re_flags) & RE_FLAGS_PRINTABLE) {
-		fprintf(f, "(?");
-		re_flags_print(f, n->re_flags & ~*re_flags);
-		if (*re_flags & ~n->re_flags & RE_FLAGS_PRINTABLE) {
-			fprintf(f, "-");
-			re_flags_print(f, *re_flags & ~n->re_flags);
-		}
-		fprintf(f, ")");
-		*re_flags = n->re_flags;
-	}
+	print_flags(f, *re_flags, n->re_flags);
+	*re_flags = n->re_flags;
 
 	switch (n->type) {
 	case AST_EXPR_EMPTY:
@@ -146,13 +214,69 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 	}
 
 	case AST_EXPR_ALT: {
+		struct bm bm;
 		size_t i;
+		int sep;
+
+		sep = 0;
+
+		/*
+		 * The general idea here is to run through all alts and pick up
+		 * single characters for a bitmap, printing non-bitmappable children
+		 * as we go. Then after iteration, print the bitmap in [xyz] form.
+		 */
+		/* TODO: not in utf8 mode, [^xyz] would be incorrect */
+		bm_clear(&bm);
 
 		for (i = 0; i < n->u.alt.count; i++) {
-			pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
-			if (i + 1 < n->u.alt.count) {
+			struct bm tmp;
+
+			/*
+			 * This is not the same as nullability of the alt node itself.
+			 * see ast_expr_charset() for explanation of the same situation.
+			 *
+			 * We're reproducing the same idea here because here we're
+			 * going to some effort to merge each child into one set where
+			 * possible, and handling the others separately. So we don't just
+			 * decline the bitmap construction for the entire alt node.
+			 */
+			if (ast_expr_is_nullable(n->u.alt.n[i])) {
+				if (sep) {
+					fprintf(f, "|");
+				}
+
+				pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
+				sep = 1;
+				continue;
+			}
+
+			/* ast_expr_charset() may add members before failing */
+			bm_clear(&tmp);
+
+			if (!ast_expr_charset(n->u.alt.n[i], n->re_flags, &tmp)) {
+				if (sep) {
+					fprintf(f, "|");
+				}
+
+				pp_atomic(f, opt, re_flags, n->u.alt.n[i], n);
+				sep = 1;
+				continue;
+			}
+
+			bm_union(&bm, &tmp);
+		}
+
+		if (bm_any(&bm)) {
+			if (sep) {
 				fprintf(f, "|");
 			}
+
+			/* the bitmap was collected under the alt's flags,
+			 * which the children printed above may have changed */
+			print_flags(f, *re_flags, n->re_flags);
+			*re_flags = n->re_flags;
+
+			(void) print_charset(f, opt, n->re_flags, &bm);
 		}
 
 		break;
@@ -222,18 +346,39 @@ pp_iter(FILE *f, const struct fsm_options *opt, enum re_flags *re_flags, struct 
 
 	case AST_EXPR_ANCHOR:
 		assert(n->u.anchor.type == AST_ANCHOR_START || n->u.anchor.type == AST_ANCHOR_END);
-		fprintf(f, "%s", n->u.anchor.type == AST_ANCHOR_START ? "^" : "\\z");
+		if (n->u.anchor.type == AST_ANCHOR_START) {
+			fprintf(f, "^");
+		} else if (n->u.anchor.is_end_nl) {
+			fprintf(f, "$");
+		} else {
+			fprintf(f, "\\z");
+		}
 		break;
 
-	case AST_EXPR_SUBTRACT:
-		assert(!"unimplemented");
-		pp_iter(f, opt, re_flags, n->u.subtract.a);
-		fprintf(f, "-");
+	case AST_EXPR_SUBTRACT: {
+		{
+			struct bm bm;
+
+			bm_clear(&bm);
+			if (ast_expr_charset(n, *re_flags, &bm)) {
+				(void) print_charset(f, opt, n->re_flags, &bm);
+				break;
+			}
+		}
+
+		/* this is a best effort; the idea here is that lookaround is close enough.
+		 * is it exactly equivalent to subtraction? i don't know */
+		enum re_flags local_flags = *re_flags;
+		fprintf(f, "(?!");
+		pp_iter(f, opt, &local_flags, n->u.subtract.a);
+		fprintf(f, ")");
 		pp_iter(f, opt, re_flags, n->u.subtract.b);
 		break;
+	}
 
 	case AST_EXPR_RANGE:
-		if (n->u.range.from.u.literal.c == 0x00 &&
+		if ((n->re_flags & RE_SINGLE) &&
+			n->u.range.from.u.literal.c == 0x00 &&
 			n->u.range.to.u.literal.c == 0xff)
 		{
 			fprintf(f, ".");
@@ -260,11 +405,21 @@ void
 ast_print_pcre(FILE *f, const struct fsm_options *opt,
 	enum re_flags re_flags, const struct ast *ast)
 {
+	const struct ast_expr *e;
+
 	assert(f != NULL);
 	assert(opt != NULL);
 	assert(ast != NULL);
 
-	pp_iter(f, opt, &re_flags, ast->expr);
+	/* skip the implicit () around the whole expression for group 0 */
+	/* TODO: need to confirm this is correct wrt local flags */
+	if (ast->expr->type == AST_EXPR_GROUP && ast->expr->u.group.id == 0) {
+		e = ast->expr->u.group.e;
+	} else {
+		e = ast->expr;
+	}
+
+	pp_iter(f, opt, &re_flags, e);
 
 	fprintf(f, "\n");
 }

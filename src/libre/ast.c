@@ -10,9 +10,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <ctype.h>
 
 #include <re/re.h>
 #include <re/literal.h>
+
+#include <adt/bitmap.h>
 
 #include "class.h"
 #include "ast.h"
@@ -562,6 +565,189 @@ ast_contains_expr(const struct ast_expr *node, struct ast_expr * const *a, size_
 	return 0;
 }
 
+int
+ast_expr_charset(const struct ast_expr *n, enum re_flags re_flags, struct bm *bm)
+{
+	unsigned char from, to;
+
+	assert(n != NULL);
+	assert(bm != NULL);
+
+	/* not a single character: case-sensitive characters
+	 * can't be members of a case-insensitive set */
+	if ((n->type == AST_EXPR_LITERAL || n->type == AST_EXPR_CODEPOINT || n->type == AST_EXPR_RANGE)
+		&& (re_flags & RE_ICASE) && !(n->re_flags & RE_ICASE)) {
+		return 0;
+	}
+
+	switch (n->type) {
+	case AST_EXPR_EMPTY:
+		/* always the empty set. this is not *optionally* nullable */
+		return 1;
+
+	case AST_EXPR_GROUP:
+		return ast_expr_charset(n->u.group.e, re_flags, bm);
+
+	case AST_EXPR_REPEAT:
+		if (n->u.repeat.max == 0) {
+			return 1;
+		}
+
+		if (n->u.repeat.min == 1 && n->u.repeat.max == 1) {
+			return ast_expr_charset(n->u.repeat.e, re_flags, bm);
+		}
+
+		/* nullable, or variable quantities */
+		return 0;
+
+	case AST_EXPR_ANCHOR:
+	case AST_EXPR_TOMBSTONE:
+		return 0;
+
+	case AST_EXPR_ALT: {
+		size_t i;
+
+		for (i = 0; i < n->u.alt.count; i++) {
+			/*
+			 * This is not the same as nullability of the alt node itself.
+			 *
+			 * Here we're required to either produce a set or to fail.
+			 * An alt of 0 nodes correctly produces the empty set.
+			 * But if something within the alt is *optionally* empty
+			 * and other nodes are not, we can't always produce a set;
+			 * similarly to a repeat, the set cannot express that some
+			 * members would be optional.
+			 *
+			 * So we have to check nullability for each child of the alt.
+			 */
+			if (ast_expr_is_nullable(n->u.alt.n[i])) {
+				return 0;
+			}
+
+			if (!ast_expr_charset(n->u.alt.n[i], re_flags, bm)) {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	case AST_EXPR_CONCAT:
+		if (n->u.concat.count != 1) {
+			return 0;
+		}
+
+		return ast_expr_charset(n->u.concat.n[0], re_flags, bm);
+
+	case AST_EXPR_LITERAL:
+		from = (unsigned char) n->u.literal.c;
+		to   = (unsigned char) n->u.literal.c;
+		break;
+
+	case AST_EXPR_CODEPOINT:
+		if (n->u.codepoint.u > UCHAR_MAX) {
+			return 0;
+		}
+
+		from = (unsigned char) n->u.codepoint.u;
+		to   = (unsigned char) n->u.codepoint.u;
+		break;
+
+	case AST_EXPR_RANGE:
+		if (!ast_endpoint_char(&n->u.range.from, &from)) {
+			return 0;
+		}
+
+		if (!ast_endpoint_char(&n->u.range.to, &to)) {
+			return 0;
+		}
+
+		break;
+
+	case AST_EXPR_SUBTRACT:
+		{
+			struct bm a, b;
+
+			bm_clear(&a);
+			if (!ast_expr_charset(n->u.subtract.a, re_flags, &a)) {
+				return 0;
+			}
+
+			bm_clear(&b);
+			if (!ast_expr_charset(n->u.subtract.b, re_flags, &b)) {
+				return 0;
+			}
+
+			bm_invert(&b);
+			bm_intersect(&a, &b);
+			bm_union(bm, &a);
+
+			return 1;
+		}
+
+		/*
+		 * Another option would be to compile just this subtree to an FSM,
+		 * determinise it, and then convert that FSM back to an AST.
+		 * Then we get a positive of the subtraction. That's more general
+		 * (in that it always applies), but very expensive just for our
+		 * purposes here.
+		 *
+		 * It might make sense to do this for all node types where we
+		 * return 0; already though.
+		 */
+
+		return 0;
+
+	default:
+		assert(!"unreached");
+		return 0;
+	}
+
+	{
+		unsigned c;
+
+		for (c = from; c <= to; c++) {
+			if (n->re_flags & RE_ICASE) {
+				bm_set(bm, tolower(c));
+				bm_set(bm, toupper(c));
+				continue;
+			}
+
+			bm_set(bm, c);
+		}
+	}
+
+	return 1;
+}
+
+int
+ast_endpoint_char(const struct ast_endpoint *e, unsigned char *c)
+{
+	assert(e != NULL);
+	assert(c != NULL);
+
+	switch (e->type) {
+	case AST_ENDPOINT_LITERAL:
+		*c = e->u.literal.c;
+		return 1;
+
+	case AST_ENDPOINT_CODEPOINT:
+		if (e->u.codepoint.u > UCHAR_MAX) {
+			return 0;
+		}
+
+		*c = (unsigned char) e->u.codepoint.u;
+		return 1;
+
+	case AST_ENDPOINT_NAMED:
+		return 0;
+
+	default:
+		assert(!"unreached");
+		return 0;
+	}
+}
+
 struct ast_expr *
 ast_make_expr_empty(struct ast_expr_pool **poolp, enum re_flags re_flags)
 {
@@ -843,17 +1029,19 @@ ast_make_expr_named(struct ast_expr_pool **poolp, enum re_flags re_flags, const 
 		} else {
 			struct ast_endpoint from, to;
 
-			from.type = AST_ENDPOINT_LITERAL;
 			if (class->ranges[i].a <= UCHAR_MAX) {
+				from.type = AST_ENDPOINT_LITERAL;
 				from.u.literal.c = (unsigned char) class->ranges[i].a;
 			} else {
+				from.type = AST_ENDPOINT_CODEPOINT;
 				from.u.codepoint.u = class->ranges[i].a;
 			}
 
-			to.type = AST_ENDPOINT_LITERAL;
 			if (class->ranges[i].b <= UCHAR_MAX) {
+				to.type = AST_ENDPOINT_LITERAL;
 				to.u.literal.c = (unsigned char) class->ranges[i].b;
 			} else {
+				to.type = AST_ENDPOINT_CODEPOINT;
 				to.u.codepoint.u = class->ranges[i].b;
 			}
 

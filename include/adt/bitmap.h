@@ -17,7 +17,7 @@ struct fsm_state;
 struct fsm_options;
 
 struct bm {
-	uint64_t map[(UCHAR_MAX + 1)/sizeof(uint64_t)];
+	uint64_t map[(UCHAR_MAX + 1) / (sizeof (uint64_t) * CHAR_BIT)];
 };
 
 int
