@@ -180,9 +180,6 @@
 					(c, !, !) = CHAR;
 				||
 					(c, !, !) = CONTROL;
-					/* TODO: just construct the AST here;
-					 * complain about unsupported things at a later stage */
-					<err-unsupported>;
 				||
 					(c, !, !) = UNSUPPORTED;
 					<err-unsupported>;
@@ -208,7 +205,6 @@
 						(c, start, end) = CHAR;
 					||
 						(c, start, end) = CONTROL;
-						<err-unsupported>;
 					||
 						(c, start, end) = UNSUPPORTED;
 						<err-unsupported>;
