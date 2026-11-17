@@ -2,13 +2,28 @@
 
 AWK ?= awk
 SED ?= sed
+SORT ?= LC_ALL=C sort
+UNIQ ?= uniq
 
 UCD ?= share/ucd
 CODEPOINTS ?= ${AWK} -f share/bin/codepoints.awk
 CLASS ?= ${AWK} -f share/bin/class.awk
 
+# UnicodeData.txt lists some ranges as a pair in the form:
+#
+#   E000;<Private Use, First>;Co;0;L;;;;;N;;;;;
+#   F8FF;<Private Use, Last>;Co;0;L;;;;;N;;;;;
+#
+# here we're normalising them to the same x..y form as the others:
+#
+#   E000..F8FF;<Private Use>;Co;0;L;;;;;N;;;;;
+NORMALISE_RANGES = ${AWK} -F';' -v OFS=';' \
+	'$$2 ~ /, First>/ { first = $$1; next } \
+	 $$2 ~ /, Last>/  { $$1 = first ".." $$1; sub(", Last>", ">", $$2) } \
+	 { print }'
+
 UNI_SCRIPT != cat ${UCD}/Scripts.txt \
-	| ${SED} 's/\#.*//' | cut -d';' -f2 | sort | uniq
+	| ${SED} 's/\#.*//' | cut -d';' -f2 | ${SORT} | ${UNIQ}
 
 .for script in ${UNI_SCRIPT}
 
@@ -17,7 +32,7 @@ src/libre/class/utf8_${script}.c:
 	| ${SED} 's/\#.*//' \
 	| tr -d ' ' \
 	| grep -v '^$$' \
-	| ${AWK} -F';' -v script='^${script}' '$$2 ~ script { print $$1 }' \
+	| ${AWK} -F';' -v script='${script}' '$$2 == script { print $$1 }' \
 	| ${CLASS} -v class=utf8_${script} \
 	> ${.TARGET}
 
@@ -27,16 +42,16 @@ SRC += src/libre/class/utf8_${script}.c
 
 # XXX: Cc excluded
 UNI_CAT != cat ${UCD}/UnicodeData.txt \
-	| cut -d';' -f3 | sort | uniq | grep -v 'Cc'
+	| cut -d';' -f3 | ${SORT} | ${UNIQ} | grep -v 'Cc'
 
 # some awkwardness to avoid :O:u for OpenBSD make(1)
-UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | sort | uniq
+UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | ${SORT} | ${UNIQ}
 
 .for group in ${UNI_CAT_UNIQ}
 
-# This could be faster if we kept the minimized DFA for each category
 src/libre/class/utf8_${group}.c:
 	cat ${UCD}/UnicodeData.txt \
+	| ${NORMALISE_RANGES} \
 	| ${AWK} -F';' -v group='^${group}' '$$3 ~ group { print $$1 }' \
 	| ${CLASS} -v class=utf8_${group} \
 	> ${.TARGET}
@@ -49,6 +64,7 @@ SRC += src/libre/class/utf8_${group}.c
 
 src/libre/class/utf8_${cat}.c:
 	cat ${UCD}/UnicodeData.txt \
+	| ${NORMALISE_RANGES} \
 	| ${AWK} -F';' -v cat='${cat}' '$$3 == cat { print $$1 }' \
 	| ${CLASS} -v class=utf8_${cat} \
 	> ${.TARGET}
@@ -67,6 +83,7 @@ SRC += src/libre/class/utf8_private.c
 # Plane 15/16 private use range start/end explicitly excluded here
 src/libre/class/utf8_assigned.c:
 	cat ${UCD}/UnicodeData.txt \
+	| ${NORMALISE_RANGES} \
 	| grep -v -E '^(F0000|FFFFD|100000|10FFFD)$$' \
 	| cut -d';' -f1 \
 	| ${CLASS} -v class=utf8_assigned \
@@ -124,7 +141,7 @@ SRC += src/libre/class/${class}.c
 
 .if make(gen)
 gen:: src/libre/class.h
-src/libre/class.h:
+src/libre/class.h: src/libre/class/Makefile ${UCD}/Scripts.txt ${UCD}/UnicodeData.txt
 	printf "/* generated */\n" > ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#ifndef RE_CLASS_H\n" >> ${.TARGET}
@@ -159,6 +176,7 @@ src/libre/class.h:
 .if make(gen)
 .for src in ${SRC:Msrc/libre/class/*.c}
 gen:: ${src}
+${src}: src/libre/class/Makefile share/bin/codepoints.awk share/bin/class.awk ${UCD}/Scripts.txt ${UCD}/UnicodeData.txt
 .endfor
 .endif
 
@@ -186,7 +204,7 @@ CFLAGS.${src} += -Wno-overflow
 
 .if make(gen)
 gen:: src/libre/class_name.c
-src/libre/class_name.c:
+src/libre/class_name.c: src/libre/class/Makefile ${UCD}/Scripts.txt ${UCD}/UnicodeData.txt
 	printf "/* generated */\n" > ${.TARGET}
 	printf "\n" >> ${.TARGET}
 	printf "#include <assert.h>\n" >> ${.TARGET}

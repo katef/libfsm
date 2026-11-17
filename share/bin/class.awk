@@ -68,7 +68,9 @@ function range(i, n) {
 	a = hex($1)
 	b = hex($2)
 
-	range(a, $2 ? b - a : 0)
+	# the != "" is so we don't treat e.g. 0E1234 as a float,
+	# and therefore as zero, and therefore false.
+	range(a, $2 != "" ? b - a : 0)
 }
 
 END {
