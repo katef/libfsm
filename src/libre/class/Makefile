@@ -9,6 +9,19 @@ UCD ?= share/ucd
 CODEPOINTS ?= ${AWK} -f share/bin/codepoints.awk
 CLASS ?= ${AWK} -f share/bin/class.awk
 
+# UnicodeData.txt lists some ranges as a pair in the form:
+#
+#   E000;<Private Use, First>;Co;0;L;;;;;N;;;;;
+#   F8FF;<Private Use, Last>;Co;0;L;;;;;N;;;;;
+#
+# here we're normalising them to the same x..y form as the others:
+#
+#   E000..F8FF;<Private Use>;Co;0;L;;;;;N;;;;;
+NORMALISE_RANGES = ${AWK} -F';' -v OFS=';' \
+	'$$2 ~ /, First>/ { first = $$1; next } \
+	 $$2 ~ /, Last>/  { $$1 = first ".." $$1; sub(", Last>", ">", $$2) } \
+	 { print }'
+
 UNI_SCRIPT != cat ${UCD}/Scripts.txt \
 	| ${SED} 's/\#.*//' | cut -d';' -f2 | ${SORT} | ${UNIQ}
 
@@ -38,6 +51,7 @@ UNI_CAT_UNIQ != echo ${UNI_CAT:C/(.)./\1/} | tr ' ' '\n' | ${SORT} | ${UNIQ}
 
 src/libre/class/utf8_${group}.c:
 	cat ${UCD}/UnicodeData.txt \
+	| ${NORMALISE_RANGES} \
 	| ${AWK} -F';' -v group='^${group}' '$$3 ~ group { print $$1 }' \
 	| ${CLASS} -v class=utf8_${group} \
 	> ${.TARGET}
@@ -50,6 +64,7 @@ SRC += src/libre/class/utf8_${group}.c
 
 src/libre/class/utf8_${cat}.c:
 	cat ${UCD}/UnicodeData.txt \
+	| ${NORMALISE_RANGES} \
 	| ${AWK} -F';' -v cat='${cat}' '$$3 == cat { print $$1 }' \
 	| ${CLASS} -v class=utf8_${cat} \
 	> ${.TARGET}
@@ -68,6 +83,7 @@ SRC += src/libre/class/utf8_private.c
 # Plane 15/16 private use range start/end explicitly excluded here
 src/libre/class/utf8_assigned.c:
 	cat ${UCD}/UnicodeData.txt \
+	| ${NORMALISE_RANGES} \
 	| grep -v -E '^(F0000|FFFFD|100000|10FFFD)$$' \
 	| cut -d';' -f1 \
 	| ${CLASS} -v class=utf8_assigned \
