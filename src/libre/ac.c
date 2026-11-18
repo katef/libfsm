@@ -16,6 +16,7 @@
 #include <fsm/options.h>
 
 #include <fsm/fsm.h>
+#include <adt/bitmap.h>
 #include <adt/stateset.h>
 
 #include "ac.h"
@@ -72,11 +73,15 @@
 
 enum { POOL_BLOCK_SIZE = 256 };
 
+struct trie_children {
+	struct bm bm;
+	struct trie_state *a[]; /* ordered by symbol */
+};
+
 struct trie_state {
-	struct trie_state *children[256];
+	struct trie_children *children; /* may be NULL */
 	struct trie_state *fail;
-	/* use a state set as an endid set */
-	struct state_set *endids;
+	struct state_set *endids; /* borrowing state_set for endids */
 
 	fsm_state_t st;
 	unsigned int output:1;
@@ -98,7 +103,56 @@ struct trie_graph {
 };
 
 static struct trie_state *
-newstate(struct trie_graph *g)
+get_child(const struct trie_state *ts, unsigned char sym)
+{
+	if (ts->children == NULL || !bm_get(&ts->children->bm, sym)) {
+		return NULL;
+	}
+
+	return ts->children->a[bm_rank(&ts->children->bm, sym)];
+}
+
+/* sym must not already be present */
+static int
+add_child(struct trie_state *ts, unsigned char sym, struct trie_state *nx)
+{
+	struct trie_children *new;
+	size_t count, rank;
+
+	assert(get_child(ts, sym) == NULL);
+
+	count = ts->children == NULL ? 0 : bm_count(&ts->children->bm);
+
+	/*
+	 * Normally I would double for each realloc, but in this case a trie
+	 * typically has just one child per node. The whole point of the dense
+	 * array + bitmap arrangement is to avoid allocating unused pointers
+	 * to save memory overall.
+	 */
+	new = realloc(ts->children, sizeof *new + (count + 1) * sizeof *new->a);
+	if (new == NULL) {
+		return 0;
+	}
+
+	if (count == 0) {
+		bm_clear(&new->bm);
+	}
+
+	/* shuffle along to make space */
+	rank = bm_rank(&new->bm, sym);
+	assert(count >= rank);
+	memmove(&new->a[rank + 1], &new->a[rank], (count - rank) * sizeof *new->a);
+
+	new->a[rank] = nx;
+	bm_set(&new->bm, sym);
+
+	ts->children = new;
+
+	return 1;
+}
+
+static struct trie_state *
+add_state(struct trie_graph *g)
 {
 	struct trie_state *st;
 
@@ -123,7 +177,7 @@ newstate(struct trie_graph *g)
 	st = &g->pool->states[g->pool->n++];
 	g->nstates++;
 
-	memset(st->children,0,sizeof st->children);
+	st->children = NULL;
 
 	st->fail    = NULL;
 	st->have_st = 0;
@@ -145,6 +199,7 @@ cleanup_pool(struct trie_graph *g)
 
 		for (size_t i = 0; i < p->n; i++) {
 			state_set_free(p->states[i].endids);
+			free(p->states[i].children);
 		}
 
 		free(p->states);
@@ -178,7 +233,7 @@ trie_create(void)
 	g->depth = 0;
 	g->has_endids = 0;
 
-	g->root = newstate(g);
+	g->root = add_state(g);
 	if (g->root == NULL) {
 		free(g);
 		return NULL;
@@ -209,16 +264,17 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n, const fsm_end_id_t 
 
 	for (i = 0; i < n; i++) {
 		struct trie_state *nx;
-		int idx = (unsigned char)w[i];
-		nx = st->children[idx];
 
+		nx = get_child(st, (unsigned char) w[i]);
 		if (nx == NULL) {
-			nx = newstate(g);
+			nx = add_state(g);
 			if (nx == NULL) {
 				return NULL;
 			}
 
-			st->children[idx] = nx;
+			if (!add_child(st, (unsigned char) w[i], nx)) {
+				return NULL;
+			}
 		}
 
 		st = nx;
@@ -240,12 +296,13 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n, const fsm_end_id_t 
 }
 
 int
-trie_add_failure_edges(struct trie_graph *g) {
+trie_add_failure_edges(struct trie_graph *g)
+{
 	struct trie_state **q;
 	size_t top,bot;
 	int sym;
 
-	q = malloc(g->nstates * sizeof q[0]);
+	q = malloc(g->nstates * sizeof *q);
 	if (q == NULL) {
 		return -1;
 	}
@@ -256,7 +313,7 @@ trie_add_failure_edges(struct trie_graph *g) {
 	for (sym = 0; sym < 256; sym++) {
 		struct trie_state *st;
 
-		st = g->root->children[sym];
+		st = get_child(g->root, sym);
 		if (st == NULL) {
 			continue;
 		}
@@ -299,7 +356,7 @@ trie_add_failure_edges(struct trie_graph *g) {
 		for (sym=0; sym < 256; sym++) {
 			struct trie_state *fs, *nx;
 
-			nx = st->children[sym];
+			nx = get_child(st, sym);
 			if (nx == NULL) {
 				continue;
 			}
@@ -311,12 +368,12 @@ trie_add_failure_edges(struct trie_graph *g) {
 			fs = st->fail;
 			assert(fs != NULL);
 
-			while (fs->children[sym] == NULL && fs != g->root) {
+			while (get_child(fs, sym) == NULL && fs != g->root) {
 				fs = fs->fail;
 				assert(fs != NULL);
 			}
 
-			nx->fail = fs->children[sym];
+			nx->fail = get_child(fs, sym);
 			if (nx->fail == NULL) {
 				assert(fs == g->root);
 				nx->fail = fs;
@@ -336,7 +393,7 @@ find_next_state(const struct trie_state *s, int sym)
 {
 	struct trie_state *nx, *fail;
 
-	nx = s->children[sym];
+	nx = get_child(s, sym);
 	if (nx != NULL) {
 		return nx;
 	}
@@ -347,10 +404,10 @@ find_next_state(const struct trie_state *s, int sym)
 	}
 
 
-	nx = fail->children[sym];
+	nx = get_child(fail, sym);
 	while (nx == NULL && fail->fail != fail) {
 		fail = fail->fail;
-		nx = fail->children[sym];
+		nx = get_child(fail, sym);
 	}
 
 	if (nx == NULL) {
@@ -501,8 +558,11 @@ dump_rank(struct dump_state *ds, const struct trie_state *st, unsigned int rank,
 	(*index)++;
 
 	for (i = 0; i < 256; i++) {
-		if (st->children[i] != NULL) {
-			dump_rank(ds, st->children[i], rank + 1, f, index);
+		struct trie_state *nx;
+
+		nx = get_child(st, i);
+		if (nx != NULL) {
+			dump_rank(ds, nx, rank + 1, f, index);
 		}
 	}
 }
@@ -682,10 +742,13 @@ trie_dump(const struct trie_graph *g, FILE *f)
 			int sym;
 
 			for (sym = 0; sym < 256; sym++) {
-				if (ds[i].st->children[sym] != NULL) {
+				const struct trie_state *nx;
+
+				nx = get_child(ds[i].st, sym);
+				if (nx != NULL) {
 					static const struct fsm_options opt;
 					fprintf(f, "\tn%p -> n%p [ style = solid; label = <",
-						(const void *) ds[i].st, (const void *) ds[i].st->children[sym]);
+						(const void *) ds[i].st, (const void *) nx);
 					dot_escputc_html(f, &opt, (char) sym);
 					fprintf(f, "> ];\n");
 				}
