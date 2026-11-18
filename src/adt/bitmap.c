@@ -115,7 +115,7 @@ bm_rank(const struct bm *bm, size_t i)
 		count += u64bitset_popcount(bm->map[n]);
 	}
 
-	return count + u64bitset_popcount(bm->map[n] & ((1U << (i % bits)) - 1));
+	return count + u64bitset_popcount(bm->map[n] & ((UINT64_C(1) << (i % bits)) - 1));
 }
 
 void
