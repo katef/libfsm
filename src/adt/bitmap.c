@@ -77,11 +77,10 @@ bm_next(const struct bm *bm, int i, int value)
 	return UCHAR_MAX + 1;
 }
 
-unsigned int
+size_t
 bm_count(const struct bm *bm)
 {
-	unsigned int count;
-	size_t n;
+	size_t count, n;
 
 	assert(bm != NULL);
 
@@ -94,12 +93,11 @@ bm_count(const struct bm *bm)
 	return count;
 }
 
-unsigned int
+size_t
 bm_rank(const struct bm *bm, size_t i)
 {
 	const uint64_t bits = sizeof (bm->map[0]) * CHAR_BIT;
-	unsigned int count;
-	size_t n;
+	size_t count, n;
 
 	assert(bm != NULL);
 

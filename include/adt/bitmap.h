@@ -35,14 +35,14 @@ bm_range(struct bm *bm, size_t x, size_t y);
 size_t
 bm_next(const struct bm *bm, int i, int value);
 
-unsigned int
+size_t
 bm_count(const struct bm *bm);
 
 /*
  * Count of bits set at indicies below i, where i <= UCHAR_MAX + 1U.
  * bm_rank(bm, UCHAR_MAX + 1U) is equivalent to bm_count(bm).
  */
-unsigned int
+size_t
 bm_rank(const struct bm *bm, size_t i);
 
 void
