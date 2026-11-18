@@ -108,7 +108,7 @@ newstate(struct trie_graph *g)
 			return NULL;
 		}
 
-		p->states = calloc(POOL_BLOCK_SIZE, sizeof p->states[0]);
+		p->states = malloc(POOL_BLOCK_SIZE * sizeof *p->states);
 		if (p->states == NULL) {
 			free(p);
 			return NULL;
