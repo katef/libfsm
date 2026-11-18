@@ -94,6 +94,30 @@ bm_count(const struct bm *bm)
 	return count;
 }
 
+unsigned int
+bm_rank(const struct bm *bm, size_t i)
+{
+	const uint64_t bits = sizeof (bm->map[0]) * CHAR_BIT;
+	unsigned int count;
+	size_t n;
+
+	assert(bm != NULL);
+
+	if (i == UCHAR_MAX + 1U) {
+		return bm_count(bm);
+	}
+
+	assert(i <= UCHAR_MAX);
+
+	count = 0;
+
+	for (n = 0; n < i / bits; n++) {
+		count += u64bitset_popcount(bm->map[n]);
+	}
+
+	return count + u64bitset_popcount(bm->map[n] & ((1U << (i % bits)) - 1));
+}
+
 void
 bm_clear(struct bm *bm)
 {
