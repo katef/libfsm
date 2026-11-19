@@ -44,6 +44,21 @@ bm_unset(struct bm *bm, size_t i)
 	u64bitset_clear(bm->map, i);
 }
 
+void
+bm_range(struct bm *bm, size_t x, size_t y)
+{
+	size_t i;
+
+	assert(bm != NULL);
+	assert(x <= y);
+	assert(y <= UCHAR_MAX);
+
+	// TODO: consider some kind of bitmap homunculus to set a range of bits within a bitmap
+	for (i = x; i <= y; i++) {
+		bm_set(bm, i);
+	}
+}
+
 uint64_t *
 bm_nth_word(struct bm *bm, size_t n)
 {

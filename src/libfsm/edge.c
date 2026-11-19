@@ -74,7 +74,6 @@ fsm_addedge_range(struct fsm *fsm,
 	char x, char y)
 {
 	struct bm bm;
-	unsigned c;
 
 	assert(fsm != NULL);
 	assert(from < fsm->statecount);
@@ -86,11 +85,7 @@ fsm_addedge_range(struct fsm *fsm,
 	}
 
 	bm_clear(&bm);
-
-	// TODO: consider bm_range() to set a range of bits within a bitmap
-	for (c = (unsigned char) x; c <= (unsigned char) y; c++) {
-		bm_set(&bm, c);
-	}
+	bm_range(&bm, (unsigned char) x, (unsigned char) y);
 
 	if (!edge_set_add_bulk(&fsm->states[from].edges, fsm->alloc, bm.map, to)) {
 		return 0;
