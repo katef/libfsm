@@ -78,6 +78,7 @@ fsm_new_statealloc
 fsm_addedge_any
 fsm_addedge_epsilon
 fsm_addedge_literal
+fsm_addedge_range
 
 fsm_findmode
 fsm_collate

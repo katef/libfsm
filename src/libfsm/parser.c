@@ -396,7 +396,7 @@ ZL2_edge_C_Ctrans_Hlist:;
 					ADVANCE_LEXER;
 					/* BEGINNING OF ACTION: add-edge-any */
 					{
-#line 393 "src/libfsm/parser.act"
+#line 388 "src/libfsm/parser.act"
 
 		if (!fsm_addedge_any(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_any");
@@ -564,7 +564,7 @@ p_xstart(fsm fsm, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: err-expected-start */
 					{
-#line 420 "src/libfsm/parser.act"
+#line 415 "src/libfsm/parser.act"
 
 		err_expected(lex_state, "'start:'");
 	
@@ -714,7 +714,7 @@ p_xend(fsm fsm, lex_state lex_state, act_state act_state)
 				{
 					/* BEGINNING OF ACTION: err-expected-end */
 					{
-#line 424 "src/libfsm/parser.act"
+#line 419 "src/libfsm/parser.act"
 
 		err_expected(lex_state, "'end:'");
 	
@@ -909,7 +909,7 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-syntax */
 		{
-#line 428 "src/libfsm/parser.act"
+#line 423 "src/libfsm/parser.act"
 
 		err(lex_state, "Syntax error");
 		exit(EXIT_FAILURE);
@@ -980,7 +980,7 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-comma */
 		{
-#line 416 "src/libfsm/parser.act"
+#line 411 "src/libfsm/parser.act"
 
 		err_expected(lex_state, "','");
 	
@@ -1010,7 +1010,7 @@ ZL1:;
 	{
 		/* BEGINNING OF ACTION: err-expected-sep */
 		{
-#line 408 "src/libfsm/parser.act"
+#line 403 "src/libfsm/parser.act"
 
 		err_expected(lex_state, "';'");
 	
@@ -1205,7 +1205,7 @@ p_86(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 					{
 						/* BEGINNING OF ACTION: add-edge-epsilon */
 						{
-#line 400 "src/libfsm/parser.act"
+#line 395 "src/libfsm/parser.act"
 
 		if (!fsm_addedge_epsilon(fsm, (ZIx), (ZIy))) {
 			perror("fsm_addedge_epsilon");
@@ -1223,7 +1223,7 @@ p_86(fsm fsm, lex_state lex_state, act_state act_state, string *ZIa)
 				{
 					/* BEGINNING OF ACTION: err-expected-trans */
 					{
-#line 412 "src/libfsm/parser.act"
+#line 407 "src/libfsm/parser.act"
 
 		err_expected(lex_state, "transition");
 	
@@ -1353,17 +1353,12 @@ p_87(fsm fsm, lex_state lex_state, act_state act_state, state *ZIx, state *ZIy, 
 			exit(EXIT_FAILURE);
 		}
 
-		// TODO: edge_set_advise_growth, or bulk add edges
-		// or fsm_addedge_range() perhaps
-
-		for (unsigned c = (unsigned char) (*ZIc); c <= (unsigned char) (ZId); c++) {
-			if (!fsm_addedge_literal(fsm, (*ZIx), (*ZIy), (unsigned char) c)) {
-				perror("fsm_addedge_literal");
-				exit(EXIT_FAILURE);
-			}
+		if (!fsm_addedge_range(fsm, (*ZIx), (*ZIy), (*ZIc), (ZId))) {
+			perror("fsm_addedge_range");
+			exit(EXIT_FAILURE);
 		}
 	
-#line 1367 "src/libfsm/parser.c"
+#line 1362 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: add-edge-range */
 		}
@@ -1380,7 +1375,7 @@ p_87(fsm fsm, lex_state lex_state, act_state act_state, state *ZIx, state *ZIy, 
 			exit(EXIT_FAILURE);
 		}
 	
-#line 1384 "src/libfsm/parser.c"
+#line 1379 "src/libfsm/parser.c"
 			}
 			/* END OF ACTION: add-edge-literal */
 		}
@@ -1432,7 +1427,7 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state, state ZIs)
 
 		ZIid = (fsm_end_id_t) u;
 	
-#line 1436 "src/libfsm/parser.c"
+#line 1431 "src/libfsm/parser.c"
 			}
 			/* END OF EXTRACT: ENDID */
 			break;
@@ -1448,7 +1443,7 @@ p_xend_C_Cend_Hid(fsm fsm, lex_state lex_state, act_state act_state, state ZIs)
 			goto ZL1;
 		}
 	
-#line 1452 "src/libfsm/parser.c"
+#line 1447 "src/libfsm/parser.c"
 		}
 		/* END OF ACTION: mark-end-id */
 	}
@@ -1460,7 +1455,7 @@ ZL1:;
 
 /* BEGINNING OF TRAILER */
 
-#line 433 "src/libfsm/parser.act"
+#line 428 "src/libfsm/parser.act"
 
 
 	struct fsm *fsm_parse(FILE *f, const struct fsm_alloc *alloc) {
@@ -1525,6 +1520,6 @@ ZL1:;
 		return new;
 	}
 
-#line 1529 "src/libfsm/parser.c"
+#line 1524 "src/libfsm/parser.c"
 
 /* END OF FILE */

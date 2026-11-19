@@ -379,14 +379,9 @@
 			exit(EXIT_FAILURE);
 		}
 
-		// TODO: edge_set_advise_growth, or bulk add edges
-		// or fsm_addedge_range() perhaps
-
-		for (unsigned c = (unsigned char) @a; c <= (unsigned char) @b; c++) {
-			if (!fsm_addedge_literal(fsm, @x, @y, (unsigned char) c)) {
-				perror("fsm_addedge_literal");
-				exit(EXIT_FAILURE);
-			}
+		if (!fsm_addedge_range(fsm, @x, @y, @a, @b)) {
+			perror("fsm_addedge_range");
+			exit(EXIT_FAILURE);
 		}
 	@};
 

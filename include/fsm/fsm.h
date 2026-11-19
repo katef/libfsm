@@ -147,6 +147,11 @@ fsm_compact_states(struct fsm *fsm,
  * - An epsilon transition.
  * - Any character
  * - A literal character. The character '\0' is permitted.
+ * - A range of literal characters (inclusive), where x <= y.
+ *
+ * fsm_addedge_any() is equivalent to fsm_addedge_range() of 0..UCHAR_MAX,
+ * and fsm_addedge_range() is equivalent to calling fsm_addedge_literal()
+ * for each symbol in turn.
  *
  * Returns 1 on success, or 0 on error; see errno.
  */
@@ -159,6 +164,10 @@ fsm_addedge_any(struct fsm *fsm, fsm_state_t from, fsm_state_t to);
 int
 fsm_addedge_literal(struct fsm *fsm, fsm_state_t from, fsm_state_t to,
 	char c);
+
+int
+fsm_addedge_range(struct fsm *fsm, fsm_state_t from, fsm_state_t to,
+	char x, char y);
 
 /*
  * Find the mode (as in median, mode and average) of the set of states to which
