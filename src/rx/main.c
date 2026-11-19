@@ -845,7 +845,6 @@ main(int argc, char *argv[])
 		.comments = false,
 		.case_ranges = true,
 		.always_hex = false,
-		.group_edges = true,
 		.io = FSM_IO_PAIR,
 		.ambig = AMBIG_ERROR
 	};

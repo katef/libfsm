@@ -32,7 +32,6 @@ cmp_output(const void *pa, const void *pb)
 struct fsm_options print_options = {
 	.consolidate_edges = 1,
 	.comments = 0,
-	.group_edges = 1,
 };
 
 void

@@ -319,7 +319,6 @@ static const struct fsm_options dump_nfa_opt = {
 	.ambig = AMBIG_MULTIPLE,
 	.case_ranges = 1,
 	.consolidate_edges = 1,
-	.group_edges = 1,
 };
 
 static bool

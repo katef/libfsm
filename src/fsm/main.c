@@ -418,12 +418,11 @@ main(int argc, char *argv[])
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "aCcgwXe:k:i:" "xpq:l:dG:mrt:ES:U:W:"), c != -1) {
+		while (c = getopt(argc, argv, "h" "aCcwXe:k:i:" "xpq:l:dG:mrt:ES:U:W:"), c != -1) {
 			switch (c) {
 			case 'a': opt.anonymous_states  = 1;          break;
 			case 'c': opt.consolidate_edges = 1;          break;
 			case 'C': opt.comments          = 0;          break;
-			case 'g': opt.group_edges       = 1;          break;
 			case 'w': opt.fragment          = 1;          break;
 			case 'X': opt.always_hex        = 1;          break;
 			case 'e': opt.prefix            = optarg;     break;

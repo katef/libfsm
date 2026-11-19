@@ -208,7 +208,8 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm_hooks *hook
 	}
 
 	assert(s < fsm->statecount);
-	if (opt->group_edges) {
+
+	{
 		struct edge_group_iter egi;
 		struct edge_group_iter_info info;
 
@@ -250,30 +251,6 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm_hooks *hook
 
 			if (opt->comments) {
 				if (-1 == print_state_comments(f, opt, fsm, info.to)) {
-					return -1;
-				}
-			}
-
-			fprintf(f, "\n");
-		}
-	} else {
-		struct fsm_edge e;
-		struct edge_ordered_iter eoi;
-
-		for (edge_set_ordered_iter_reset(fsm->states[s].edges, &eoi);
-		     edge_set_ordered_iter_next(&eoi, &e); ) {
-			assert(e.state < fsm->statecount);
-
-			fprintf(f, "%-2u -> %2u", s, e.state);
-
-			fprintf(f, " \"");
-			fsm_escputc(f, opt, (char) e.symbol);
-			putc('\"', f);
-
-			fprintf(f, ";");
-
-			if (opt->comments) {
-				if (-1 == print_state_comments(f, opt, fsm, e.state)) {
 					return -1;
 				}
 			}

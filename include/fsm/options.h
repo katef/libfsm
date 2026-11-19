@@ -76,11 +76,6 @@ struct fsm_options {
 	 */
 	unsigned int always_hex:1;
 
-	/* boolean: true indicates to group edges with a common destination in output,
-	 * when possible, rather than printing them all individually.
-	 */
-	unsigned int group_edges:1;
-
 	/* a prefix for namespacing generated identifiers. NULL if not required. */
 	const char *prefix;
 
