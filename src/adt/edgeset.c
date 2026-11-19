@@ -822,7 +822,7 @@ edge_set_remove_state(struct edge_set **pset, fsm_state_t state)
 	while (i < set->count) {
 		const struct edge_group *eg = &set->groups[i];
 		if (eg->to == state) {
-			const size_t to_mv = set->count - i;
+			const size_t to_mv = set->count - i - 1;
 			memmove(&set->groups[i],
 			    &set->groups[i + 1],
 			    to_mv * sizeof(*eg));
@@ -1105,7 +1105,7 @@ edge_set_replace_state(struct edge_set **pset, const struct fsm_alloc *alloc,
 	for (i = 0; i < set->count; i++) {
 		struct edge_group *eg = &set->groups[i];
 		if (eg->to == old) {
-			const size_t to_mv = set->count - i;
+			const size_t to_mv = set->count - i - 1;
 			unsigned char label;
 			if (!find_first_group_label(eg, &label)) {
 				return 1; /* ignore empty group */
