@@ -58,8 +58,6 @@ fsm_complete(struct fsm *fsm,
 	}
 
 	for (s = 0; s < fsm->statecount; s++) {
-		struct edge_group_iter it;
-		struct edge_group_iter_info info;
 		struct bm bm;
 
 		if (!predicate(fsm, s)) {
@@ -68,13 +66,7 @@ fsm_complete(struct fsm *fsm,
 
 		bm_clear(&bm);
 
-		edge_set_group_iter_reset(fsm->states[s].edges, EDGE_GROUP_ITER_ALL, &it);
-		while (edge_set_group_iter_next(&it, &info)) {
-			for (size_t i = 0; i < 4; i++) {
-				uint64_t *w = bm_nth_word(&bm, i);
-				*w |= info.symbols[i];
-			}
-		}
+		edge_set_get_symbols(fsm->states[s].edges, &bm);
 
 		bm_invert(&bm);
 

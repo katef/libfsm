@@ -120,6 +120,10 @@ edge_set_contains(const struct edge_set *set, unsigned char symbol);
 int
 edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm);
 
+/* Union the symbols of all edges in the set into bm. */
+void
+edge_set_get_symbols(const struct edge_set *set, struct bm *bm);
+
 int
 edge_set_transition(const struct edge_set *set, unsigned char symbol,
 	fsm_state_t *state);

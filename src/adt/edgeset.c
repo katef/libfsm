@@ -561,6 +561,25 @@ edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm)
 	return 0;
 }
 
+void
+edge_set_get_symbols(const struct edge_set *set, struct bm *bm)
+{
+	size_t i, w_i;
+
+	assert(bm != NULL);
+
+	if (edge_set_empty(set)) {
+		return;
+	}
+
+	for (i = 0; i < set->count; i++) {
+		const struct edge_group *eg = &set->groups[i];
+		for (w_i = 0; w_i < 4; w_i++) {
+			bm->map[w_i] |= eg->symbols[w_i];
+		}
+	}
+}
+
 int
 edge_set_transition(const struct edge_set *set, unsigned char symbol,
 	fsm_state_t *state)
