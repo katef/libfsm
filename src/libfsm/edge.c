@@ -6,12 +6,12 @@
 
 #include <assert.h>
 #include <stdlib.h>
-#include <limits.h>
 #include <errno.h>
 
 #include <fsm/fsm.h>
 
 #include <adt/set.h>
+#include <adt/bitmap.h>
 #include <adt/stateset.h>
 #include <adt/edgeset.h>
 
@@ -36,11 +36,20 @@ int
 fsm_addedge_any(struct fsm *fsm,
 	fsm_state_t from, fsm_state_t to)
 {
+	struct bm bm;
+
 	assert(fsm != NULL);
 	assert(from < fsm->statecount);
 	assert(to < fsm->statecount);
 
-	return fsm_addedge_range(fsm, from, to, 0, (char) UCHAR_MAX);
+	bm_clear(&bm);
+	bm_invert(&bm);
+
+	if (!edge_set_add_bulk(&fsm->states[from].edges, fsm->alloc, bm.map, to)) {
+		return 0;
+	}
+
+	return 1;
 }
 
 int
@@ -64,6 +73,7 @@ fsm_addedge_range(struct fsm *fsm,
 	fsm_state_t from, fsm_state_t to,
 	char x, char y)
 {
+	struct bm bm;
 	unsigned c;
 
 	assert(fsm != NULL);
@@ -75,12 +85,15 @@ fsm_addedge_range(struct fsm *fsm,
 		return 0;
 	}
 
-	// TODO: edge_set_advise_growth, or bulk add edges
+	bm_clear(&bm);
 
+	// TODO: consider bm_range() to set a range of bits within a bitmap
 	for (c = (unsigned char) x; c <= (unsigned char) y; c++) {
-		if (!fsm_addedge_literal(fsm, from, to, c)) {
-			return 0;
-		}
+		bm_set(&bm, c);
+	}
+
+	if (!edge_set_add_bulk(&fsm->states[from].edges, fsm->alloc, bm.map, to)) {
+		return 0;
 	}
 
 	return 1;
