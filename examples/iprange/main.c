@@ -244,11 +244,9 @@ gen_edge_range(struct record *r, unsigned oct, const unsigned char *octs,
 		assert(r->regs[oct].c == octs[oct]);
 	}
 
-	for (unsigned i = range_start; i <= range_end; i++) {
-		if (!fsm_addedge_literal(r->fsm, from, to, (unsigned char) i)) {
-			perror("fsm_addedge_literal");
-			exit(-1);
-		}
+	if (!fsm_addedge_range(r->fsm, from, to, range_start, range_end)) {
+		perror("fsm_addedge_range");
+		exit(-1);
 	}
 }
 
