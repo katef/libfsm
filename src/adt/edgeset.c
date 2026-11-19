@@ -281,7 +281,7 @@ find_state_position(const struct edge_set *set, fsm_state_t state, size_t *dst)
 
 int
 edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
-	uint64_t symbols[256/64], fsm_state_t state)
+	const uint64_t symbols[256/64], fsm_state_t state)
 {
 	struct edge_set *set;
 	struct edge_group *eg;

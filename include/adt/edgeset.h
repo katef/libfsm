@@ -84,7 +84,7 @@ edge_set_add(struct edge_set **set, const struct fsm_alloc *alloc,
 
 int
 edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
-	uint64_t symbols[256/64], fsm_state_t state);
+	const uint64_t symbols[256/64], fsm_state_t state);
 
 /* Notify the data structure that it wis likely to soon need to grow
  * to fit N more bulk edge groups. This can avoid resizing multiple times
