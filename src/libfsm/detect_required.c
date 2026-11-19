@@ -258,9 +258,7 @@ fsm_detect_required_characters(const struct fsm *dfa, size_t step_limit,
 		fprintf(stderr, "%s: finished in %zu/%zu steps\n", __func__, env.steps, step_limit);
 	}
 
-	for (size_t i = 0; i < 4; i++) {
-		charmap[i] = *bm_nth_word(&env.overall, i);
-	}
+	memcpy(charmap, env.overall.map, sizeof env.overall.map);
 
 	if (count != NULL) {
 		*count = bm_count(&env.overall);
