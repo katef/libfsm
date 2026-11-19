@@ -1,0 +1,20 @@
+#
+# Copyright 2026 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+0 -> 1 'a';
+0 -> 1 'b';
+0 -> 1 'c';
+
+0 -> 1 'x';
+0 -> 1 'y';
+0 -> 1 'z';
+
+1 -> 2 ',';
+1 -> 2 ';';
+
+start: 0;
+end: 2;
+

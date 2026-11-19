@@ -1,0 +1,22 @@
+#
+# Copyright 2026 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# ? is a supsetset of other labels
+0 -> 1 ?, 'a';
+0 -> 1 'b' .. 'd', ?;
+
+# lexically uninteresting
+1 -> 2 '?', 'a';
+
+# edge labels needn't be unique
+2 -> 3 'a', 'a', 'a' .. 'b', 'b';
+
+# equivalent to: 3 -> 4 ?;
+3 -> 4 "\x00" .. "\x7f", "\x80" .. "\xff";
+
+start: 0;
+end: 4;
+
