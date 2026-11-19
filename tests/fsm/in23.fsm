@@ -1,0 +1,20 @@
+#
+# Copyright 2026 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+0 -> 1 "a" .. "c";
+0 -> 1 'x';
+
+0 -> 1 "\x00" .. "\x02";
+0 -> 1 "\101" .. "\103";
+0 -> 2 "\xfe" .. "\xff";
+
+# you can mix quotes for range endpoints i guess
+1 -> 2 "\\" .. '^';
+2 -> 3 'm'  .. "m";
+
+start: 0;
+end: 3;
+

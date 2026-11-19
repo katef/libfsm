@@ -4,6 +4,7 @@
 #define LX_H
 
 enum lx_token {
+	TOK_RANGE,
 	TOK_SEP,
 	TOK_ANY,
 	TOK_TO,

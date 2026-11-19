@@ -1,0 +1,12 @@
+#
+# Copyright 2026 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+# equivalent to: 0 -> 1 ?;
+0 -> 1 "\x00" .. "\xff";
+
+start: 0;
+end: 1;
+

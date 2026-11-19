@@ -33,6 +33,7 @@
 	ANY;
 	SEP;
 	COMMA;
+	RANGE;
 
 	EOF;
 	!UNKNOWN;
@@ -48,6 +49,7 @@
 	<free-statelist>;
 
 	<add-edge-literal>: (:state, :state, :char) -> ();
+	<add-edge-range>:   (:state, :state, :char, :char) -> ();
 	<add-edge-any>:     (:state, :state)        -> ();
 	<add-edge-epsilon>: (:state, :state)        -> ();
 
@@ -89,6 +91,11 @@
 		{
 			c = label;
 			<add-edge-literal>(x, y, c);
+		||
+			c = label;
+			RANGE;
+			d = label;
+			<add-edge-range>(x, y, c, d);
 		||
 			ANY;
 			<add-edge-any>(x, y);
