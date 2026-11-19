@@ -58,8 +58,8 @@ fsm_complete(struct fsm *fsm,
 	}
 
 	for (s = 0; s < fsm->statecount; s++) {
-		struct fsm_edge e;
-		struct edge_iter jt;
+		struct edge_group_iter it;
+		struct edge_group_iter_info info;
 		struct bm bm;
 
 		if (!predicate(fsm, s)) {
@@ -68,9 +68,12 @@ fsm_complete(struct fsm *fsm,
 
 		bm_clear(&bm);
 
-		// TODO: we should be able to pick this up as a bitmap, rather than iterating per symbol
-		for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
-			bm_set(&bm, e.symbol);
+		edge_set_group_iter_reset(fsm->states[s].edges, EDGE_GROUP_ITER_ALL, &it);
+		while (edge_set_group_iter_next(&it, &info)) {
+			for (size_t i = 0; i < 4; i++) {
+				uint64_t *w = bm_nth_word(&bm, i);
+				*w |= info.symbols[i];
+			}
 		}
 
 		bm_invert(&bm);
