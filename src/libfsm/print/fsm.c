@@ -176,12 +176,66 @@ print_char_range(FILE *f, const struct fsm_options *opt, char lower, char upper)
 }
 
 static int
+print_edges(FILE *f, const struct fsm_options *opt,
+	const struct fsm *fsm, fsm_state_t from, const struct edge_set *edges)
+{
+	struct edge_group_iter_info info;
+	struct edge_group_iter egi;
+
+	edge_set_group_iter_reset(edges, EDGE_GROUP_ITER_ALL, &egi);
+	while (edge_set_group_iter_next(&egi, &info)) {
+		unsigned i, ranges = 0;
+		unsigned lower = 256; /* start with lower bound out of range */
+		assert(info.to < fsm->statecount);
+
+		fprintf(f, "%-2u -> %2u ", from, info.to);
+
+		for (i = 0; i < 256; i++) {
+			if (u64bitset_get(info.symbols, i)) {
+				if (lower > i) {
+					lower = i; /* set lower bound for range */
+				}
+			} else {
+				if (lower < i) {
+					if (ranges > 0) {
+						fprintf(f, ", ");
+					}
+
+					print_char_range(f, opt, (char) lower, (char) i - 1);
+					ranges++;
+				}
+				lower = 256;
+			}
+		}
+		if (lower < 256) { /* close last range */
+			if (ranges > 0) {
+				fprintf(f, ", ");
+			}
+
+			print_char_range(f, opt, (char) lower, (char) 255);
+		}
+
+		fprintf(f, ";");
+
+		if (opt->comments) {
+			if (-1 == print_state_comments(f, opt, fsm, info.to)) {
+				return -1;
+			}
+		}
+
+		fprintf(f, "\n");
+	}
+
+	return 0;
+}
+
+static int
 print_state(FILE *f, const struct fsm_options *opt, const struct fsm_hooks *hooks,
-	const struct fsm *fsm,
-	fsm_state_t s)
+	const struct fsm *fsm, fsm_state_t s)
 {
 	assert(f != NULL);
 	assert(opt != NULL);
+	assert(s < fsm->statecount);
 
 	if (!fsm_isend(fsm, s)) {
 		if (-1 == print_hook_reject(f, opt, hooks, NULL, NULL, NULL)) {
@@ -207,57 +261,7 @@ print_state(FILE *f, const struct fsm_options *opt, const struct fsm_hooks *hook
 		}
 	}
 
-	assert(s < fsm->statecount);
-
-	{
-		struct edge_group_iter egi;
-		struct edge_group_iter_info info;
-
-		edge_set_group_iter_reset(fsm->states[s].edges,
-		    EDGE_GROUP_ITER_ALL, &egi);
-		while (edge_set_group_iter_next(&egi, &info)) {
-			unsigned i, ranges = 0;
-			unsigned lower = 256; /* start with lower bound out of range */
-			assert(info.to < fsm->statecount);
-
-			fprintf(f, "%-2u -> %2u ", s, info.to);
-
-			for (i = 0; i < 256; i++) {
-				if (u64bitset_get(info.symbols, i)) {
-					if (lower > i) {
-						lower = i; /* set lower bound for range */
-					}
-				} else {
-					if (lower < i) {
-						if (ranges > 0) {
-							fprintf(f, ", ");
-						}
-
-						print_char_range(f, opt, (char) lower, (char) i - 1);
-						ranges++;
-					}
-					lower = 256;
-				}
-			}
-			if (lower < 256) { /* close last range */
-				if (ranges > 0) {
-					fprintf(f, ", ");
-				}
-
-				print_char_range(f, opt, (char) lower, (char) 255);
-			}
-
-			fprintf(f, ";");
-
-			if (opt->comments) {
-				if (-1 == print_state_comments(f, opt, fsm, info.to)) {
-					return -1;
-				}
-			}
-
-			fprintf(f, "\n");
-		}
-	}
+	print_edges(f, opt, fsm, s, fsm->states[s].edges);
 
 	return 0;
 }
