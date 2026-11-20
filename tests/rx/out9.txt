@@ -1,0 +1,11 @@
+a: match, ids: 0
+b: match, ids: 1
+ab: match, ids: 1
+aa: nomatch
+: match, ids: 2
+c: nomatch
+cc: nomatch
+d: nomatch
+e: nomatch
+ef: nomatch
+f: nomatch

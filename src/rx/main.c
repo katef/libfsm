@@ -124,9 +124,8 @@ xgetline(FILE *f)
 		exit(EXIT_FAILURE);
 	}
 
-	/* n == 0 for an empty line */
-	if (n > 0) {
-		assert(buf[n - 1] == '\n');
+	/* n == 0 for an empty line, and it needn't end in a newline */
+	if (n > 0 && buf[n - 1] == '\n') {
 		buf[n - 1] = '\0';
 	}
 

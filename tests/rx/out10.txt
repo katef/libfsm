@@ -1,0 +1,8 @@
+a: match, ids: 0
+aa: match, ids: 0
+q: match, ids: 16
+qqq: match, ids: 16
+aq: nomatch
+r: match, ids: 17
+s: nomatch
+: nomatch
