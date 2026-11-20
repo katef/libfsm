@@ -233,7 +233,7 @@ trie_add_failure_edges(struct trie_graph *g) {
 				nx->fail = fs;
 			}
 
-			nx->output = nx->output | fs->output;
+			nx->output = nx->output | nx->fail->output;
 			if (!state_set_copy(&nx->endids, NULL, nx->fail->endids)) {
 				free(q);
 				return -1;
