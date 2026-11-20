@@ -1,0 +1,9 @@
+ac: match, ids: 1
+c: nomatch
+abc: match, ids: 0 1
+aac: match, ids: 1
+axc: match, ids: 1
+a.c: match, ids: 1
+a c: match, ids: 1
+bac: nomatch
+a: nomatch
