@@ -1,0 +1,26 @@
+moomin: match, ids: 0
+moominmamma: match, ids: 0
+m_omin%: match, ids: 0 3
+snorkmaiden: nomatch
+mxmin: nomatch
+mxminny: nomatch
+ocelots: match, ids: 1
+tigers: match, ids: 2 4 11
+tiger: match, ids: 4 11
+tarantulas: match, ids: 5 11
+tarantula: match, ids: 11
+bobcat: match, ids: 6
+caaat: match, ids: 6
+owl: match, ids: 7
+barnowls: match, ids: 7
+zebra: match, ids: 8
+zeeebras: match, ids: 8
+azebra: nomatch
+redPANDA: match, ids: 9
+cats: match, ids: 6 10
+dog: match, ids: 10
+dogs!: nomatch
+tapir: match, ids: 11
+: nomatch
+moo: nomatch
+emu: nomatch

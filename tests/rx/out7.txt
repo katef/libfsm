@@ -1,0 +1,39 @@
+accept: match, ids: 0 1
+accepted: match, ids: 0 1
+accepting: match, ids: 0 1
+automata: match, ids: 0 1
+byte: match, ids: 0 1
+character: match, ids: 0 1
+complete: match, ids: 0 1
+deterministic: match, ids: 0 1
+graph: match, ids: 1
+group: match, ids: 0 1
+join: match, ids: 0 1
+minimise: match, ids: 1
+nybble: match, ids: 0 1
+optional: match, ids: 0 1
+query: match, ids: 0 1
+repeat: match, ids: 1
+repetition: match, ids: 1
+star: match, ids: 0 1
+transform: match, ids: 0 1
+transition: match, ids: 0 1
+trie: match, ids: 1
+union: match, ids: 0 1
+words: match, ids: 0 1
+about: match, ids: 0
+learn: match, ids: 0
+learning: match, ids: 0
+marzipan: match, ids: 0
+octopus: match, ids: 0
+penguins: match, ids: 0
+rectangles: match, ids: 0
+saffron: match, ids: 0
+secure: match, ids: 0
+zest: match, ids: 0
+cabbages: nomatch
+peas: nomatch
+abou: nomatch
+earn: nomatch
+learns: nomatch
+zestful: nomatch
