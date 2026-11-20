@@ -30,4 +30,17 @@ ${TEST_OUTDIR.tests/rx}/res${n}: ${TEST_SRCDIR.tests/rx}/out${n}.txt ${TEST_OUTD
 
 test:: ${TEST_OUTDIR.tests/rx}/res${n}
 
+# every literal is a matching text verbatim by definition
+${TEST_OUTDIR.tests/rx}/got-literal${n}.txt: ${TEST_OUTDIR.tests/rx}/run${n} ${TEST.tests/rx/in${n}:M*.literal}
+	cat /dev/null ${.ALLSRC:M*.literal} \
+	| ${TEST_OUTDIR.tests/rx}/run${n} \
+	> $@
+
+${TEST_OUTDIR.tests/rx}/res-literal${n}: ${TEST_OUTDIR.tests/rx}/got-literal${n}.txt
+	grep -q ': nomatch$$' ${.ALLSRC:M*.txt}; \
+	if [ $$? -eq 1 ]; then echo PASS; else echo FAIL; fi \
+	> $@
+
+test:: ${TEST_OUTDIR.tests/rx}/res-literal${n}
+
 .endfor
