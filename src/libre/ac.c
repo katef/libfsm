@@ -318,6 +318,24 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 	ts->st = st;
 	ts->have_st = 1;
 
+	if (ts->output) {
+		fsm_setend(fsm, st, 1);
+
+		struct state_iter si;
+		fsm_state_t state;
+		state_set_reset(ts->endids, &si);
+		while (state_set_next(&si, &state)) {
+			if (!fsm_endid_set(fsm, st, (fsm_end_id_t) state)) {
+				return 0;
+			}
+		}
+	}
+
+	if (ts->output && have_end) {
+		*q = st;
+		return fsm_addedge_any(fsm, st, st);
+	}
+
 	for (sym = 0; sym < 256; sym++) {
 		struct trie_state *nx;
 
@@ -330,19 +348,6 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 			}
 
 			if (!fsm_addedge_literal(fsm, st, dst, (char)sym)) {
-				return 0;
-			}
-		}
-	}
-
-	if (ts->output) {
-		fsm_setend(fsm, st, 1);
-
-		struct state_iter si;
-		fsm_state_t state;
-		state_set_reset(ts->endids, &si);
-		while (state_set_next(&si, &state)) {
-			if (!fsm_endid_set(fsm, st, (fsm_end_id_t) state)) {
 				return 0;
 			}
 		}
