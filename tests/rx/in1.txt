@@ -1,0 +1,9 @@
+ac
+c
+abc
+aac
+axc
+a.c
+a c
+bac
+a

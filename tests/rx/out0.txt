@@ -1,5 +1,19 @@
-abc: match, ids: 2
-xabc: match, ids: 2
-aa: nomatch
-ac: nomatch
-: nomatch
+fish: match, ids: 2
+a: nomatch
+c: match, ids: 0
+bc: match, ids: 0
+ab: nomatch
+bb: nomatch
+abc: match, ids: 0
+abb: nomatch
+acb: nomatch
+acab: nomatch
+abcxyz: match, ids: 0
+abcxyzzz: match, ids: 0
+xyz: match, ids: 0
+xyzz: match, ids: 0
+xyzzzzz: match, ids: 0
+zz: match, ids: 1
+zzzz: nomatch
+zzzzz: nomatch
+zzzzzzzzz: nomatch
