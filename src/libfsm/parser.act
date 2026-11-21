@@ -367,7 +367,20 @@
 
 	<add-edge-literal>: (x :state, y :state, c :char) -> () = @{
 		if (!fsm_addedge_literal(fsm, @x, @y, @c)) {
+			/* XXX: the .fsm parser is now library code, we shouldn't exit() here */
 			perror("fsm_addedge_literal");
+			exit(EXIT_FAILURE);
+		}
+	@};
+
+	<add-edge-range>: (x :state, y :state, a :char, b :char) -> () = @{
+		if ((unsigned char) @a > (unsigned char) @b) {
+			err(lex_state, "Syntax error: range out of order");
+			exit(EXIT_FAILURE);
+		}
+
+		if (!fsm_addedge_range(fsm, @x, @y, @a, @b)) {
+			perror("fsm_addedge_range");
 			exit(EXIT_FAILURE);
 		}
 	@};

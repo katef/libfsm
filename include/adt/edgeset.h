@@ -84,7 +84,7 @@ edge_set_add(struct edge_set **set, const struct fsm_alloc *alloc,
 
 int
 edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
-	uint64_t symbols[256/64], fsm_state_t state);
+	const uint64_t symbols[256/64], fsm_state_t state);
 
 /* Notify the data structure that it wis likely to soon need to grow
  * to fit N more bulk edge groups. This can avoid resizing multiple times
@@ -119,6 +119,10 @@ edge_set_contains(const struct edge_set *set, unsigned char symbol);
 
 int
 edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm);
+
+/* Union the symbols of all edges in the set into bm. */
+void
+edge_set_get_symbols(const struct edge_set *set, struct bm *bm);
 
 int
 edge_set_transition(const struct edge_set *set, unsigned char symbol,

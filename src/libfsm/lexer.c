@@ -715,7 +715,7 @@ z5(struct lx *lx)
 	enum {
 		S0, S1, S2, S3, S4, S5, S6, S7, S8, S9, 
 		S10, S11, S12, S13, S14, S15, S16, S17, S18, S19, 
-		S20, S21, S22
+		S20, S21, S22, S23, S24
 	} state;
 
 	state = S0;
@@ -725,14 +725,15 @@ z5(struct lx *lx)
 		switch (state) {
 		case S0: /* e.g. "" */
 			switch ((unsigned char) c) {
-			case ',': state = S1; break;
-			case ';': state = S2; break;
-			case '?': state = S3; break;
-			case '-': state = S4; break;
-			case '[': state = S5; break;
-			case '=': state = S6; break;
-			case 'e': state = S7; break;
-			case 's': state = S8; break;
+			case '.': state = S1; break;
+			case ',': state = S2; break;
+			case ';': state = S3; break;
+			case '?': state = S4; break;
+			case '-': state = S5; break;
+			case '[': state = S6; break;
+			case '=': state = S7; break;
+			case 'e': state = S8; break;
+			case 's': state = S9; break;
 			case '0':
 			case '1':
 			case '2':
@@ -793,45 +794,54 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case '\'': state = S10; break;
-			case '"': state = S11; break;
-			case '#': state = S12; break;
+			case 'z': state = S10; break;
+			case '\'': state = S11; break;
+			case '"': state = S12; break;
+			case '#': state = S13; break;
 			case '\t':
 			case '\n':
 			case '\r':
-			case ' ': state = S13; break;
+			case ' ': state = S14; break;
 			default:  
 				if (!has_consumed_input) { return TOK_EOF; }
 				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S1: /* e.g. "," */
+		case S1: /* e.g. "." */
+			switch ((unsigned char) c) {
+			case '.': state = S24; break;
+			default:  
+				if (!has_consumed_input) { return TOK_EOF; }
+				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
+			}
+			break;
+
+		case S2: /* e.g. "," */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_COMMA;
 
-		case S2: /* e.g. ";" */
+		case S3: /* e.g. ";" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_SEP;
 
-		case S3: /* e.g. "\077" */
+		case S4: /* e.g. "\077" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_ANY;
 
-		case S4: /* e.g. "-" */
+		case S5: /* e.g. "-" */
 			switch ((unsigned char) c) {
-			case '>': state = S22; break;
+			case '>': state = S23; break;
 			default:  
 				if (!has_consumed_input) { return TOK_EOF; }
 				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 			}
 			break;
 
-		case S5: /* e.g. "[" */
+		case S6: /* e.g. "[" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return lx->z = z1, TOK_OPENENDIDS;
 
-		case S6: /* e.g. "=" */
+		case S7: /* e.g. "=" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_EQUALS;
 
-		case S7: /* e.g. "e" */
+		case S8: /* e.g. "e" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -894,13 +904,13 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case 'n': state = S19; break;
+			case 'z': state = S10; break;
+			case 'n': state = S20; break;
 			default:  lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_IDENT;
 			}
 			break;
 
-		case S8: /* e.g. "s" */
+		case S9: /* e.g. "s" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -963,13 +973,13 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case 't': state = S14; break;
+			case 'z': state = S10; break;
+			case 't': state = S15; break;
 			default:  lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_IDENT;
 			}
 			break;
 
-		case S9: /* e.g. "0" */
+		case S10: /* e.g. "0" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -1038,16 +1048,16 @@ z5(struct lx *lx)
 			}
 			break;
 
-		case S10: /* e.g. "'" */
+		case S11: /* e.g. "'" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return lx->z = z2, lx->z(lx);
 
-		case S11: /* e.g. "\"" */
+		case S12: /* e.g. "\"" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return lx->z = z3, lx->z(lx);
 
-		case S12: /* e.g. "#" */
+		case S13: /* e.g. "#" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return lx->z = z4, lx->z(lx);
 
-		case S13: /* e.g. "\\x09" */
+		case S14: /* e.g. "\\x09" */
 			switch ((unsigned char) c) {
 			case '\t':
 			case '\n':
@@ -1057,7 +1067,7 @@ z5(struct lx *lx)
 			}
 			break;
 
-		case S14: /* e.g. "st" */
+		case S15: /* e.g. "st" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -1120,13 +1130,13 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case 'a': state = S15; break;
+			case 'z': state = S10; break;
+			case 'a': state = S16; break;
 			default:  lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_IDENT;
 			}
 			break;
 
-		case S15: /* e.g. "sta" */
+		case S16: /* e.g. "sta" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -1189,13 +1199,13 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case 'r': state = S16; break;
+			case 'z': state = S10; break;
+			case 'r': state = S17; break;
 			default:  lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_IDENT;
 			}
 			break;
 
-		case S16: /* e.g. "star" */
+		case S17: /* e.g. "star" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -1258,13 +1268,13 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case 't': state = S17; break;
+			case 'z': state = S10; break;
+			case 't': state = S18; break;
 			default:  lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_IDENT;
 			}
 			break;
 
-		case S17: /* e.g. "start" */
+		case S18: /* e.g. "start" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -1328,16 +1338,16 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case ':': state = S18; break;
+			case 'z': state = S10; break;
+			case ':': state = S19; break;
 			default:  lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_IDENT;
 			}
 			break;
 
-		case S18: /* e.g. "start:" */
+		case S19: /* e.g. "start:" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_START;
 
-		case S19: /* e.g. "en" */
+		case S20: /* e.g. "en" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -1400,13 +1410,13 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case 'd': state = S20; break;
+			case 'z': state = S10; break;
+			case 'd': state = S21; break;
 			default:  lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_IDENT;
 			}
 			break;
 
-		case S20: /* e.g. "end" */
+		case S21: /* e.g. "end" */
 			switch ((unsigned char) c) {
 			case '0':
 			case '1':
@@ -1470,17 +1480,20 @@ z5(struct lx *lx)
 			case 'w':
 			case 'x':
 			case 'y':
-			case 'z': state = S9; break;
-			case ':': state = S21; break;
+			case 'z': state = S10; break;
+			case ':': state = S22; break;
 			default:  lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_IDENT;
 			}
 			break;
 
-		case S21: /* e.g. "end:" */
+		case S22: /* e.g. "end:" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_END;
 
-		case S22: /* e.g. "->" */
+		case S23: /* e.g. "->" */
 			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_TO;
+
+		case S24: /* e.g. ".." */
+			lx_ungetc(lx, c); lx_dynpop(lx->buf_opaque); return TOK_RANGE;
 
 		default:
 			; /* unreached */
@@ -1489,37 +1502,38 @@ z5(struct lx *lx)
 
 	/* end states */
 	switch (state) {
-	case S1: return TOK_COMMA;
-	case S2: return TOK_SEP;
-	case S3: return TOK_ANY;
-	case S5: return lx->z = z1, TOK_OPENENDIDS;
-	case S6: return TOK_EQUALS;
-	case S7: return TOK_IDENT;
+	case S2: return TOK_COMMA;
+	case S3: return TOK_SEP;
+	case S4: return TOK_ANY;
+	case S6: return lx->z = z1, TOK_OPENENDIDS;
+	case S7: return TOK_EQUALS;
 	case S8: return TOK_IDENT;
 	case S9: return TOK_IDENT;
-	case S10: return lx->z = z2, lx->z(lx);
-	case S11: return lx->z = z3, lx->z(lx);
-	case S12: return lx->z = z4, lx->z(lx);
-	case S13: return TOK_EOF;
-	case S14: return TOK_IDENT;
+	case S10: return TOK_IDENT;
+	case S11: return lx->z = z2, lx->z(lx);
+	case S12: return lx->z = z3, lx->z(lx);
+	case S13: return lx->z = z4, lx->z(lx);
+	case S14: return TOK_EOF;
 	case S15: return TOK_IDENT;
 	case S16: return TOK_IDENT;
 	case S17: return TOK_IDENT;
-	case S18: return TOK_START;
-	case S19: return TOK_IDENT;
+	case S18: return TOK_IDENT;
+	case S19: return TOK_START;
 	case S20: return TOK_IDENT;
-	case S21: return TOK_END;
-	case S22: return TOK_TO;
+	case S21: return TOK_IDENT;
+	case S22: return TOK_END;
+	case S23: return TOK_TO;
+	case S24: return TOK_RANGE;
 	default: 
 				if (!has_consumed_input) { return TOK_EOF; }
 				lx_ungetc(lx, c); lx->lgetc = NULL; return TOK_UNKNOWN;
 	}
 
 		switch (state) {
-		case S10:
 		case S11:
 		case S12:
 		case S13:
+		case S14:
 			break;
 
 		default:
@@ -1544,6 +1558,7 @@ const char *
 lx_name(enum lx_token t)
 {
 	switch (t) {
+	case TOK_RANGE: return "RANGE";
 	case TOK_SEP: return "SEP";
 	case TOK_ANY: return "ANY";
 	case TOK_TO: return "TO";
@@ -1574,6 +1589,7 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 
 	if (z == z0) {
 		switch (t) {
+		case TOK_RANGE: return "";
 		case TOK_SEP: return "";
 		case TOK_ANY: return "";
 		case TOK_TO: return "";
@@ -1595,6 +1611,7 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 	} else
 	if (z == z1) {
 		switch (t) {
+		case TOK_RANGE: return "";
 		case TOK_SEP: return "";
 		case TOK_ANY: return "";
 		case TOK_TO: return "";
@@ -1616,6 +1633,7 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 	} else
 	if (z == z2) {
 		switch (t) {
+		case TOK_RANGE: return "";
 		case TOK_SEP: return "";
 		case TOK_ANY: return "";
 		case TOK_TO: return "";
@@ -1637,6 +1655,7 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 	} else
 	if (z == z3) {
 		switch (t) {
+		case TOK_RANGE: return "";
 		case TOK_SEP: return "";
 		case TOK_ANY: return "";
 		case TOK_TO: return "";
@@ -1658,6 +1677,7 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 	} else
 	if (z == z4) {
 		switch (t) {
+		case TOK_RANGE: return "";
 		case TOK_SEP: return "";
 		case TOK_ANY: return "";
 		case TOK_TO: return "";
@@ -1679,6 +1699,7 @@ lx_example(enum lx_token (*z)(struct lx *), enum lx_token t)
 	} else
 	if (z == z5) {
 		switch (t) {
+		case TOK_RANGE: return "";
 		case TOK_SEP: return "";
 		case TOK_ANY: return "";
 		case TOK_TO: return "";

@@ -703,18 +703,16 @@ ast_expr_charset(const struct ast_expr *n, enum re_flags re_flags, struct bm *bm
 		return 0;
 	}
 
-	{
+	/* not portable */
+	if (n->re_flags & RE_ICASE) {
 		unsigned c;
 
 		for (c = from; c <= to; c++) {
-			if (n->re_flags & RE_ICASE) {
-				bm_set(bm, tolower(c));
-				bm_set(bm, toupper(c));
-				continue;
-			}
-
-			bm_set(bm, c);
+			bm_set(bm, tolower(c));
+			bm_set(bm, toupper(c));
 		}
+	} else {
+		bm_range(bm, from, to);
 	}
 
 	return 1;

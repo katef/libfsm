@@ -219,7 +219,6 @@ static void
 find_coverage(const struct ir_group *groups, size_t n, struct bm *bm)
 {
 	size_t j, i;
-	unsigned int e;
 
 	assert(groups != NULL);
 	assert(bm != NULL);
@@ -229,10 +228,7 @@ find_coverage(const struct ir_group *groups, size_t n, struct bm *bm)
 	for (j = 0; j < n; j++) {
 		for (i = 0; i < groups[j].n; i++) {
 			assert(groups[j].ranges[i].end >= groups[j].ranges[i].start);
-			for (e = groups[j].ranges[i].start; e <= groups[j].ranges[i].end; e++) {
-				assert(!bm_get(bm, e));
-				bm_set(bm, e);
-			}
+			bm_range(bm, groups[j].ranges[i].start, groups[j].ranges[i].end);
 		}
 	}
 }

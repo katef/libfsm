@@ -58,10 +58,7 @@ fsm_complete(struct fsm *fsm,
 	}
 
 	for (s = 0; s < fsm->statecount; s++) {
-		struct fsm_edge e;
-		struct edge_iter jt;
 		struct bm bm;
-		int i;
 
 		if (!predicate(fsm, s)) {
 			continue;
@@ -69,17 +66,17 @@ fsm_complete(struct fsm *fsm,
 
 		bm_clear(&bm);
 
-		for (edge_set_reset(fsm->states[s].edges, &jt); edge_set_next(&jt, &e); ) {
-			bm_set(&bm, e.symbol);
+		edge_set_get_symbols(fsm->states[s].edges, &bm);
+
+		bm_invert(&bm);
+
+		if (!bm_any(&bm)) {
+			continue;
 		}
 
-		/* TODO: bulk add symbols as the inverse of this bitmap */
-		i = -1;
-		while (i = bm_next(&bm, i, 0), i <= UCHAR_MAX) {
-			if (!fsm_addedge_literal(fsm, s, new, (char)i)) {
-				/* TODO: free stuff */
-				return 0;
-			}
+		if (!edge_set_add_bulk(&fsm->states[s].edges, fsm->alloc, bm.map, new)) {
+			/* TODO: free stuff */
+			return 0;
 		}
 	}
 

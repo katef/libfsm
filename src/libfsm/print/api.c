@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include "libfsm/internal.h" /* XXX: up here for bitmap.h */
 
@@ -26,21 +25,6 @@
 #include <fsm/walk.h>
 #include <fsm/print.h>
 #include <fsm/options.h>
-
-static int
-rangeclass(unsigned char x, unsigned char y)
-{
-	int (*a[])(int c) = { isupper, islower, isdigit };
-	size_t i;
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (a[i](x) && a[i](y)) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
 
 int
 fsm_print_api(FILE *f,
@@ -215,16 +199,12 @@ fsm_print_api(FILE *f,
 					c_escputcharlit(f, opt, lo);
 					fprintf(f, ")) { return 0; }\n");
 				} else {
-					fprintf(f, "\tfor (i = 0x%02x; i <= 0x%02x; i++) {",
-						(unsigned int) lo, (unsigned int) hi - 1);
-					if (opt->comments && rangeclass(lo, hi - 1)) {
-						fprintf(f, " /* '%c' .. '%c' */", (unsigned char) lo, (unsigned char) hi - 1);
-					}
-					fprintf(f, "\n");
-					fprintf(f, "\t\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], i))",
+					fprintf(f, "\tif (!fsm_addedge_range(fsm, s[%u], s[%u], ",
 						from, to);
-					fprintf(f, " { return 0; }\n");
-					fprintf(f, "\t}\n");
+					c_escputcharlit(f, opt, lo);
+					fprintf(f, ", ");
+					c_escputcharlit(f, opt, hi - 1);
+					fprintf(f, ")) { return 0; }\n");
 				}
 			}
 		}

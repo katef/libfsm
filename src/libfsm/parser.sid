@@ -33,6 +33,7 @@
 	ANY;
 	SEP;
 	COMMA;
+	RANGE;
 
 	EOF;
 	!UNKNOWN;
@@ -48,6 +49,7 @@
 	<free-statelist>;
 
 	<add-edge-literal>: (:state, :state, :char) -> ();
+	<add-edge-range>:   (:state, :state, :char, :char) -> ();
 	<add-edge-any>:     (:state, :state)        -> ();
 	<add-edge-epsilon>: (:state, :state)        -> ();
 
@@ -75,7 +77,36 @@
 		n = IDENT;
 	};
 
-	edge = {
+	edge [
+
+		trans-list: (x :state, y :state) -> () = {
+			{
+				c = label;
+				<add-edge-literal>(x, y, c);
+			||
+				c = label;
+				RANGE;
+				d = label;
+				<add-edge-range>(x, y, c, d);
+			||
+				ANY;
+				<add-edge-any>(x, y);
+			};
+
+			{
+				{
+					COMMA;
+				##
+					<err-expected-comma>;
+				};
+
+				trans-list(x, y);
+			||
+				$;
+			};
+		};
+
+	] = {
 		a = ident;
 		TO;
 		b = ident;
@@ -87,11 +118,7 @@
 		<free>(b);
 
 		{
-			c = label;
-			<add-edge-literal>(x, y, c);
-		||
-			ANY;
-			<add-edge-any>(x, y);
+			trans-list(x, y);
 		||
 			<add-edge-epsilon>(x, y);
 		##
@@ -126,8 +153,8 @@
 		};
 	};
 
-	items = {
-		items;
+	item-list = {
+		item-list;
 		{
 			edge;
 		||
@@ -238,7 +265,7 @@
 	};
 
 	fsm = {
-		items;
+		item-list;
 		xstart;
 		xend;
 

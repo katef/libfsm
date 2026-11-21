@@ -281,7 +281,7 @@ find_state_position(const struct edge_set *set, fsm_state_t state, size_t *dst)
 
 int
 edge_set_add_bulk(struct edge_set **pset, const struct fsm_alloc *alloc,
-	uint64_t symbols[256/64], fsm_state_t state)
+	const uint64_t symbols[256/64], fsm_state_t state)
 {
 	struct edge_set *set;
 	struct edge_group *eg;
@@ -561,6 +561,25 @@ edge_set_hasnondeterminism(const struct edge_set *set, struct bm *bm)
 	return 0;
 }
 
+void
+edge_set_get_symbols(const struct edge_set *set, struct bm *bm)
+{
+	size_t i, w_i;
+
+	assert(bm != NULL);
+
+	if (edge_set_empty(set)) {
+		return;
+	}
+
+	for (i = 0; i < set->count; i++) {
+		const struct edge_group *eg = &set->groups[i];
+		for (w_i = 0; w_i < 4; w_i++) {
+			bm->map[w_i] |= eg->symbols[w_i];
+		}
+	}
+}
+
 int
 edge_set_transition(const struct edge_set *set, unsigned char symbol,
 	fsm_state_t *state)
@@ -803,7 +822,7 @@ edge_set_remove_state(struct edge_set **pset, fsm_state_t state)
 	while (i < set->count) {
 		const struct edge_group *eg = &set->groups[i];
 		if (eg->to == state) {
-			const size_t to_mv = set->count - i;
+			const size_t to_mv = set->count - i - 1;
 			memmove(&set->groups[i],
 			    &set->groups[i + 1],
 			    to_mv * sizeof(*eg));
@@ -1086,7 +1105,7 @@ edge_set_replace_state(struct edge_set **pset, const struct fsm_alloc *alloc,
 	for (i = 0; i < set->count; i++) {
 		struct edge_group *eg = &set->groups[i];
 		if (eg->to == old) {
-			const size_t to_mv = set->count - i;
+			const size_t to_mv = set->count - i - 1;
 			unsigned char label;
 			if (!find_first_group_label(eg, &label)) {
 				return 1; /* ignore empty group */

@@ -452,8 +452,6 @@ void
 	fsm_print(f, fsm, & (const struct fsm_options) {
 		.consolidate_edges = 1,
 		.comments = 1,
-		.group_edges = 1
 	}, NULL, FSM_PRINT_FSM);
-
 }
 

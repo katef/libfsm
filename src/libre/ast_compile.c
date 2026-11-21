@@ -241,6 +241,41 @@ addedge_literal(struct comp_env *env, enum re_flags re_flags,
 }
 
 static int
+addedge_range(struct comp_env *env, enum re_flags re_flags,
+	fsm_state_t from, fsm_state_t to, char x, char y)
+{
+	struct fsm *fsm = env->fsm;
+	assert(fsm != NULL);
+
+	assert(from < env->fsm->statecount);
+	assert(to < env->fsm->statecount);
+	assert((unsigned char) x <= (unsigned char) y);
+
+	if (re_flags & RE_ICASE) {
+		unsigned int c;
+
+		for (c = (unsigned char) x; c <= (unsigned char) y; c++) {
+			if (!fsm_addedge_literal(fsm, from, to, (char)tolower((unsigned char) c))) {
+				return 0;
+			}
+
+			if (!fsm_addedge_literal(fsm, from, to, (char)toupper((unsigned char) c))) {
+				return 0;
+			}
+		}
+	} else {
+		if (!fsm_addedge_range(env->fsm, from, to,
+			x, y))
+		{
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+
+static int
 intern_start_any_loop(struct comp_env *env)
 {
 	fsm_state_t loop;
@@ -543,6 +578,9 @@ print_linkage(enum link_types t)
 
 #define LITERAL(FROM, TO, C)        \
     if (!addedge_literal(env, n->re_flags, (FROM), (TO), ((char)C))) { goto error; }
+
+#define RANGE(FROM, TO, X, Y)        \
+    if (!addedge_range(env, n->re_flags, (FROM), (TO), ((char)X), ((char)Y))) { goto error; }
 
 #define RECURSE(FROM, TO, NODE, PARENT)		\
     if (!comp_iter(env, (FROM), (TO), (NODE), (PARENT))) { return 0; }
@@ -980,8 +1018,6 @@ comp_iter(struct comp_env *env,
 	}
 
 	case AST_EXPR_RANGE: {
-		unsigned int i;
-
 		if (n->u.range.from.type != AST_ENDPOINT_LITERAL || n->u.range.to.type != AST_ENDPOINT_LITERAL) {
 			/* not yet supported */
 			goto error;
@@ -996,10 +1032,7 @@ comp_iter(struct comp_env *env,
 			break;
 		}
 
-		for (i = n->u.range.from.u.literal.c; i <= n->u.range.to.u.literal.c; i++) {
-			LITERAL(x, y, i);
-		}
-
+		RANGE(x, y, n->u.range.from.u.literal.c, n->u.range.to.u.literal.c);
 		break;
 	}
 
@@ -1020,6 +1053,7 @@ error:
 #undef ANY
 #undef NEWSTATE
 #undef LITERAL
+#undef RANGE
 #undef RECURSE
 
 struct fsm *
