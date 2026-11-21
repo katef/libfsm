@@ -1,0 +1,8 @@
+abcd: match, ids: 0 1 2
+abcde: match, ids: 0 1 2
+xcx: match, ids: 2
+bc: match, ids: 0 2
+bd: nomatch
+abd: nomatch
+c: match, ids: 2
+cc: match, ids: 2
