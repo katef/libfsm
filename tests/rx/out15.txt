@@ -1,0 +1,7 @@
+ab: match, ids: 0
+abc: match, ids: 0
+abcd: match, ids: 0 1
+abcdx: match, ids: 0 1
+a: nomatch
+xab: nomatch
+abab: match, ids: 0

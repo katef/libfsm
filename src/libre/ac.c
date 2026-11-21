@@ -333,9 +333,58 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 		}
 	}
 
-	if (ts->output && have_end) {
+	if (ts->output && have_end && ts->fail != NULL) {
 		*q = st;
 		return fsm_addedge_any(fsm, st, st);
+	}
+
+	if (ts->output && have_end) {
+		fsm_state_t rest;
+
+		if (!fsm_addstate(fsm, &rest)) {
+			return 0;
+		}
+
+		if (!fsm_addedge_any(fsm, rest, rest)) {
+			return 0;
+		}
+
+		fsm_setend(fsm, rest, 1);
+
+		struct state_iter si;
+		fsm_state_t state;
+		state_set_reset(ts->endids, &si);
+		while (state_set_next(&si, &state)) {
+			if (!fsm_endid_set(fsm, rest, (fsm_end_id_t) state)) {
+				return 0;
+			}
+		}
+
+		for (sym = 0; sym < 256; sym++) {
+			struct trie_state *nx;
+			fsm_state_t dst;
+
+			nx = ts->children[sym];
+			if (nx == NULL) {
+				dst = rest;
+			} else {
+				nx->output = 1;
+				if (!state_set_copy(&nx->endids, NULL, ts->endids)) {
+					return 0;
+				}
+
+				if (!trie_to_fsm_state(nx, fsm, have_end, single_end, &dst)) {
+					return 0;
+				}
+			}
+
+			if (!fsm_addedge_literal(fsm, st, dst, (char)sym)) {
+				return 0;
+			}
+		}
+
+		*q = st;
+		return 1;
 	}
 
 	for (sym = 0; sym < 256; sym++) {
