@@ -313,16 +313,15 @@ categorize(enum re_dialect dialect, enum re_flags flags,
 		return CATEGORY_ERROR;
 	}
 
+	if (r == 1 && category == RE_LITERAL_UNSATISFIABLE) {
+		assert(lit_s == NULL);
+		return CATEGORY_UNSATISFIABLE;
+	}
+
 	/* empty string */
 	if (r == 1 && lit_n == 0) {
 		assert(lit_s == NULL);
 		return CATEGORY_EMPTY;
-	}
-
-	/* unsatisfiable */
-	if (r == 1 && category == RE_LITERAL_UNSATISFIABLE) {
-		assert(lit_s == NULL);
-		return CATEGORY_UNSATISFIABLE;
 	}
 
 	/* is a literal */
