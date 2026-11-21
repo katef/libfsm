@@ -619,10 +619,10 @@ conflict(FILE *f, const struct fsm_options *opt,
 
 		for (size_t j = 0; j < env->general->count; j++) {
 			// TODO: delimiters per dialect, centralise with libre's re_perror()
-			if (env->general->a[i].id == state_metadata->end_ids[i]) {
+			if (env->general->a[j].id == state_metadata->end_ids[i]) {
 				fprintf(stderr, "#%u: /%s/\n",
 					state_metadata->end_ids[i],
-					env->general->a[i].s);
+					env->general->a[j].s);
 				goto next;
 			}
 		}
