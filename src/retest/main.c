@@ -1252,6 +1252,8 @@ main(int argc, char *argv[])
 					vm_opts.flags |= FSM_VM_COMPILE_PRINT_IR;
 				} else if (strcmp(optarg, "enc") == 0) {
 					vm_opts.flags |= FSM_VM_COMPILE_PRINT_ENC;
+				} else if (strcmp(optarg, "greedy") == 0) {
+					vm_opts.flags |= FSM_VM_COMPILE_GREEDY;
 				} else {
 					fprintf(stderr, "unknown argument to -L: %s\n", optarg);
 					usage();

@@ -38,7 +38,6 @@ R pcre
 +xxxx/ case S0: exit-2; ////
 -x
 
-
 # a tombstone alt means the whole subexpression matches nothing.
 # we have test coverage for [^\x00-\xff] elsewhere, here it's
 # important that we get it in an alt.
@@ -63,6 +62,16 @@ R pcre
 ~^(?:[^\x00-\xff]|)$
 +
 -a
+
+# for -l rust, a fetch followed by a fetch left the first `c` unused
+# this doesn't apply for the vmc codegen because its declaration is
+# scoped to the entire function
+R pcre
+~^(?s).a
++\na
++xa
+-a
+-xb
 
 # regression for \z and $ comparing equal in AST deduplication
 # this caused \z|$ to be constructed as just \z
