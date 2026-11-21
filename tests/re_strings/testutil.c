@@ -35,6 +35,10 @@ run_test(const char **strings)
 	struct fsm *fsm = re_strings_build(s, NULL, flags);
 	assert(fsm != NULL);
 
+	if (!fsm_determinise(fsm)) {
+		assert(!"fsm_determinise");
+	}
+
 	/* Each literal string input should match, and the set of
 	 * matching endids should include the expected one. */
 	id = 0;

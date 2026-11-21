@@ -428,8 +428,11 @@ literal_strings(const struct literal *a, size_t n, enum re_strings_flags flags)
 		exit(EXIT_FAILURE);
 	}
 
-	/* this is already a DFA, courtesy of re_strings() */
-	assert(fsm_all(fsm, fsm_isdfa));
+	/* re_strings no longer guarantees a DFA :( */
+	if (!fsm_determinise(fsm)) {
+		perror("fsm_determinise");
+		exit(EXIT_FAILURE);
+	}
 
 	return fsm;
 }
