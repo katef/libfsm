@@ -304,11 +304,8 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 		int szeroes, eones;
 		int tzeroes, tones;
 
-		szeroes = eones = -1;
-		if (dbyte < noct) {
-			szeroes = memcmp(&socts[dbyte], &zeroes, (noct - dbyte) + 1);
-			eones   = memcmp(&eocts[dbyte], &ones,   (noct - dbyte) + 1);
-		}
+		szeroes = memcmp(&socts[dbyte], zeroes, (noct - dbyte) + 1);
+		eones   = memcmp(&eocts[dbyte], ones,   (noct - dbyte) + 1);
 
 		if (szeroes == 0 && eones == 0) {
 			/*
@@ -316,18 +313,17 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 			 * range, and the final differing bytes are all ones, we complete
 			 * the entire range.
 			 */
-			gen_range(r, noct, dbyte - 1, 0, 255, socts);
+			gen_range(r, noct, (int) dbyte - 1, 0, 255, socts);
 			return;
 		}
 
-		tzeroes = tones = -1;
-		if (dbyte + 1 < noct) {
-			tzeroes = memcmp(&socts[dbyte + 1], &zeroes, noct - dbyte);
-			tones   = memcmp(&eocts[dbyte + 1], &ones,   noct - dbyte);
-		}
+		tzeroes = (dbyte == noct) ? 0
+			: memcmp(&socts[dbyte + 1], zeroes, noct - dbyte);
+		tones   = (dbyte == noct) ? 0
+			: memcmp(&eocts[dbyte + 1], ones,   noct - dbyte);
 
 		if (tzeroes == 0 && tones == 0) {
-			gen_range(r, noct, dbyte - 1, socts[dbyte], eocts[dbyte], socts);
+			gen_range(r, noct, (int) dbyte - 1, socts[dbyte], eocts[dbyte], socts);
 			return;
 		}
 
