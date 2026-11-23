@@ -29,7 +29,6 @@ struct trie_state {
 	struct state_set *endids;
 
 	fsm_state_t st;
-	unsigned int index;
 	unsigned int output:1;
 	unsigned int have_st:1;
 };
@@ -71,13 +70,12 @@ newstate(struct trie_graph *g)
 	}
 
 	st = &g->pool->states[g->pool->n++];
+	g->nstates++;
 
 	memset(st->children,0,sizeof st->children);
 
 	st->fail    = NULL;
 	st->have_st = 0;
-
-	st->index   = g->nstates++;
 
 	st->output  = 0;
 	st->endids  = NULL;
@@ -365,60 +363,6 @@ struct dump_state {
 };
 
 static void
-dump_state(const struct trie_state *st, FILE *f)
-{
-	int i;
-
-	fprintf(f, "\tn%u [ label=<%u>; ];\n", st->index, st->index);
-
-	for (i = 0; i < 256; i++) {
-		if (st->children[i] != NULL) {
-			static const struct fsm_options opt;
-			fprintf(f, "\tn%u -> n%u [ style = solid; label = <",
-				st->index, st->children[i]->index);
-			dot_escputc_html(f, &opt, (char) i);
-			fprintf(f, "> ];\n");
-
-			dump_state(st->children[i], f);
-		}
-	}
-
-	if (st->output) {
-		struct state_iter it;
-		fsm_state_t endid;
-		int i;
-
-		fprintf(f, "\tn%u [ peripheries = 2, label = <", st->index);
-
-		for (i = 0, state_set_reset(st->endids, &it); state_set_next(&it, &endid); i = 1) {
-			if (i != 0) {
-				fprintf(f, ", ");
-			}
-			fprintf(f, "#%u", endid);
-		}
-
-		fprintf(f, "> ];\n");
-	}
-}
-
-static void
-dump_fail(const struct trie_state *st, FILE *f)
-{
-	int i;
-
-	if (st->fail) {
-		fprintf(f, "\tn%u -> n%u [ dir = back, style = dashed ];\n",
-			st->fail->index, st->index);
-	}
-
-	for (i = 0; i < 256; i++) {
-		if (st->children[i] != NULL) {
-			dump_fail(st->children[i], f);
-		}
-	}
-}
-
-static void
 dump_rank(struct dump_state *ds, const struct trie_state *st, unsigned int rank, FILE *f, size_t *index)
 {
 	unsigned i;
@@ -455,6 +399,42 @@ ds_rank_cmp(const void *a, const void *b)
 	return 0;
 }
 
+/*
+ * Picking up a state index from the allocator pool means we don't need to
+ * store the index inside struct trie_state. This way we can match the
+ * numbering from the academic paper (using the same numbering helps for
+ * debugging!) and keep the memory footprint svelte.
+ *
+ * The downside of course is that this search is slow. Which is fine for
+ * our purposes debugging.
+ *
+ * This is based on the assumption that the allocations are tracked in
+ * the order that they're made.
+ */
+static unsigned
+state_index(const struct trie_pool *pool, const struct trie_state *state)
+{
+	unsigned index;
+	size_t i;
+
+	assert(pool != NULL);
+
+	index = 0;
+
+	do {
+		for (i = 0; i < pool->n; i++) {
+			if (&pool->states[i] == state) {
+				return index;
+			}
+
+			index++;
+		}
+	} while (pool = pool->next, pool != NULL);
+
+	assert(!"unreached");
+	abort();
+}
+
 void
 trie_dump(struct trie_graph *g, FILE *f)
 {
@@ -469,6 +449,7 @@ trie_dump(struct trie_graph *g, FILE *f)
 	fprintf(f, "\tedge [ dir = none, style = invis ];\n");
 	fprintf(f, "\tranksep = 0;\n");
 	fprintf(f, "\tTBbalance = min;\n");
+	fprintf(f, "\troot = n%p;\n", (const void *) g->root);
 	fprintf(f, "\n");
 
 	ds = malloc(g->nstates * sizeof *ds);
@@ -499,7 +480,7 @@ trie_dump(struct trie_graph *g, FILE *f)
 				rank = ds[i].rank;
 			}
 
-			fprintf(f, "n%u", ds[i].st->index);
+			fprintf(f, "n%p", (const void *) ds[i].st);
 			if (i < g->nstates && ds[i + 1].rank == rank) {
 				/* cross-links for horizontal ordering within a rank */
 				fprintf(f, " -> ");
@@ -511,9 +492,70 @@ trie_dump(struct trie_graph *g, FILE *f)
 		fprintf(f, "\n");
 	}
 
-	/* i'm doing this as two passes because it gets better layout from dot(1) to define all the nodes first */
-	dump_state(g->root, f);
-	dump_fail(g->root, f);
+	/* nodes */
+	{
+		unsigned i;
+
+		for (i = 0; i < g->nstates; i++) {
+			fprintf(f, "\tn%p [ label = <%u> ];\n",
+				(const void *) ds[i].st, state_index(g->pool, ds[i].st));
+
+			if (ds[i].st->output) {
+				struct state_iter it;
+				fsm_state_t endid;
+				int j;
+
+				fprintf(f, "\tn%p [ peripheries = 2, label = <%u",
+					(const void *) ds[i].st, state_index(g->pool, ds[i].st));
+
+				for (j = 0, state_set_reset(ds[i].st->endids, &it); state_set_next(&it, &endid); j = 1) {
+					if (j != 0) {
+						fprintf(f, ", ");
+					}
+					fprintf(f, "#%u", endid);
+				}
+
+				fprintf(f, "> ];\n");
+			}
+		}
+
+		fprintf(f, "\n");
+	}
+
+	/* trie edges */
+	{
+		unsigned i;
+
+		for (i = 0; i < g->nstates; i++) {
+			int sym;
+
+			for (sym = 0; sym < 256; sym++) {
+				if (ds[i].st->children[sym] != NULL) {
+					static const struct fsm_options opt;
+					fprintf(f, "\tn%p -> n%p [ style = solid; label = <",
+						(const void *) ds[i].st, (const void *) ds[i].st->children[sym]);
+					dot_escputc_html(f, &opt, (char) sym);
+					fprintf(f, "> ];\n");
+				}
+			}
+		}
+
+		fprintf(f, "\n");
+	}
+
+	/* fail edges */
+	{
+		unsigned i;
+
+		for (i = 0; i < g->nstates; i++) {
+			if (ds[i].st->fail) {
+				fprintf(f, "\tn%p -> n%p [ dir = back, style = dashed ];\n",
+					(const void *) ds[i].st->fail, (const void *) ds[i].st);
+			}
+		}
+	}
+
+	free(ds);
 
 	fprintf(f, "}\n");
 }
