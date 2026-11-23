@@ -445,7 +445,7 @@ trie_dump(struct trie_graph *g, FILE *f)
 	assert(f != NULL);
 
 	fprintf(f, "digraph G {\n");
-	fprintf(f, "\tnode [ ordering = out, shape = circle, width = 0.3, label = \"\" ];\n");
+	fprintf(f, "\tnode [ ordering = out, shape = box, style = rounded, width = 0.3, label = \"\" ];\n");
 	fprintf(f, "\tedge [ dir = none, style = invis ];\n");
 	fprintf(f, "\tranksep = 0;\n");
 	fprintf(f, "\tTBbalance = min;\n");
@@ -497,16 +497,36 @@ trie_dump(struct trie_graph *g, FILE *f)
 		unsigned i;
 
 		for (i = 0; i < g->nstates; i++) {
-			fprintf(f, "\tn%p [ label = <%u> ];\n",
-				(const void *) ds[i].st, state_index(g->pool, ds[i].st));
+			fprintf(f, "\tn%p [ ",
+				(const void *) ds[i].st);
 
 			if (ds[i].st->output) {
+				fprintf(f, "peripheries = 2, ");
+			}
+
+			fprintf(f, "label = \n");
+			fprintf(f, "\t\t<<TABLE BORDER='0' CELLPADDING='2' CELLSPACING='0'>\n");
+
+			fprintf(f, "\t\t\t<TR>");
+			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>S%u</TD>", state_index(g->pool, ds[i].st));
+			fprintf(f, "</TR>");
+
+			fprintf(f, "\t\t\t<TR>");
+			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>fail</TD><TD ALIGN='LEFT'>S%u</TD>",
+				state_index(g->pool, ds[i].st->fail));
+			fprintf(f, "</TR>\n");
+
+			fprintf(f, "\t\t\t<TR>");
+			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>endids</TD>");
+			fprintf(f, "<TD ALIGN='LEFT'>");
+			if (!ds[i].st->output) {
+				fprintf(f, "-");
+			} else if (state_set_count(ds[i].st->endids) == 0) {
+				fprintf(f, "∅");
+			} else {
 				struct state_iter it;
 				fsm_state_t endid;
 				int j;
-
-				fprintf(f, "\tn%p [ peripheries = 2, label = <%u",
-					(const void *) ds[i].st, state_index(g->pool, ds[i].st));
 
 				for (j = 0, state_set_reset(ds[i].st->endids, &it); state_set_next(&it, &endid); j = 1) {
 					if (j != 0) {
@@ -514,9 +534,11 @@ trie_dump(struct trie_graph *g, FILE *f)
 					}
 					fprintf(f, "#%u", endid);
 				}
-
-				fprintf(f, "> ];\n");
 			}
+			fprintf(f, "</TD>");
+			fprintf(f, "</TR>\n");
+
+			fprintf(f, "</TABLE>> ];\n");
 		}
 
 		fprintf(f, "\n");
