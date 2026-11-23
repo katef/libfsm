@@ -34,18 +34,16 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <fsm/fsm.h>
-#include <fsm/bool.h>
-#include <fsm/pred.h>
 
 #include "iprange.h"
+#include "builder.h"
 #include "tree.h"
-
-#define FSM_NONE ((fsm_state_t) -1)
 
 static const unsigned char zeroes[16] = { 0 };
 static const unsigned char ones[16] = {
@@ -58,14 +56,6 @@ struct record {
 	size_t len;
 	RB_ENTRY(record) entry;
 	unsigned id;
-
-	struct fsm *fsm;
-	fsm_state_t start;
-	fsm_state_t end;
-	struct {
-		fsm_state_t s;
-		unsigned char c;
-	} regs[16];
 };
 
 struct ip_interval {
@@ -99,15 +89,15 @@ struct iprange {
 	size_t nranges;
 	size_t range_cap;
 
+	struct dfa_builder builder;
+
 	int compiled;
 };
 
 static char *
 dup_str(const char *s, size_t len)
 {
-	char *copy;
-
-	copy = malloc(len + 1);
+	char *copy = malloc(len + 1);
 	if (copy == NULL) {
 		return NULL;
 	}
@@ -115,6 +105,89 @@ dup_str(const char *s, size_t len)
 	memcpy(copy, s, len);
 	copy[len] = '\0';
 	return copy;
+}
+
+static enum iprange_err
+decompose_interval(struct dfa_builder *b,
+	const unsigned char *start, const unsigned char *end,
+	unsigned label_id)
+{
+	unsigned char s[16];
+	unsigned nbytes = b->nbytes;
+
+	memcpy(s, start, nbytes);
+
+	for (;;) {
+		unsigned d = 0;
+		int tzeroes, tones;
+
+		if (memcmp(s, end, nbytes) == 0) {
+			if (!dfa_builder_emit_prefix(b, nbytes - 1,
+				s[nbytes - 1], s[nbytes - 1], s, label_id)) {
+				return IPRANGE_ERR_NOMEM;
+			}
+			return IPRANGE_OK;
+		}
+
+		for (unsigned i = 0; i < nbytes; i++) {
+			if (s[i] != end[i]) {
+				d = i;
+				break;
+			}
+		}
+		assert(s[d] < end[d]);
+
+		tzeroes = (d + 1 == nbytes) ||
+			(memcmp(&s[d + 1], zeroes, nbytes - 1 - d) == 0);
+		tones = (d + 1 == nbytes) ||
+			(memcmp(&end[d + 1], ones, nbytes - 1 - d) == 0);
+
+		if (tzeroes && tones) {
+			if (s[d] == 0 && end[d] == 255 && d > 0) {
+				if (!dfa_builder_emit_prefix(b, d - 1,
+					s[d - 1], s[d - 1], s, label_id)) {
+					return IPRANGE_ERR_NOMEM;
+				}
+			} else {
+				if (!dfa_builder_emit_prefix(b, d,
+					s[d], end[d], s, label_id)) {
+					return IPRANGE_ERR_NOMEM;
+				}
+			}
+			return IPRANGE_OK;
+		}
+
+		if (tzeroes) {
+			if (!dfa_builder_emit_prefix(b, d,
+				s[d], (unsigned char) (end[d] - 1), s,
+				label_id)) {
+				return IPRANGE_ERR_NOMEM;
+			}
+			s[d] = end[d];
+			continue;
+		}
+
+		unsigned spos = nbytes - 1;
+		for (unsigned i = nbytes - 1; i > d; i--) {
+			if (s[i] != 0) {
+				spos = i;
+				break;
+			}
+		}
+
+		if (!dfa_builder_emit_prefix(b, spos, s[spos], 255, s, label_id)) {
+			return IPRANGE_ERR_NOMEM;
+		}
+
+		s[spos] = 0;
+		for (unsigned k = spos; k > 0; k--) {
+			if (s[k - 1] < 255) {
+				s[k - 1]++;
+				break;
+			}
+			s[k - 1] = 0;
+		}
+	}
 }
 
 struct iprange *
@@ -134,6 +207,7 @@ iprange_new(enum iprange_family family)
 
 	ipr->family = family;
 	RB_INIT(&ipr->recmap);
+	dfa_builder_init(&ipr->builder, (unsigned) family);
 	return ipr;
 }
 
@@ -148,13 +222,11 @@ iprange_free(struct iprange *ipr)
 
 	RB_FOREACH_SAFE(r, recmap, &ipr->recmap, next) {
 		RB_REMOVE(recmap, &ipr->recmap, r);
-		if (r->fsm != NULL) {
-			fsm_free(r->fsm);
-		}
 		free(r->rec);
 		free(r);
 	}
 
+	dfa_builder_destroy(&ipr->builder);
 	free(ipr->ranges);
 	free(ipr->byid);
 	free(ipr);
@@ -238,188 +310,25 @@ get_record(struct iprange *ipr, const char *label, size_t reclen,
 	}
 
 	r->len = reclen;
-	r->fsm = fsm_new(NULL);
-	if (r->fsm == NULL) {
-		free(r->rec);
-		free(r);
-		return IPRANGE_ERR_FSM;
-	}
-
-	if (!fsm_addstate(r->fsm, &r->start)) {
-		goto fsm_err;
-	}
-	fsm_setstart(r->fsm, r->start);
-
-	if (!fsm_addstate(r->fsm, &r->end)) {
-		goto fsm_err;
-	}
-	fsm_setend(r->fsm, r->end, 1);
-
-	for (size_t i = 0; i < sizeof r->regs / sizeof *r->regs; i++) {
-		r->regs[i].c = '\0';
-		r->regs[i].s = FSM_NONE;
-	}
-
 	r->id = ipr->nrecords++;
 	ipr->byid[r->id] = r;
 	RB_INSERT(recmap, &ipr->recmap, r);
 
 	*out = r;
 	return IPRANGE_OK;
-
-fsm_err:
-	fsm_free(r->fsm);
-	free(r->rec);
-	free(r);
-	return IPRANGE_ERR_FSM;
 }
 
 static int
-get_to(struct record *r, unsigned oct, unsigned nbytes,
-	const unsigned char *octs, fsm_state_t *to_out)
+addr_inc(unsigned char *addr, unsigned nbytes)
 {
-	fsm_state_t to;
-
-	if (r->regs[oct].s != FSM_NONE && r->regs[oct].c == octs[oct]) {
-		*to_out = r->regs[oct].s;
-		return 1;
+	for (unsigned i = nbytes; i > 0; i--) {
+		if (addr[i - 1] < 255) {
+			addr[i - 1]++;
+			return 1;
+		}
+		addr[i - 1] = 0;
 	}
-
-	if (!fsm_addstate(r->fsm, &to)) {
-		return 0;
-	}
-
-	r->regs[oct].s = to;
-	r->regs[oct].c = octs[oct];
-
-	for (unsigned i = oct + 1; i < nbytes; i++) {
-		r->regs[i].s = FSM_NONE;
-	}
-
-	*to_out = to;
-	return 1;
-}
-
-/*
- * Emit a shortest-prefix transition path:
- *   octets[0 .. prefix_len - 1] . [range_start .. range_end] -> r->end
- *
- * Once the prefix octets and [range_start .. range_end] match, we transition
- * directly to the terminal state r->end without matching any trailing octets.
- */
-static int
-emit_prefix_range(struct iprange *ipr, struct record *r, unsigned prefix_len,
-	unsigned char range_start, unsigned char range_end,
-	const unsigned char *octets)
-{
-	unsigned nbytes = (unsigned) ipr->family;
-	fsm_state_t from, to;
-
-	assert(prefix_len < nbytes);
-	assert(range_start <= range_end);
-
-	for (unsigned i = 0; i < prefix_len; i++) {
-		from = (i == 0) ? r->start : r->regs[i - 1].s;
-		if (i > 0) {
-			assert(r->regs[i - 1].c == octets[i - 1]);
-		}
-		if (!get_to(r, i, nbytes, octets, &to)) {
-			return 0;
-		}
-		if (!fsm_addedge_literal(r->fsm, from, to, (char) octets[i])) {
-			return 0;
-		}
-	}
-
-	from = (prefix_len == 0) ? r->start : r->regs[prefix_len - 1].s;
-
-	if (!fsm_addedge_range(r->fsm, from, r->end,
-		(char) range_start, (char) range_end)) {
-		return 0;
-	}
-
-	return 1;
-}
-
-static enum iprange_err
-decompose_interval(struct iprange *ipr, struct record *r,
-	const unsigned char *start, const unsigned char *end)
-{
-	unsigned char s[16];
-	unsigned nbytes = (unsigned) ipr->family;
-
-	memcpy(s, start, nbytes);
-
-	for (;;) {
-		unsigned d = 0;
-		int tzeroes, tones;
-
-		if (memcmp(s, end, nbytes) == 0) {
-			if (!emit_prefix_range(ipr, r, nbytes - 1,
-				s[nbytes - 1], s[nbytes - 1], s)) {
-				return IPRANGE_ERR_FSM;
-			}
-			return IPRANGE_OK;
-		}
-
-		for (unsigned i = 0; i < nbytes; i++) {
-			if (s[i] != end[i]) {
-				d = i;
-				break;
-			}
-		}
-		assert(s[d] < end[d]);
-
-		tzeroes = (d + 1 == nbytes) ||
-			(memcmp(&s[d + 1], zeroes, nbytes - 1 - d) == 0);
-		tones = (d + 1 == nbytes) ||
-			(memcmp(&end[d + 1], ones, nbytes - 1 - d) == 0);
-
-		if (tzeroes && tones) {
-			if (s[d] == 0 && end[d] == 255 && d > 0) {
-				if (!emit_prefix_range(ipr, r, d - 1,
-					s[d - 1], s[d - 1], s)) {
-					return IPRANGE_ERR_FSM;
-				}
-			} else {
-				if (!emit_prefix_range(ipr, r, d,
-					s[d], end[d], s)) {
-					return IPRANGE_ERR_FSM;
-				}
-			}
-			return IPRANGE_OK;
-		}
-
-		if (tzeroes) {
-			if (!emit_prefix_range(ipr, r, d,
-				s[d], (unsigned char) (end[d] - 1), s)) {
-				return IPRANGE_ERR_FSM;
-			}
-			s[d] = end[d];
-			continue;
-		}
-
-		unsigned spos = nbytes - 1;
-		for (unsigned i = nbytes - 1; i > d; i--) {
-			if (s[i] != 0) {
-				spos = i;
-				break;
-			}
-		}
-
-		if (!emit_prefix_range(ipr, r, spos, s[spos], 255, s)) {
-			return IPRANGE_ERR_FSM;
-		}
-
-		s[spos] = 0;
-		for (unsigned k = spos; k > 0; k--) {
-			if (s[k - 1] < 255) {
-				s[k - 1]++;
-				break;
-			}
-			s[k - 1] = 0;
-		}
-	}
+	return 0;
 }
 
 enum iprange_err
@@ -449,6 +358,10 @@ iprange_add(struct iprange *ipr,
 		return err;
 	}
 
+	if (id_out != NULL) {
+		*id_out = r->id;
+	}
+
 	if (ipr->nranges == ipr->range_cap) {
 		size_t new_cap = (ipr->range_cap == 0) ? 128 : ipr->range_cap * 2;
 		struct ip_interval *tmp = realloc(ipr->ranges,
@@ -465,10 +378,6 @@ iprange_add(struct iprange *ipr,
 	memcpy(iv->start, start, nbytes);
 	memcpy(iv->end, end, nbytes);
 	iv->id = r->id;
-
-	if (id_out != NULL) {
-		*id_out = r->id;
-	}
 
 	return IPRANGE_OK;
 }
@@ -492,19 +401,6 @@ iprange_add_str(struct iprange *ipr,
 	}
 
 	return iprange_add(ipr, s, e, label, id_out);
-}
-
-static int
-addr_inc(unsigned char *addr, unsigned nbytes)
-{
-	for (unsigned i = nbytes; i > 0; i--) {
-		if (addr[i - 1] < 255) {
-			addr[i - 1]++;
-			return 1;
-		}
-		addr[i - 1] = 0;
-	}
-	return 0;
 }
 
 static int
@@ -544,9 +440,9 @@ cmp_by_start_then_end(const void *pa, const void *pb)
 
 struct sweep_event {
 	unsigned char pos[16];
-	unsigned id;
-	int overflow; /* 1 if pos represents 2^(8 * nbytes) past all-0xff */
-	int is_add;   /* 1 = interval start, 0 = interval end + 1 */
+	size_t iv_idx;
+	int overflow;
+	int is_add;
 };
 
 static int
@@ -568,7 +464,7 @@ cmp_sweep_event(const void *pa, const void *pb)
 	if (a->is_add != b->is_add) {
 		return a->is_add - b->is_add;
 	}
-	return (a->id > b->id) - (a->id < b->id);
+	return (a->iv_idx > b->iv_idx) - (a->iv_idx < b->iv_idx);
 }
 
 struct reported_set {
@@ -603,13 +499,13 @@ report_all_conflicts(const struct iprange *ipr,
 
 		memset(ea, 0, sizeof *ea);
 		memcpy(ea->pos, iv->start, nbytes);
-		ea->id = iv->id;
+		ea->iv_idx = iv->id;
 		ea->overflow = 0;
 		ea->is_add = 1;
 
 		memset(eb, 0, sizeof *eb);
 		memcpy(eb->pos, iv->end, nbytes);
-		eb->id = iv->id;
+		eb->iv_idx = iv->id;
 		eb->overflow = !addr_inc(eb->pos, nbytes);
 		eb->is_add = 0;
 	}
@@ -624,7 +520,7 @@ report_all_conflicts(const struct iprange *ipr,
 		    evs[j].overflow == evs[i].overflow &&
 		    (evs[i].overflow ||
 		     memcmp(evs[j].pos, evs[i].pos, nbytes) == 0)) {
-			unsigned id = evs[j].id;
+			unsigned id = (unsigned) evs[j].iv_idx;
 
 			if (evs[j].is_add) {
 				size_t pos = 0;
@@ -713,89 +609,44 @@ out:
 	return ret;
 }
 
-/*
- * Coalesce overlapping or adjacent intervals within each record, then check
- * for cross-record overlaps across all records.
- */
-static enum iprange_err
-normalize_intervals(struct iprange *ipr,
-	iprange_conflict_fn *on_conflict, void *conflict_opaque)
+static int
+is_sorted_and_cross_disjoint(const struct iprange *ipr)
 {
 	unsigned nbytes = (unsigned) ipr->family;
-	size_t dst;
-	int has_conflict = 0;
+	unsigned run_id = ipr->ranges[0].id;
+	unsigned char run_max_end[16];
 
-	if (ipr->nranges <= 1) {
-		return IPRANGE_OK;
-	}
+	memcpy(run_max_end, ipr->ranges[0].end, nbytes);
 
-	/*
-	 * Fast path O(M): if the input is already ordered and cross-record
-	 * disjoint, coalesce consecutive same-record overlapping/adjacent
-	 * intervals in a single linear pass without sorting.
-	 */
-	dst = 0;
-	{
-		int sorted_disjoint = 1;
-		size_t i;
+	for (size_t i = 1; i < ipr->nranges; i++) {
+		const struct ip_interval *cur = &ipr->ranges[i];
 
-		for (i = 1; i < ipr->nranges; i++) {
-			struct ip_interval *prev = &ipr->ranges[dst];
-			const struct ip_interval *cur = &ipr->ranges[i];
-
-			if (memcmp(cur->start, prev->start, nbytes) < 0) {
-				sorted_disjoint = 0;
-				break;
-			}
-
-			if (prev->id == cur->id) {
-				unsigned char next_after_prev[16];
-				int contiguous = 0;
-
-				if (memcmp(cur->start, prev->end, nbytes) <= 0) {
-					contiguous = 1;
-				} else {
-					memcpy(next_after_prev, prev->end, nbytes);
-					if (addr_inc(next_after_prev, nbytes) &&
-					    memcmp(cur->start, next_after_prev, nbytes) == 0) {
-						contiguous = 1;
-					}
-				}
-
-				if (contiguous) {
-					if (memcmp(cur->end, prev->end, nbytes) > 0) {
-						memcpy(prev->end, cur->end, nbytes);
-					}
-					continue;
-				}
-			} else if (memcmp(cur->start, prev->end, nbytes) <= 0) {
-				sorted_disjoint = 0;
-				break;
-			}
-
-			dst++;
-			if (dst != i) {
-				ipr->ranges[dst] = *cur;
-			}
+		if (memcmp(cur->start, ipr->ranges[i - 1].start, nbytes) < 0) {
+			return 0;
 		}
 
-		if (sorted_disjoint) {
-			ipr->nranges = dst + 1;
-			return IPRANGE_OK;
-		}
-
-		if (dst + 1 < i) {
-			memmove(&ipr->ranges[dst + 1], &ipr->ranges[i],
-				(ipr->nranges - i) * sizeof *ipr->ranges);
-			ipr->nranges -= i - (dst + 1);
+		if (cur->id == run_id) {
+			if (memcmp(cur->end, run_max_end, nbytes) > 0) {
+				memcpy(run_max_end, cur->end, nbytes);
+			}
+		} else {
+			if (memcmp(cur->start, run_max_end, nbytes) <= 0) {
+				return 0;
+			}
+			run_id = cur->id;
+			memcpy(run_max_end, cur->end, nbytes);
 		}
 	}
 
-	/* 1. Sort by (id, start, end) and merge overlapping/adjacent per id */
-	qsort(ipr->ranges, ipr->nranges, sizeof *ipr->ranges,
-		cmp_by_id_then_start);
+	return 1;
+}
 
-	dst = 0;
+static void
+coalesce_adjacent_same_id(struct iprange *ipr)
+{
+	unsigned nbytes = (unsigned) ipr->family;
+	size_t dst = 0;
+
 	for (size_t i = 1; i < ipr->nranges; i++) {
 		struct ip_interval *prev = &ipr->ranges[dst];
 		const struct ip_interval *cur = &ipr->ranges[i];
@@ -827,7 +678,35 @@ normalize_intervals(struct iprange *ipr,
 			ipr->ranges[dst] = *cur;
 		}
 	}
+
 	ipr->nranges = dst + 1;
+}
+
+static enum iprange_err
+normalize_intervals(struct iprange *ipr,
+	iprange_conflict_fn *on_conflict, void *conflict_opaque)
+{
+	unsigned nbytes = (unsigned) ipr->family;
+	int has_conflict = 0;
+
+	if (ipr->nranges <= 1) {
+		return IPRANGE_OK;
+	}
+
+	/*
+	 * Fast path O(M): if the input is already ordered and cross-record
+	 * disjoint, coalesce consecutive same-record overlapping/adjacent
+	 * intervals in a single linear pass without sorting.
+	 */
+	if (is_sorted_and_cross_disjoint(ipr)) {
+		coalesce_adjacent_same_id(ipr);
+		return IPRANGE_OK;
+	}
+
+	/* 1. Sort by (id, start, end) and merge overlapping/adjacent per id */
+	qsort(ipr->ranges, ipr->nranges, sizeof *ipr->ranges,
+		cmp_by_id_then_start);
+	coalesce_adjacent_same_id(ipr);
 
 	/* 2. Sort across all records by (start, end, id) to detect conflicts */
 	qsort(ipr->ranges, ipr->nranges, sizeof *ipr->ranges,
@@ -864,9 +743,6 @@ enum iprange_err
 iprange_compile(struct iprange *ipr, struct fsm **fsm_out,
 	iprange_conflict_fn *on_conflict, void *conflict_opaque)
 {
-	struct fsm *fsm;
-	fsm_state_t fsm_start;
-	struct record *r;
 	enum iprange_err err;
 
 	if (ipr == NULL || fsm_out == NULL || ipr->compiled) {
@@ -883,92 +759,24 @@ iprange_compile(struct iprange *ipr, struct fsm **fsm_out,
 	}
 
 	/*
-	 * Intervals in ipr->ranges are now strictly sorted, pairwise disjoint,
-	 * and maximally coalesced per record. Emit shortest-prefix paths into
-	 * each record's NFA; ascending order lets r->regs share prefix states.
+	 * Stream the sorted, pairwise-disjoint, maximally-coalesced intervals
+	 * directly through the shared register stack and memoized state table,
+	 * constructing the minimal DFA in one O(M * W) pass.
 	 */
 	for (size_t i = 0; i < ipr->nranges; i++) {
 		const struct ip_interval *iv = &ipr->ranges[i];
-		err = decompose_interval(ipr, ipr->byid[iv->id],
-			iv->start, iv->end);
+		err = decompose_interval(&ipr->builder, iv->start, iv->end, iv->id);
 		if (err != IPRANGE_OK) {
 			return err;
 		}
 	}
 
-	fsm = fsm_new(NULL);
-	if (fsm == NULL) {
-		return IPRANGE_ERR_FSM;
-	}
+	free(ipr->ranges);
+	ipr->ranges = NULL;
+	ipr->nranges = 0;
+	ipr->range_cap = 0;
 
-	if (!fsm_addstate(fsm, &fsm_start)) {
-		fsm_free(fsm);
-		return IPRANGE_ERR_FSM;
-	}
-
-	RB_FOREACH(r, recmap, &ipr->recmap) {
-		struct fsm_combine_info ci;
-		fsm_state_t start;
-		struct fsm *merged;
-
-		if (!fsm_determinise(r->fsm)) {
-			fsm_free(fsm);
-			return IPRANGE_ERR_FSM;
-		}
-
-		if (!fsm_minimise(r->fsm)) {
-			fsm_free(fsm);
-			return IPRANGE_ERR_FSM;
-		}
-
-		if (!fsm_setendid(r->fsm, r->id)) {
-			fsm_free(fsm);
-			return IPRANGE_ERR_FSM;
-		}
-
-		if (!fsm_getstart(r->fsm, &start)) {
-			fsm_free(fsm);
-			return IPRANGE_ERR_FSM;
-		}
-
-		merged = fsm_merge(fsm, r->fsm, &ci);
-		if (merged == NULL) {
-			return IPRANGE_ERR_FSM;
-		}
-		r->fsm = NULL;
-		fsm = merged;
-
-		fsm_start += ci.base_a;
-		start     += ci.base_b;
-
-		if (!fsm_addedge_epsilon(fsm, fsm_start, start)) {
-			fsm_free(fsm);
-			return IPRANGE_ERR_FSM;
-		}
-	}
-
-	fsm_setstart(fsm, fsm_start);
-
-	if (!fsm_determinise(fsm)) {
-		fsm_free(fsm);
-		return IPRANGE_ERR_FSM;
-	}
-
-	if (!fsm_minimise(fsm)) {
-		fsm_free(fsm);
-		return IPRANGE_ERR_FSM;
-	}
-
-	if (!fsm_getstart(fsm, &fsm_start)) {
-		if (!fsm_addstate(fsm, &fsm_start)) {
-			fsm_free(fsm);
-			return IPRANGE_ERR_FSM;
-		}
-		fsm_setstart(fsm, fsm_start);
-	}
-
-	*fsm_out = fsm;
-	return IPRANGE_OK;
+	return dfa_builder_finish(&ipr->builder, ipr->nrecords, fsm_out);
 }
 
 struct byte_slice {

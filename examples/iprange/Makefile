@@ -9,7 +9,7 @@ CFLAGS += -I ../../include
 LDFLAGS += ../../build/lib/libre.a
 LDFLAGS += ../../build/lib/libfsm.a
 
-OBJS = main.o iprange.o
+OBJS = main.o iprange.o builder.o
 
 all: iprange
 
@@ -17,7 +17,8 @@ iprange: $(OBJS)
 	$(CC) -o iprange $(CFLAGS) $(OBJS) $(LDFLAGS)
 
 main.o: main.c iprange.h
-iprange.o: iprange.c iprange.h tree.h
+iprange.o: iprange.c iprange.h builder.h tree.h
+builder.o: builder.c builder.h iprange.h
 
 clean:
 	rm -f iprange $(OBJS)
