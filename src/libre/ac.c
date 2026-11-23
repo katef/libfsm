@@ -359,17 +359,22 @@ trie_to_fsm(struct fsm *fsm, struct trie_graph *g, int have_end, fsm_state_t end
 	return fsm;
 }
 
+struct dump_state {
+	const struct trie_state *st;
+	unsigned rank;
+};
+
 static void
 dump_state(const struct trie_state *st, FILE *f)
 {
 	int i;
 
-	fprintf(f, "\tn%u;\n", st->index);
+	fprintf(f, "\tn%u [ label=<%u>; ];\n", st->index, st->index);
 
 	for (i = 0; i < 256; i++) {
 		if (st->children[i] != NULL) {
 			static const struct fsm_options opt;
-			fprintf(f, "\tn%u -> n%u [ label = <",
+			fprintf(f, "\tn%u -> n%u [ style = solid; label = <",
 				st->index, st->children[i]->index);
 			dot_escputc_html(f, &opt, (char) i);
 			fprintf(f, "> ];\n");
@@ -402,7 +407,7 @@ dump_fail(const struct trie_state *st, FILE *f)
 	int i;
 
 	if (st->fail) {
-		fprintf(f, "\tn%u -> n%u [ dir = back, style = dotted ];\n",
+		fprintf(f, "\tn%u -> n%u [ dir = back, style = dashed ];\n",
 			st->fail->index, st->index);
 	}
 
@@ -413,19 +418,98 @@ dump_fail(const struct trie_state *st, FILE *f)
 	}
 }
 
+static void
+dump_rank(struct dump_state *ds, const struct trie_state *st, unsigned int rank, FILE *f, size_t *index)
+{
+	unsigned i;
+
+	assert(ds != NULL);
+	assert(st != NULL);
+	assert(index != NULL);
+
+	ds[*index].st   = st;
+	ds[*index].rank = rank;
+	(*index)++;
+
+	for (i = 0; i < 256; i++) {
+		if (st->children[i] != NULL) {
+			dump_rank(ds, st->children[i], rank + 1, f, index);
+		}
+	}
+}
+
+static int
+ds_rank_cmp(const void *a, const void *b)
+{
+	const struct dump_state *da = a;
+	const struct dump_state *db = b;
+
+	/* these can only happen when there are bugs,
+	 * but this code is for debugging... */
+	if (da == NULL) { return +1; }
+	if (db == NULL) { return -1; }
+
+	if (da->rank < db->rank) { return -1; }
+	if (da->rank > db->rank) { return +1; }
+
+	return 0;
+}
+
 void
 trie_dump(struct trie_graph *g, FILE *f)
 {
+	struct dump_state *ds;
+
 	assert(g != NULL);
 	assert(g->root != NULL);
 	assert(f != NULL);
 
 	fprintf(f, "digraph G {\n");
 	fprintf(f, "\tnode [ ordering = out, shape = circle, width = 0.3, label = \"\" ];\n");
-	fprintf(f, "\tedge [ dir = none ];\n");
+	fprintf(f, "\tedge [ dir = none, style = invis ];\n");
 	fprintf(f, "\tranksep = 0;\n");
 	fprintf(f, "\tTBbalance = min;\n");
 	fprintf(f, "\n");
+
+	ds = malloc(g->nstates * sizeof *ds);
+	if (ds == NULL) {
+		perror("malloc");
+		abort();
+	}
+
+	{
+		size_t count = 0;
+		dump_rank(ds, g->root, 0, f, &count);
+		assert(count == g->nstates);
+	}
+
+	qsort(ds, g->nstates, sizeof *ds, ds_rank_cmp);
+
+	{
+		size_t i;
+		unsigned rank;
+
+		rank = 0;
+
+		fprintf(f, "\tsubgraph { rank = same; ");
+		for (i = 0; i < g->nstates; i++) {
+			if (ds[i].rank != rank) {
+				fprintf(f, "}\n");
+				fprintf(f, "\tsubgraph { rank = same; ");
+				rank = ds[i].rank;
+			}
+
+			fprintf(f, "n%u", ds[i].st->index);
+			if (i < g->nstates && ds[i + 1].rank == rank) {
+				/* cross-links for horizontal ordering within a rank */
+				fprintf(f, " -> ");
+			} else {
+				fprintf(f, "; ");
+			}
+		}
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
 
 	/* i'm doing this as two passes because it gets better layout from dot(1) to define all the nodes first */
 	dump_state(g->root, f);
