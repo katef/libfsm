@@ -144,6 +144,7 @@ SUBDIR += tests/union
 SUBDIR += tests/set
 SUBDIR += tests/stateset
 SUBDIR += tests/internedstateset
+SUBDIR += tests/bitmap
 SUBDIR += tests/sql
 SUBDIR += tests/queue
 SUBDIR += tests/aho_corasick
