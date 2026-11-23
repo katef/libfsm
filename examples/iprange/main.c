@@ -270,39 +270,43 @@ gen_range(struct record *r, unsigned noct, int prefix_octs, unsigned char range_
 }
 
 static void
-handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
+handle_line(const unsigned char *start, const unsigned char *eocts, unsigned noct,
 	char *rec, size_t reclen)
 {
 	struct record *r;
-	unsigned dbyte;
+	unsigned char socts[16];
+	unsigned nbytes = noct + 1;
 
-	assert(socts != NULL);
+	assert(start != NULL);
 	assert(eocts != NULL);
 
 	r = get_id(rec, reclen);
+	memcpy(socts, start, nbytes);
 
-	/*
-	 * If we have a /32 or a /128, the shortest path is the whole address.
-	 */
-	if (memcmp(socts, eocts, noct + 1) == 0) {
-		gen_range(r, noct, noct, 0, 0, socts);
-		return;
-	}
-
-	/*
-	 * Find the first differing byte in the address.
-	 */
-	dbyte = 0;
-	for (unsigned i = 0; i <= noct; i++) {
-		if (socts[i] != eocts[i]) {
-			dbyte = i;
-			break;
-		}
-	}
-
-	while (dbyte <= noct) {
+	for (;;) {
+		unsigned dbyte = 0;
 		int szeroes, eones;
 		int tzeroes, tones;
+
+		/*
+		 * If we have a /32 or a /128 (or advanced to match eocts),
+		 * the shortest path is the whole address.
+		 */
+		if (memcmp(socts, eocts, nbytes) == 0) {
+			gen_range(r, noct, (int) noct, 0, 0, socts);
+			return;
+		}
+
+		/*
+		 * Find the first differing byte in the address.
+		 */
+		for (unsigned i = 0; i <= noct; i++) {
+			if (socts[i] != eocts[i]) {
+				dbyte = i;
+				break;
+			}
+		}
+		assert(socts[dbyte] < eocts[dbyte]);
 
 		szeroes = memcmp(&socts[dbyte], zeroes, (noct - dbyte) + 1);
 		eones   = memcmp(&eocts[dbyte], ones,   (noct - dbyte) + 1);
@@ -336,12 +340,6 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 			gen_range(r, noct, (int) dbyte - 1, socts[dbyte],
 				(unsigned char) (eocts[dbyte] - 1), socts);
 			socts[dbyte] = eocts[dbyte];
-			for (unsigned i = dbyte; i <= noct; i++) {
-				if (socts[i] != eocts[i]) {
-					dbyte = i;
-					break;
-				}
-			}
 			continue;
 		}
 
@@ -361,21 +359,6 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 		gen_range(r, noct, (int) spos - 1, socts[spos], 255, socts);
 		socts[spos] = 0;
 		socts[spos - 1]++;
-
-		/*
-		 * Now, if we had e.g. 1.0.1.0, we have generated a range of
-		 * `1.0.[1-255]` and updated socts to be `1.1.0.0`. Our range
-		 * in our example would now be 1.1.0.0 - 1.2.255.255. We reset
-		 * our dbyte calculation, since the differing byte could now
-		 * be elsewhere. But it can't be before the original differing
-		 * byte, so we start there.
-		 */
-		for (unsigned i = 0; i <= noct; i++) {
-			if (socts[i] != eocts[i]) {
-				dbyte = i;
-				break;
-			}
-		}
 	}
 }
 
