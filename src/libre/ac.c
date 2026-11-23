@@ -74,7 +74,7 @@ newstate(struct trie_graph *g)
 	st->fail    = NULL;
 	st->have_st = 0;
 
-	st->index   = ++g->nstates;
+	st->index   = g->nstates++;
 
 	st->output  = 0;
 	st->endids  = NULL;
