@@ -327,72 +327,40 @@ handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
 			return;
 		}
 
-		if (szeroes == 0) {
+		if (tzeroes == 0) {
 			/*
-			 * our start position is all zeroes, but our end position doesn't
-			 * consist of ones. this case is complicated, because it includes
-			 * things like 1.0.0.0 - 1.2.255.254, 1.0.0.0 - 1.1.1.1.
+			 * Trailing bytes after dbyte in socts are all zeroes,
+			 * while eocts does not end in all ones (e.g.
+			 * 1.0.0.0 - 1.2.255.254 or 1.1.0.0 - 1.2.0.0).
 			 */
-			gen_range(r, noct, dbyte - 1, socts[dbyte], eocts[dbyte] - 1, socts);
+			gen_range(r, noct, (int) dbyte - 1, socts[dbyte],
+				(unsigned char) (eocts[dbyte] - 1), socts);
 			socts[dbyte] = eocts[dbyte];
-			dbyte++;
 			for (unsigned i = dbyte; i <= noct; i++) {
 				if (socts[i] != eocts[i]) {
 					dbyte = i;
 					break;
 				}
 			}
-
 			continue;
 		}
 
 		/*
 		 * Here we have some byte position _after_ the differing
-		 * byte in the start range that is non-zero, or we have some
-		 * differing byte end the end range that is not 255. We want to
-		 * reduce our starting range first, because this guarantees us
-		 * shortest matches later.
+		 * byte in the start range that is non-zero. Reduce the
+		 * starting range from right to left to align to zeroes.
 		 */
-
 		unsigned spos = noct;
-
-		/*
-		 * When our start position isn't all zeroes, we need to
-		 * finish a starting range, and we need to finish the longest
-		 * range. For example 1.0.1.0 - 1.2.255.255 must first
-		 * generate `1.0.[1-255]`.
-		 */
-		for (unsigned i = noct; i >= dbyte; i--) {
+		for (unsigned i = noct; i > dbyte; i--) {
 			if (socts[i] != 0) {
 				spos = i;
 				break;
 			}
 		}
 
-		/*
-		 * We complete this range. If we complete a range starting at
-		 * the initial octet, this is special because we need to move
-		 * our range forward only to the ending octet (instead of 255).
-		 */
-		if (spos == dbyte) {
-			gen_range(r, noct, spos - 1, socts[spos], eocts[spos] - 1, socts);
-			for (unsigned i = spos + 1; i <= noct; i++) {
-				socts[i] = 0;
-			}
-
-			socts[spos] = eocts[spos];
-
-			// XXX: not sure about this
-			break;
-		} else {
-			gen_range(r, noct, spos - 1, socts[spos], 255, socts);
-
-			for (unsigned i = spos; i <= noct; i++) {
-				socts[i] = 0;
-			}
-
-			socts[spos - 1]++;
-		}
+		gen_range(r, noct, (int) spos - 1, socts[spos], 255, socts);
+		socts[spos] = 0;
+		socts[spos - 1]++;
 
 		/*
 		 * Now, if we had e.g. 1.0.1.0, we have generated a range of
