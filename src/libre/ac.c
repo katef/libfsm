@@ -12,6 +12,9 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include <print/esc.h>
+#include <fsm/options.h>
+
 #include <fsm/fsm.h>
 #include <adt/stateset.h>
 
@@ -357,44 +360,77 @@ trie_to_fsm(struct fsm *fsm, struct trie_graph *g, int have_end, fsm_state_t end
 }
 
 static void
-dump_state(struct trie_state *st, FILE *f, int indent, char* buf)
+dump_state(const struct trie_state *st, FILE *f)
 {
 	int i;
 
+	fprintf(f, "\tn%u;\n", st->index);
+
 	for (i = 0; i < 256; i++) {
-		int sp;
-
 		if (st->children[i] != NULL) {
-			fprintf(f, "%5d|", indent);
-			for (sp=0; sp < indent; sp++) {
-				fprintf(f, "  ");
-			}
-			fprintf(f, "<%5u> --[%3d %c]-- <%5u>\n", st->index, i, isprint(i) ? i : ' ', st->children[i]->index);
+			static const struct fsm_options opt;
+			fprintf(f, "\tn%u -> n%u [ label = <",
+				st->index, st->children[i]->index);
+			dot_escputc_html(f, &opt, (char) i);
+			fprintf(f, "> ];\n");
 
-			buf[indent] = isprint(i) ? i : ' ';
-			dump_state(st->children[i],f,indent+1, buf);
+			dump_state(st->children[i], f);
 		}
 	}
 
 	if (st->output) {
-		buf[indent] = '\0';
-		fprintf(f, "W:%s\n", buf);
+		struct state_iter it;
+		fsm_state_t endid;
+		int i;
+
+		fprintf(f, "\tn%u [ peripheries = 2, label = <", st->index);
+
+		for (i = 0, state_set_reset(st->endids, &it); state_set_next(&it, &endid); i = 1) {
+			if (i != 0) {
+				fprintf(f, ", ");
+			}
+			fprintf(f, "#%u", endid);
+		}
+
+		fprintf(f, "> ];\n");
+	}
+}
+
+static void
+dump_fail(const struct trie_state *st, FILE *f)
+{
+	int i;
+
+	if (st->fail) {
+		fprintf(f, "\tn%u -> n%u [ dir = back, style = dotted ];\n",
+			st->fail->index, st->index);
+	}
+
+	for (i = 0; i < 256; i++) {
+		if (st->children[i] != NULL) {
+			dump_fail(st->children[i], f);
+		}
 	}
 }
 
 void
 trie_dump(struct trie_graph *g, FILE *f)
 {
-	char *buf;
+	assert(g != NULL);
+	assert(g->root != NULL);
+	assert(f != NULL);
 
-	buf = malloc(g->depth+1);
-	if (buf == NULL) {
-		perror("allocating buffer");
-		return;
-	}
+	fprintf(f, "digraph G {\n");
+	fprintf(f, "\tnode [ ordering = out, shape = circle, width = 0.3, label = \"\" ];\n");
+	fprintf(f, "\tedge [ dir = none ];\n");
+	fprintf(f, "\tranksep = 0;\n");
+	fprintf(f, "\tTBbalance = min;\n");
+	fprintf(f, "\n");
 
-	dump_state(g->root,f,0, buf);
+	/* i'm doing this as two passes because it gets better layout from dot(1) to define all the nodes first */
+	dump_state(g->root, f);
+	dump_fail(g->root, f);
 
-	free(buf);
+	fprintf(f, "}\n");
 }
 
