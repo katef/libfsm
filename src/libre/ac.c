@@ -246,7 +246,7 @@ trie_add_failure_edges(struct trie_graph *g) {
 }
 
 static struct trie_state *
-find_next_state(struct trie_state *s, int sym)
+find_next_state(const struct trie_state *s, int sym)
 {
 	struct trie_state *nx, *fail;
 
@@ -344,7 +344,7 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 }
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, struct trie_graph *g, int have_end, fsm_state_t end)
+trie_to_fsm(struct fsm *fsm, const struct trie_graph *g, int have_end, fsm_state_t end)
 {
 	fsm_state_t start;
 
@@ -436,7 +436,7 @@ state_index(const struct trie_pool *pool, const struct trie_state *state)
 }
 
 void
-trie_dump(struct trie_graph *g, FILE *f)
+trie_dump(const struct trie_graph *g, FILE *f)
 {
 	struct dump_state *ds;
 

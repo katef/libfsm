@@ -28,11 +28,11 @@ int
 trie_add_failure_edges(struct trie_graph *g);
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, struct trie_graph *g,
+trie_to_fsm(struct fsm *fsm, const struct trie_graph *g,
 	int have_end, fsm_state_t end);
 
 void
-trie_dump(struct trie_graph *g, FILE *f);
+trie_dump(const struct trie_graph *g, FILE *f);
 
 #endif
 
