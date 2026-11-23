@@ -270,17 +270,15 @@ gen_range(struct record *r, unsigned noct, int prefix_octs, unsigned char range_
 }
 
 static void
-handle_line(const unsigned char *start, const unsigned char *eocts, unsigned noct,
-	char *rec, size_t reclen)
+emit_interval(struct record *r, const unsigned char *start,
+	const unsigned char *eocts, unsigned noct)
 {
-	struct record *r;
 	unsigned char socts[16];
 	unsigned nbytes = noct + 1;
 
 	assert(start != NULL);
 	assert(eocts != NULL);
 
-	r = get_id(rec, reclen);
 	memcpy(socts, start, nbytes);
 
 	for (;;) {
@@ -369,6 +367,293 @@ handle_line(const unsigned char *start, const unsigned char *eocts, unsigned noc
 	}
 }
 
+struct ip_interval {
+	unsigned char start[16];
+	unsigned char end[16];
+	unsigned id;
+};
+
+static struct ip_interval *ranges;
+static size_t nranges;
+static size_t range_cap;
+
+static int
+addr_inc(unsigned char *addr, unsigned nbytes)
+{
+	for (unsigned i = nbytes; i > 0; i--) {
+		if (addr[i - 1] < 255) {
+			addr[i - 1]++;
+			return 1;
+		}
+		addr[i - 1] = 0;
+	}
+	return 0;
+}
+
+static int
+cmp_by_id_then_start(const void *pa, const void *pb)
+{
+	const struct ip_interval *a = pa;
+	const struct ip_interval *b = pb;
+	int c;
+
+	if (a->id != b->id) {
+		return (a->id > b->id) - (a->id < b->id);
+	}
+	c = memcmp(a->start, b->start, sizeof a->start);
+	if (c != 0) {
+		return c;
+	}
+	return memcmp(a->end, b->end, sizeof a->end);
+}
+
+static int
+cmp_by_start_then_end(const void *pa, const void *pb)
+{
+	const struct ip_interval *a = pa;
+	const struct ip_interval *b = pb;
+	int c;
+
+	c = memcmp(a->start, b->start, sizeof a->start);
+	if (c != 0) {
+		return c;
+	}
+	c = memcmp(a->end, b->end, sizeof a->end);
+	if (c != 0) {
+		return c;
+	}
+	return (a->id > b->id) - (a->id < b->id);
+}
+
+struct sweep_event {
+	unsigned char pos[16];
+	unsigned id;
+	int overflow;
+	int is_add;
+};
+
+static int
+cmp_sweep_event(const void *pa, const void *pb)
+{
+	const struct sweep_event *a = pa;
+	const struct sweep_event *b = pb;
+	int c;
+
+	if (a->overflow != b->overflow) {
+		return a->overflow - b->overflow;
+	}
+	if (!a->overflow) {
+		c = memcmp(a->pos, b->pos, sizeof a->pos);
+		if (c != 0) {
+			return c;
+		}
+	}
+	if (a->is_add != b->is_add) {
+		return a->is_add - b->is_add;
+	}
+	return (a->id > b->id) - (a->id < b->id);
+}
+
+static void
+report_conflicts(unsigned nbytes, int af)
+{
+	size_t nev = nranges * 2;
+	struct sweep_event *evs = malloc(nev * sizeof *evs);
+	unsigned *active = malloc(nrecords * sizeof *active);
+	size_t nactive = 0;
+
+	if (evs == NULL || active == NULL) {
+		perror("malloc");
+		exit(-1);
+	}
+
+	for (size_t i = 0; i < nranges; i++) {
+		memset(&evs[2 * i], 0, sizeof evs[2 * i]);
+		memcpy(evs[2 * i].pos, ranges[i].start, nbytes);
+		evs[2 * i].id = ranges[i].id;
+		evs[2 * i].is_add = 1;
+
+		memset(&evs[2 * i + 1], 0, sizeof evs[2 * i + 1]);
+		memcpy(evs[2 * i + 1].pos, ranges[i].end, nbytes);
+		evs[2 * i + 1].id = ranges[i].id;
+		evs[2 * i + 1].overflow = !addr_inc(evs[2 * i + 1].pos, nbytes);
+		evs[2 * i + 1].is_add = 0;
+	}
+
+	qsort(evs, nev, sizeof *evs, cmp_sweep_event);
+
+	for (size_t i = 0, j; i < nev; i = j) {
+		j = i;
+		while (j < nev &&
+		    evs[j].overflow == evs[i].overflow &&
+		    (evs[i].overflow || memcmp(evs[j].pos, evs[i].pos, nbytes) == 0)) {
+			unsigned id = evs[j].id;
+			if (evs[j].is_add) {
+				size_t pos = 0;
+				while (pos < nactive && active[pos] < id) {
+					pos++;
+				}
+				memmove(&active[pos + 1], &active[pos],
+					(nactive - pos) * sizeof *active);
+				active[pos] = id;
+				nactive++;
+			} else {
+				size_t pos = 0;
+				while (pos < nactive && active[pos] != id) {
+					pos++;
+				}
+				memmove(&active[pos], &active[pos + 1],
+					(nactive - pos - 1) * sizeof *active);
+				nactive--;
+			}
+			j++;
+		}
+
+		if (j < nev && nactive >= 2 && !evs[i].overflow) {
+			char ipbuf[INET6_ADDRSTRLEN];
+
+			fprintf(stderr, "ambiguous matches for ");
+			for (size_t k = 0; k < nactive; k++) {
+				fprintf(stderr, "%s%s", find_id(active[k])->rec,
+					(k + 1 < nactive) ? ", " : "");
+			}
+			if (inet_ntop(af, evs[i].pos, ipbuf, sizeof ipbuf) != NULL) {
+				fprintf(stderr, "; for example on input '%s'", ipbuf);
+			}
+			fprintf(stderr, "\n");
+		}
+	}
+
+	free(active);
+	free(evs);
+}
+
+static void
+coalesce_same_id(unsigned nbytes)
+{
+	size_t dst = 0;
+
+	for (size_t i = 1; i < nranges; i++) {
+		struct ip_interval *prev = &ranges[dst];
+		const struct ip_interval *cur = &ranges[i];
+
+		if (prev->id == cur->id) {
+			unsigned char next_ip[16];
+			int contiguous = (memcmp(cur->start, prev->end, nbytes) <= 0);
+
+			if (!contiguous) {
+				memcpy(next_ip, prev->end, nbytes);
+				if (addr_inc(next_ip, nbytes) &&
+				    memcmp(cur->start, next_ip, nbytes) == 0) {
+					contiguous = 1;
+				}
+			}
+			if (contiguous) {
+				if (memcmp(cur->end, prev->end, nbytes) > 0) {
+					memcpy(prev->end, cur->end, nbytes);
+				}
+				continue;
+			}
+		}
+
+		dst++;
+		if (dst != i) {
+			ranges[dst] = *cur;
+		}
+	}
+	nranges = dst + 1;
+}
+
+static void
+normalize_ranges(unsigned nbytes, int af)
+{
+	int sorted_disjoint = 1;
+
+	if (nranges <= 1) {
+		return;
+	}
+
+	{
+		unsigned run_id = ranges[0].id;
+		unsigned char run_max_end[16];
+
+		memcpy(run_max_end, ranges[0].end, nbytes);
+		for (size_t i = 1; i < nranges; i++) {
+			if (memcmp(ranges[i].start, ranges[i - 1].start, nbytes) < 0) {
+				sorted_disjoint = 0;
+				break;
+			}
+			if (ranges[i].id == run_id) {
+				if (memcmp(ranges[i].end, run_max_end, nbytes) > 0) {
+					memcpy(run_max_end, ranges[i].end, nbytes);
+				}
+			} else {
+				if (memcmp(ranges[i].start, run_max_end, nbytes) <= 0) {
+					sorted_disjoint = 0;
+					break;
+				}
+				run_id = ranges[i].id;
+				memcpy(run_max_end, ranges[i].end, nbytes);
+			}
+		}
+	}
+
+	if (sorted_disjoint) {
+		coalesce_same_id(nbytes);
+		return;
+	}
+
+	qsort(ranges, nranges, sizeof *ranges, cmp_by_id_then_start);
+	coalesce_same_id(nbytes);
+
+	qsort(ranges, nranges, sizeof *ranges, cmp_by_start_then_end);
+	{
+		const unsigned char *max_end = ranges[0].end;
+		for (size_t i = 1; i < nranges; i++) {
+			if (memcmp(ranges[i].start, max_end, nbytes) <= 0) {
+				report_conflicts(nbytes, af);
+				exit(EXIT_FAILURE);
+			}
+			if (memcmp(ranges[i].end, max_end, nbytes) > 0) {
+				max_end = ranges[i].end;
+			}
+		}
+	}
+}
+
+static void
+handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
+	char *rec, size_t reclen)
+{
+	struct record *r;
+	unsigned nbytes = noct + 1;
+	struct ip_interval *iv;
+
+	if (memcmp(socts, eocts, nbytes) > 0) {
+		fprintf(stderr, "range start exceeds range end\n");
+		exit(EXIT_FAILURE);
+	}
+
+	r = get_id(rec, reclen);
+
+	if (nranges == range_cap) {
+		size_t nc = (range_cap == 0) ? 128 : range_cap * 2;
+		struct ip_interval *tmp = realloc(ranges, nc * sizeof *tmp);
+		if (tmp == NULL) {
+			perror("realloc");
+			exit(-1);
+		}
+		ranges = tmp;
+		range_cap = nc;
+	}
+
+	iv = &ranges[nranges++];
+	memset(iv, 0, sizeof *iv);
+	memcpy(iv->start, socts, nbytes);
+	memcpy(iv->end, eocts, nbytes);
+	iv->id = r->id;
+}
+
 static int
 important(unsigned n)
 {
@@ -383,38 +668,6 @@ important(unsigned n)
 
 		n /= 10;
 	}
-}
-
-static int
-conflict(FILE *f, const struct fsm_options *opt,
-	const struct fsm_state_metadata *state_metadata,
-	const char *example, void *hook_opaque)
-{
-	(void) f;
-	(void) hook_opaque;
-	(void) opt;
-
-	assert(state_metadata != NULL);
-
-	fprintf(stderr, "ambiguous matches for ");
-
-	for (size_t i = 0; i < state_metadata->end_id_count; i++) {
-		const struct record *r = find_id(state_metadata->end_ids[i]);
-
-		fprintf(stderr, "%s", r->rec);
-
-		if (i + 1 < state_metadata->end_id_count) {
-			fprintf(stderr, ", ");
-		}
-	}
-
-	if (example != NULL) {
-		fprintf(stderr, "; for example on input '%s'", example);
-	}
-
-	fprintf(stderr, "\n");
-
-	return 0;
 }
 
 static int
@@ -514,8 +767,6 @@ main(int argc, char **argv)
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;
 
-	hooks.conflict = conflict;
-
 	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
 		switch (c) {
 		case '4': ipv = IPV4; break;
@@ -572,6 +823,7 @@ main(int argc, char **argv)
 	}
 
 	unsigned noct = (ipv == IPV4) ? 3 : 15;
+	int af = (ipv == IPV4) ? AF_INET : AF_INET6;
 	unsigned line = 0;
 	time_t tstart = 0, tend;
 	if (progress) {
@@ -652,6 +904,14 @@ main(int argc, char **argv)
 	if (fd != stdin) {
 		fclose(fd);
 	}
+
+	normalize_ranges(noct + 1, af);
+
+	for (size_t i = 0; i < nranges; i++) {
+		emit_interval(find_id(ranges[i].id),
+			ranges[i].start, ranges[i].end, noct);
+	}
+	free(ranges);
 
 	if (progress) {
 		fprintf(stderr, "\nminimizing/unioning %u records...", nrecords);
