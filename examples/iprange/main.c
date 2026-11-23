@@ -50,10 +50,11 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "iprange -[46] [-s] [-f <file>] -l fmt\n"
+	fprintf(stderr, "iprange -[46] [-s] [-m <mode>] [-f <file>] -l fmt\n"
 	    "\t-4\t\tIPv4\n"
 	    "\t-6\t\tIPv6\n"
 	    "\t-s\t\tStream pre-sorted, conflict-free input\n"
+	    "\t-m <mode>\tOverlap mode: error (default), specific, first, last\n"
 	    "\t-f <file>\tUse <file> as input\n"
 	    "\t-l fmt\t\tOutput format (c, dot, fsm)\n");
 	exit(EXIT_FAILURE);
@@ -186,6 +187,7 @@ int
 main(int argc, char **argv)
 {
 	enum iprange_family family = IPRANGE_IPV4;
+	enum iprange_overlap_mode overlap_mode = IPRANGE_OVERLAP_ERROR;
 	enum fsm_print_lang lang = FSM_PRINT_NONE;
 	struct fsm_options opt;
 	struct fsm_hooks hooks;
@@ -210,11 +212,26 @@ main(int argc, char **argv)
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;
 
-	while (c = getopt(argc, argv, "46f:l:sQ"), c != -1) {
+	while (c = getopt(argc, argv, "46f:l:m:sQ"), c != -1) {
 		switch (c) {
 		case '4': family = IPRANGE_IPV4; break;
 		case '6': family = IPRANGE_IPV6; break;
 		case 's': streaming = 1; break;
+
+		case 'm':
+			if (strcmp(optarg, "error") == 0) {
+				overlap_mode = IPRANGE_OVERLAP_ERROR;
+			} else if (strcmp(optarg, "specific") == 0) {
+				overlap_mode = IPRANGE_OVERLAP_MOST_SPECIFIC;
+			} else if (strcmp(optarg, "first") == 0) {
+				overlap_mode = IPRANGE_OVERLAP_FIRST;
+			} else if (strcmp(optarg, "last") == 0) {
+				overlap_mode = IPRANGE_OVERLAP_LAST;
+			} else {
+				fprintf(stderr, "Invalid overlap mode '%s'\n", optarg);
+				usage();
+			}
+			break;
 
 		case 'l':
 			if (strcmp(optarg, "dot") == 0) {
@@ -251,6 +268,14 @@ main(int argc, char **argv)
 		usage();
 	}
 
+	if (streaming && overlap_mode != IPRANGE_OVERLAP_ERROR) {
+		fprintf(stderr, "-s requires -m error\n");
+		if (fd != NULL && fd != stdin) {
+			fclose(fd);
+		}
+		usage();
+	}
+
 	if (fd == NULL) {
 		fd = stdin;
 	}
@@ -262,6 +287,13 @@ main(int argc, char **argv)
 			fclose(fd);
 		}
 		return EXIT_FAILURE;
+	}
+
+	err = iprange_set_overlap_mode(ipr, overlap_mode);
+	if (err != IPRANGE_OK) {
+		fprintf(stderr, "iprange_set_overlap_mode: %s\n",
+			iprange_strerror(err));
+		goto fail;
 	}
 
 	if (streaming) {

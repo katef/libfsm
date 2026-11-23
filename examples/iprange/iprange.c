@@ -62,6 +62,7 @@ struct ip_interval {
 	unsigned char start[16];
 	unsigned char end[16];
 	unsigned id;
+	size_t seq;
 };
 
 RB_HEAD(recmap, record);
@@ -80,6 +81,7 @@ RB_GENERATE_STATIC(recmap, record, entry, recmap_cmp)
 
 struct iprange {
 	enum iprange_family family;
+	enum iprange_overlap_mode overlap_mode;
 	struct recmap recmap;
 	struct record **byid;
 	size_t rec_cap;
@@ -88,6 +90,7 @@ struct iprange {
 	struct ip_interval *ranges;
 	size_t nranges;
 	size_t range_cap;
+	size_t next_seq;
 
 	int streaming;
 	int has_pending;
@@ -210,6 +213,7 @@ iprange_new(enum iprange_family family)
 	}
 
 	ipr->family = family;
+	ipr->overlap_mode = IPRANGE_OVERLAP_ERROR;
 	RB_INIT(&ipr->recmap);
 	dfa_builder_init(&ipr->builder, (unsigned) family);
 	return ipr;
@@ -237,9 +241,31 @@ iprange_free(struct iprange *ipr)
 }
 
 enum iprange_err
+iprange_set_overlap_mode(struct iprange *ipr, enum iprange_overlap_mode mode)
+{
+	if (ipr == NULL || ipr->compiled || ipr->streaming) {
+		errno = EINVAL;
+		return IPRANGE_ERR_RANGE;
+	}
+
+	switch (mode) {
+	case IPRANGE_OVERLAP_ERROR:
+	case IPRANGE_OVERLAP_MOST_SPECIFIC:
+	case IPRANGE_OVERLAP_FIRST:
+	case IPRANGE_OVERLAP_LAST:
+		ipr->overlap_mode = mode;
+		return IPRANGE_OK;
+	}
+
+	errno = EINVAL;
+	return IPRANGE_ERR_RANGE;
+}
+
+enum iprange_err
 iprange_enable_streaming(struct iprange *ipr)
 {
-	if (ipr == NULL || ipr->compiled || ipr->nranges > 0) {
+	if (ipr == NULL || ipr->compiled || ipr->nranges > 0 ||
+	    ipr->overlap_mode != IPRANGE_OVERLAP_ERROR) {
 		errno = EINVAL;
 		return IPRANGE_ERR_RANGE;
 	}
@@ -348,6 +374,37 @@ addr_inc(unsigned char *addr, unsigned nbytes)
 	return 0;
 }
 
+static int
+addr_dec(unsigned char *addr, unsigned nbytes)
+{
+	for (unsigned i = nbytes; i > 0; i--) {
+		if (addr[i - 1] > 0) {
+			addr[i - 1]--;
+			return 1;
+		}
+		addr[i - 1] = 255;
+	}
+	return 0;
+}
+
+static void
+addr_diff(const unsigned char *end, const unsigned char *start,
+	unsigned nbytes, unsigned char *diff_out)
+{
+	unsigned borrow = 0;
+
+	for (unsigned i = nbytes; i > 0; i--) {
+		int d = (int) end[i - 1] - (int) start[i - 1] - (int) borrow;
+		if (d < 0) {
+			d += 256;
+			borrow = 1;
+		} else {
+			borrow = 0;
+		}
+		diff_out[i - 1] = (unsigned char) d;
+	}
+}
+
 enum iprange_err
 iprange_add(struct iprange *ipr,
 	const unsigned char *start, const unsigned char *end,
@@ -448,6 +505,7 @@ iprange_add(struct iprange *ipr,
 	memcpy(iv->start, start, nbytes);
 	memcpy(iv->end, end, nbytes);
 	iv->id = r->id;
+	iv->seq = ipr->next_seq++;
 
 	return IPRANGE_OK;
 }
@@ -680,6 +738,164 @@ out:
 }
 
 static int
+interval_beats(const struct ip_interval *cand, const struct ip_interval *best,
+	enum iprange_overlap_mode mode, unsigned nbytes)
+{
+	if (mode == IPRANGE_OVERLAP_FIRST) {
+		return cand->seq < best->seq;
+	}
+	if (mode == IPRANGE_OVERLAP_LAST) {
+		return cand->seq > best->seq;
+	}
+	if (mode == IPRANGE_OVERLAP_MOST_SPECIFIC) {
+		unsigned char span_c[16], span_b[16];
+		int cmp;
+
+		addr_diff(cand->end, cand->start, nbytes, span_c);
+		addr_diff(best->end, best->start, nbytes, span_b);
+		cmp = memcmp(span_c, span_b, nbytes);
+		if (cmp != 0) {
+			return cmp < 0;
+		}
+		return cand->seq > best->seq;
+	}
+
+	return 0;
+}
+
+/*
+ * Resolve overlapping intervals according to ipr->overlap_mode via an endpoint
+ * sweep, producing a sorted, disjoint, maximally coalesced interval array.
+ */
+static enum iprange_err
+resolve_overlaps_sweep(struct iprange *ipr)
+{
+	unsigned nbytes = (unsigned) ipr->family;
+	size_t m = ipr->nranges;
+	size_t nev = m * 2;
+	struct sweep_event *evs = NULL;
+	size_t *active = NULL;
+	size_t nactive = 0;
+	struct ip_interval *out = NULL;
+	size_t nout = 0, out_cap = 0;
+
+	evs = malloc(nev * sizeof *evs);
+	active = malloc(m * sizeof *active);
+	if (evs == NULL || active == NULL) {
+		free(evs);
+		free(active);
+		return IPRANGE_ERR_NOMEM;
+	}
+
+	for (size_t i = 0; i < m; i++) {
+		const struct ip_interval *iv = &ipr->ranges[i];
+		struct sweep_event *ea = &evs[2 * i];
+		struct sweep_event *eb = &evs[2 * i + 1];
+
+		memset(ea, 0, sizeof *ea);
+		memcpy(ea->pos, iv->start, nbytes);
+		ea->iv_idx = i;
+		ea->overflow = 0;
+		ea->is_add = 1;
+
+		memset(eb, 0, sizeof *eb);
+		memcpy(eb->pos, iv->end, nbytes);
+		eb->iv_idx = i;
+		eb->overflow = !addr_inc(eb->pos, nbytes);
+		eb->is_add = 0;
+	}
+
+	qsort(evs, nev, sizeof *evs, cmp_sweep_event);
+
+	size_t i = 0;
+	while (i < nev) {
+		size_t j = i;
+
+		while (j < nev &&
+		    evs[j].overflow == evs[i].overflow &&
+		    (evs[i].overflow ||
+		     memcmp(evs[j].pos, evs[i].pos, nbytes) == 0)) {
+			size_t idx = evs[j].iv_idx;
+
+			if (evs[j].is_add) {
+				active[nactive++] = idx;
+			} else {
+				size_t pos = 0;
+				while (pos < nactive && active[pos] != idx) {
+					pos++;
+				}
+				assert(pos < nactive);
+				active[pos] = active[--nactive];
+			}
+			j++;
+		}
+
+		if (j < nev && nactive > 0 && !evs[i].overflow) {
+			unsigned char slice_end[16];
+			size_t best_idx = active[0];
+
+			for (size_t k = 1; k < nactive; k++) {
+				if (interval_beats(&ipr->ranges[active[k]],
+					&ipr->ranges[best_idx],
+					ipr->overlap_mode, nbytes)) {
+					best_idx = active[k];
+				}
+			}
+
+			if (evs[j].overflow) {
+				memcpy(slice_end, ones, nbytes);
+			} else {
+				memcpy(slice_end, evs[j].pos, nbytes);
+				(void) addr_dec(slice_end, nbytes);
+			}
+
+			unsigned win_id = ipr->ranges[best_idx].id;
+
+			if (nout > 0 && out[nout - 1].id == win_id) {
+				unsigned char next_after[16];
+				memcpy(next_after, out[nout - 1].end, nbytes);
+				if (addr_inc(next_after, nbytes) &&
+				    memcmp(next_after, evs[i].pos, nbytes) == 0) {
+					memcpy(out[nout - 1].end, slice_end, nbytes);
+					i = j;
+					continue;
+				}
+			}
+
+			if (nout == out_cap) {
+				size_t nc = (out_cap == 0) ? m : out_cap * 2;
+				struct ip_interval *tmp = realloc(out,
+					nc * sizeof *tmp);
+				if (tmp == NULL) {
+					free(out);
+					free(active);
+					free(evs);
+					return IPRANGE_ERR_NOMEM;
+				}
+				out = tmp;
+				out_cap = nc;
+			}
+
+			memset(&out[nout], 0, sizeof out[nout]);
+			memcpy(out[nout].start, evs[i].pos, nbytes);
+			memcpy(out[nout].end, slice_end, nbytes);
+			out[nout].id = win_id;
+			nout++;
+		}
+
+		i = j;
+	}
+
+	free(active);
+	free(evs);
+	free(ipr->ranges);
+	ipr->ranges = out;
+	ipr->nranges = nout;
+	ipr->range_cap = out_cap;
+	return IPRANGE_OK;
+}
+
+static int
 is_sorted_and_cross_disjoint(const struct iprange *ipr)
 {
 	unsigned nbytes = (unsigned) ipr->family;
@@ -771,6 +987,10 @@ normalize_intervals(struct iprange *ipr,
 	if (is_sorted_and_cross_disjoint(ipr)) {
 		coalesce_adjacent_same_id(ipr);
 		return IPRANGE_OK;
+	}
+
+	if (ipr->overlap_mode != IPRANGE_OVERLAP_ERROR) {
+		return resolve_overlaps_sweep(ipr);
 	}
 
 	/* 1. Sort by (id, start, end) and merge overlapping/adjacent per id */

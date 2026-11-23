@@ -39,6 +39,13 @@ enum iprange_family {
 	IPRANGE_IPV6 = 16
 };
 
+enum iprange_overlap_mode {
+	IPRANGE_OVERLAP_ERROR = 0,     /* reject cross-label overlaps */
+	IPRANGE_OVERLAP_MOST_SPECIFIC, /* narrowest (end - start) range wins */
+	IPRANGE_OVERLAP_FIRST,         /* first-added range wins */
+	IPRANGE_OVERLAP_LAST           /* last-added range wins */
+};
+
 enum iprange_err {
 	IPRANGE_OK = 0,
 	IPRANGE_ERR_NOMEM,
@@ -63,6 +70,14 @@ iprange_new(enum iprange_family family);
 
 void
 iprange_free(struct iprange *ipr);
+
+/*
+ * Configure how overlapping ranges with distinct labels are resolved during
+ * iprange_compile(). Must be called before adding ranges in streaming mode.
+ * Defaults to IPRANGE_OVERLAP_ERROR.
+ */
+enum iprange_err
+iprange_set_overlap_mode(struct iprange *ipr, enum iprange_overlap_mode mode);
 
 /*
  * Enable O(1)-buffer streaming ingestion for pre-sorted, cross-label disjoint

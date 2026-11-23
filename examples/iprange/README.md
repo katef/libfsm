@@ -40,16 +40,17 @@ Common IP lookup structures make trade-offs that fit poorly here:
   determinization and Hopcroft minimization) handles byte ranges, but gets
   expensive across hundreds of thousands of rules and thousands of labels.
 
-`iprange` resolves same-label overlaps up front and folds range decomposition
-into automaton construction. Overlapping or adjacent ranges for the same label
-merge into one span, and overlapping ranges with different labels are flagged
-as conflicts. Each resulting range is walked like a base-256 odometer (emitting
-at most 7 byte-range rules for IPv4 or 31 for IPv6) into an external register
-array that tracks the open branch of the tree as it is built. Because a sorted
-stream never backs up into an earlier byte prefix, finished states are memoized
-as they leave the registers, producing a minimal DFA in one linear pass. At
-runtime there is no longest-prefix backtracking or fallback state, and lookups
-inspect 1 to 4 bytes for IPv4 or 1 to 16 bytes for IPv6.
+`iprange` resolves overlaps up front and folds range decomposition into
+automaton construction. Overlapping or adjacent ranges for the same label merge
+into one span, and overlapping ranges with different labels are either flagged
+as conflicts or flattened at compile time (most-specific subnet wins,
+first-match, or last-match). Each resulting range is walked like a base-256
+odometer (emitting at most 7 byte-range rules for IPv4 or 31 for IPv6) into an
+external register array that tracks the open branch of the tree as it is built.
+Because a sorted stream never backs up into an earlier byte prefix, finished
+states are memoized as they leave the registers, producing a minimal DFA in one
+linear pass. At runtime there is no longest-prefix backtracking or fallback
+state, and lookups inspect 1 to 4 bytes for IPv4 or 1 to 16 bytes for IPv6.
 
 ---
 
@@ -79,6 +80,14 @@ make -C examples/iprange
 - `-4` / `-6`: Match IPv4 (4-byte) or IPv6 (16-byte) ranges.
 - `-s`: Stream pre-sorted, conflict-free input using one pending range in memory
   instead of buffering the input.
+- `-m <mode>`: Choose how overlapping ranges with different labels are handled
+  (overlapping or back-to-back ranges with the same label are merged):
+  - `error` (default): Report each colliding group of labels with the lowest IP
+    address in their overlap, and exit with an error.
+  - `specific`: The narrowest range wins on the overlap, letting narrower subnet
+    rules override broader blocks; ties in span go to the later rule.
+  - `first`: The earlier rule in input order wins.
+  - `last`: The later rule in input order wins.
 - `-f <file>`: Read CSV lines from `<file>` (defaults to `stdin`).
 - `-l <fmt>`: Output format (`c`, `dot`, or `fsm`).
 
@@ -106,9 +115,11 @@ pending end address; otherwise the pending range is handed to Stage 2.
 In batch mode, a linear pass checks whether the list is sorted and free of
 cross-label overlaps. Sorted exports take this path and merge touching
 same-label ranges in place without sorting. If unsorted or cross-label
-overlapping ranges are present, Stage 1 sorts per label to merge duplicates,
-re-sorts globally to detect collisions, and reports each colliding label set
-with an example IP.
+overlapping ranges are present, Stage 1 either resolves overlaps across range
+boundaries according to `-m specific`, `first`, or `last` (merging adjacent
+slices that end up with the same label), or (under `-m error`) sorts per label
+to merge duplicates, re-sorts globally to detect collisions, and reports each
+colliding label set with an example IP.
 
 ### Stage 2: Break Each Range into Shortest Byte-Prefix Rules
 
@@ -175,9 +186,9 @@ belongs to that label.
 
 One emitted rule is never a prefix of a longer rule. Across different labels,
 that would mean addresses under the longer rule belonged to two labels, which
-Stage 1 rejected. Within the same label, if the shorter prefix covers
-`0..255`, any longer rule beneath it would be redundant, and Stage 2 does not
-emit rules inside a covered block. Because no rule is a prefix of another,
+Stage 1 rejected or split apart. Within the same label, if the shorter prefix
+covers `0..255`, any longer rule beneath it would be redundant, and Stage 2 does
+not emit rules inside a covered block. Because no rule is a prefix of another,
 nothing remains to decide once an accepting state is reached, so accepting
 states have no outgoing edges.
 
@@ -291,7 +302,7 @@ bits), and `V` states in the minimal byte-DFA:
 | Approach | Build Time | Space | Lookup Time |
 | :--- | :--- | :--- | :--- |
 | `iprange` (sorted input, `-s`) | `O(M * W)` | `O(1)` range buffer; `O(V)` DFA states | `1` to `W` byte steps (`<= 4` v4, `<= 16` v6), no backtracking |
-| `iprange` (unsorted input) | `O(M log M * W)` | `O(M * W)` build buffer; `O(V)` DFA states | `1` to `W` byte steps, no backtracking |
+| `iprange` (unsorted / overlapping) | `O(M log M * W)` | `O(M * W)` build buffer; `O(V)` DFA states | `1` to `W` byte steps, no backtracking |
 | Binary search / B-tree on ranges | `O(M log M * W)` (after splitting overlaps) | `O(M * W)` interval endpoints | `O(log M * W)` comparisons |
 | Bitwise CIDR longest-prefix trie | `O(M * W^2)` worst-case after CIDR split | Up to `16W - 2` CIDR prefixes per range (`62` v4, `254` v6) | Up to `8W` bit steps (or multi-bit strides) with fallback tracking |
 | Flat `/16` or `/24` table | `O(2^16)` or `O(2^24)` | Fixed `2^16` or `2^24` entries (infeasible across 128-bit IPv6) | `O(1)` |
