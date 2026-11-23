@@ -358,7 +358,14 @@ handle_line(const unsigned char *start, const unsigned char *eocts, unsigned noc
 
 		gen_range(r, noct, (int) spos - 1, socts[spos], 255, socts);
 		socts[spos] = 0;
-		socts[spos - 1]++;
+
+		for (unsigned k = spos; k > 0; k--) {
+			if (socts[k - 1] < 255) {
+				socts[k - 1]++;
+				break;
+			}
+			socts[k - 1] = 0;
+		}
 	}
 }
 
