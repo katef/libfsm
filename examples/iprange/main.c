@@ -50,10 +50,11 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "iprange -[46] [-f <file>] -l fmt\n"
+	fprintf(stderr, "iprange -[46] [-s] [-f <file>] -l fmt\n"
 	    "\t-4\t\tIPv4\n"
 	    "\t-6\t\tIPv6\n"
-	    "\t-f <file>\tuse <file> as input\n"
+	    "\t-s\t\tStream pre-sorted, conflict-free input\n"
+	    "\t-f <file>\tUse <file> as input\n"
 	    "\t-l fmt\t\tOutput format (c, dot, fsm)\n");
 	exit(EXIT_FAILURE);
 }
@@ -193,6 +194,7 @@ main(int argc, char **argv)
 	char *buf = NULL;
 	size_t cap = 0;
 	ssize_t len;
+	int streaming = 0;
 	int progress = 0;
 	FILE *fd = NULL;
 	int c;
@@ -208,10 +210,11 @@ main(int argc, char **argv)
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;
 
-	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
+	while (c = getopt(argc, argv, "46f:l:sQ"), c != -1) {
 		switch (c) {
 		case '4': family = IPRANGE_IPV4; break;
 		case '6': family = IPRANGE_IPV6; break;
+		case 's': streaming = 1; break;
 
 		case 'l':
 			if (strcmp(optarg, "dot") == 0) {
@@ -259,6 +262,15 @@ main(int argc, char **argv)
 			fclose(fd);
 		}
 		return EXIT_FAILURE;
+	}
+
+	if (streaming) {
+		err = iprange_enable_streaming(ipr);
+		if (err != IPRANGE_OK) {
+			fprintf(stderr, "iprange_enable_streaming: %s\n",
+				iprange_strerror(err));
+			goto fail;
+		}
 	}
 
 	unsigned line = 0;

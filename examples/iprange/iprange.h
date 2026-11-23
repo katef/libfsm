@@ -44,6 +44,7 @@ enum iprange_err {
 	IPRANGE_ERR_NOMEM,
 	IPRANGE_ERR_PARSE,
 	IPRANGE_ERR_RANGE,
+	IPRANGE_ERR_ORDER,
 	IPRANGE_ERR_CONFLICT,
 	IPRANGE_ERR_FSM
 };
@@ -62,6 +63,16 @@ iprange_new(enum iprange_family family);
 
 void
 iprange_free(struct iprange *ipr);
+
+/*
+ * Enable O(1)-buffer streaming ingestion for pre-sorted, cross-label disjoint
+ * inputs. Consecutive overlapping or back-to-back ranges with the same label
+ * are coalesced on the fly and emitted directly into the minimal DFA builder.
+ * Out-of-order inputs return IPRANGE_ERR_ORDER; cross-label overlaps return
+ * IPRANGE_ERR_CONFLICT.
+ */
+enum iprange_err
+iprange_enable_streaming(struct iprange *ipr);
 
 enum iprange_err
 iprange_add(struct iprange *ipr,

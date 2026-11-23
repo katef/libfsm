@@ -70,12 +70,15 @@ bmake -r
 make -C examples/iprange
 ./examples/iprange/iprange -4 -f examples/iprange/v4ranges.csv -l dot
 ./examples/iprange/iprange -4 -f examples/iprange/v4ranges.csv -l c
+./examples/iprange/iprange -4 -s -f examples/iprange/v4ranges.csv -l c
 ./examples/iprange/iprange -6 -f examples/iprange/v6ranges.csv -l dot
 ```
 
 ### Flags
 
 - `-4` / `-6`: Match IPv4 (4-byte) or IPv6 (16-byte) ranges.
+- `-s`: Stream pre-sorted, conflict-free input using one pending range in memory
+  instead of buffering the input.
 - `-f <file>`: Read CSV lines from `<file>` (defaults to `stdin`).
 - `-l <fmt>`: Output format (`c`, `dot`, or `fsm`).
 
@@ -95,11 +98,17 @@ Before building the machine, the input ranges are turned into a sorted,
 non-overlapping stream where overlapping or back-to-back ranges with the same
 label have been merged.
 
-A linear pass first checks whether the list is sorted and free of cross-label
-overlaps. Sorted exports take this path and merge touching same-label ranges in
-place without sorting. If unsorted or cross-label overlapping ranges are
-present, Stage 1 sorts per label to merge duplicates, re-sorts globally to
-detect collisions, and reports each colliding label set with an example IP.
+In streaming mode (`-s`), `iprange` holds one pending range (returning an error
+if start addresses go out of order or a different label overlaps). If the next
+line shares the label and overlaps or touches the pending range, it extends the
+pending end address; otherwise the pending range is handed to Stage 2.
+
+In batch mode, a linear pass checks whether the list is sorted and free of
+cross-label overlaps. Sorted exports take this path and merge touching
+same-label ranges in place without sorting. If unsorted or cross-label
+overlapping ranges are present, Stage 1 sorts per label to merge duplicates,
+re-sorts globally to detect collisions, and reports each colliding label set
+with an example IP.
 
 ### Stage 2: Break Each Range into Shortest Byte-Prefix Rules
 
@@ -281,7 +290,7 @@ bits), and `V` states in the minimal byte-DFA:
 
 | Approach | Build Time | Space | Lookup Time |
 | :--- | :--- | :--- | :--- |
-| `iprange` (sorted input) | `O(M * W)` | `O(M * W)` build buffer; `O(V)` DFA states | `1` to `W` byte steps (`<= 4` v4, `<= 16` v6), no backtracking |
+| `iprange` (sorted input, `-s`) | `O(M * W)` | `O(1)` range buffer; `O(V)` DFA states | `1` to `W` byte steps (`<= 4` v4, `<= 16` v6), no backtracking |
 | `iprange` (unsorted input) | `O(M log M * W)` | `O(M * W)` build buffer; `O(V)` DFA states | `1` to `W` byte steps, no backtracking |
 | Binary search / B-tree on ranges | `O(M log M * W)` (after splitting overlaps) | `O(M * W)` interval endpoints | `O(log M * W)` comparisons |
 | Bitwise CIDR longest-prefix trie | `O(M * W^2)` worst-case after CIDR split | Up to `16W - 2` CIDR prefixes per range (`62` v4, `254` v6) | Up to `8W` bit steps (or multi-bit strides) with fallback tracking |

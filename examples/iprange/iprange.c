@@ -89,6 +89,10 @@ struct iprange {
 	size_t nranges;
 	size_t range_cap;
 
+	int streaming;
+	int has_pending;
+	unsigned char last_start[16];
+	struct ip_interval pending;
 	struct dfa_builder builder;
 
 	int compiled;
@@ -232,6 +236,18 @@ iprange_free(struct iprange *ipr)
 	free(ipr);
 }
 
+enum iprange_err
+iprange_enable_streaming(struct iprange *ipr)
+{
+	if (ipr == NULL || ipr->compiled || ipr->nranges > 0) {
+		errno = EINVAL;
+		return IPRANGE_ERR_RANGE;
+	}
+
+	ipr->streaming = 1;
+	return IPRANGE_OK;
+}
+
 const char *
 iprange_label(const struct iprange *ipr, unsigned id)
 {
@@ -266,6 +282,7 @@ iprange_strerror(enum iprange_err err)
 	case IPRANGE_ERR_NOMEM:    return "out of memory";
 	case IPRANGE_ERR_PARSE:    return "invalid IP address";
 	case IPRANGE_ERR_RANGE:    return "range start exceeds range end";
+	case IPRANGE_ERR_ORDER:    return "streaming input is not sorted";
 	case IPRANGE_ERR_CONFLICT: return "overlapping ranges with distinct labels";
 	case IPRANGE_ERR_FSM:      return "FSM operation failed";
 	}
@@ -360,6 +377,59 @@ iprange_add(struct iprange *ipr,
 
 	if (id_out != NULL) {
 		*id_out = r->id;
+	}
+
+	if (ipr->streaming) {
+		if (!ipr->has_pending) {
+			memset(&ipr->pending, 0, sizeof ipr->pending);
+			memcpy(ipr->last_start, start, nbytes);
+			memcpy(ipr->pending.start, start, nbytes);
+			memcpy(ipr->pending.end, end, nbytes);
+			ipr->pending.id = r->id;
+			ipr->has_pending = 1;
+			return IPRANGE_OK;
+		}
+
+		if (memcmp(start, ipr->last_start, nbytes) < 0) {
+			return IPRANGE_ERR_ORDER;
+		}
+
+		if (r->id == ipr->pending.id) {
+			unsigned char next_after_prev[16];
+			int contiguous = 0;
+
+			if (memcmp(start, ipr->pending.end, nbytes) <= 0) {
+				contiguous = 1;
+			} else {
+				memcpy(next_after_prev, ipr->pending.end, nbytes);
+				if (addr_inc(next_after_prev, nbytes) &&
+				    memcmp(start, next_after_prev, nbytes) == 0) {
+					contiguous = 1;
+				}
+			}
+
+			if (contiguous) {
+				memcpy(ipr->last_start, start, nbytes);
+				if (memcmp(end, ipr->pending.end, nbytes) > 0) {
+					memcpy(ipr->pending.end, end, nbytes);
+				}
+				return IPRANGE_OK;
+			}
+		} else if (memcmp(start, ipr->pending.end, nbytes) <= 0) {
+			return IPRANGE_ERR_CONFLICT;
+		}
+
+		err = decompose_interval(&ipr->builder, ipr->pending.start,
+			ipr->pending.end, ipr->pending.id);
+		if (err != IPRANGE_OK) {
+			return err;
+		}
+
+		memcpy(ipr->last_start, start, nbytes);
+		memcpy(ipr->pending.start, start, nbytes);
+		memcpy(ipr->pending.end, end, nbytes);
+		ipr->pending.id = r->id;
+		return IPRANGE_OK;
 	}
 
 	if (ipr->nranges == ipr->range_cap) {
@@ -752,6 +822,18 @@ iprange_compile(struct iprange *ipr, struct fsm **fsm_out,
 
 	*fsm_out = NULL;
 	ipr->compiled = 1;
+
+	if (ipr->streaming) {
+		if (ipr->has_pending) {
+			err = decompose_interval(&ipr->builder,
+				ipr->pending.start, ipr->pending.end,
+				ipr->pending.id);
+			if (err != IPRANGE_OK) {
+				return err;
+			}
+		}
+		return dfa_builder_finish(&ipr->builder, ipr->nrecords, fsm_out);
+	}
 
 	err = normalize_intervals(ipr, on_conflict, conflict_opaque);
 	if (err != IPRANGE_OK) {
