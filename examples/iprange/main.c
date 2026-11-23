@@ -27,7 +27,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define _GNU_SOURCE
+#if !defined(__APPLE__) && !defined(__MACH__)
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include <arpa/inet.h>
 
 #include <assert.h>
@@ -93,18 +95,8 @@ static struct fsm_hooks hooks;
 static struct record *
 find_id(unsigned id)
 {
-	struct record *r;
-
-	/* XXX: this is a crime, we have a tree.
-	 * we should be able to RB_FIND() */
-	RB_FOREACH(r, recmap, &recmap) {
-		if (r->id == id) {
-			return r;
-		}
-	}
-
-	assert(!"unreached");
-	abort();
+	assert(id < nrecords);
+	return byid[id];
 }
 
 static struct record *
@@ -164,8 +156,6 @@ get_id(char *rec, size_t reclen)
 			perror("malloc");
 			exit(-1);
 		}
-
-		byid[r->id] = r;
 	} else if (r->id == rec_cap) {
 		rec_cap *= 2;
 		void *f = realloc(byid, rec_cap * sizeof (*byid));
@@ -175,6 +165,7 @@ get_id(char *rec, size_t reclen)
 		}
 		byid = f;
 	}
+	byid[r->id] = r;
 
 	return r;
 }
@@ -442,25 +433,23 @@ important(unsigned n)
 
 static int
 conflict(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	const char *example, void *hook_opaque)
 {
-	size_t i;
-
 	(void) f;
 	(void) hook_opaque;
 	(void) opt;
 
+	assert(state_metadata != NULL);
+
 	fprintf(stderr, "ambiguous matches for ");
 
-	for (i = 0; i < count; i++) {
-		const struct record *r;
-
-		r = (const void *) (intptr_t) ids[i]; /* XXX */
+	for (size_t i = 0; i < state_metadata->end_id_count; i++) {
+		const struct record *r = find_id(state_metadata->end_ids[i]);
 
 		fprintf(stderr, "%s", r->rec);
 
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(stderr, ", ");
 		}
 	}
@@ -476,12 +465,13 @@ conflict(FILE *f, const struct fsm_options *opt,
 
 static int
 accept_dot(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
 	fsm_state_t s;
 
 	assert(f != NULL);
+	assert(state_metadata != NULL);
 
 	(void) hook_opaque;
 
@@ -492,19 +482,19 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 	if (!opt->anonymous_states) {
 		fprintf(f, "%u", s);
 
-		if (count > 0) {
+		if (state_metadata->end_id_count > 0) {
 			fprintf(f, "<BR/>");
 		}
 	}
 
-	for (size_t i = 0; i < count; i++) {
+	for (size_t i = 0; i < state_metadata->end_id_count; i++) {
 		const struct record *r;
 
-		r = find_id(ids[i]);
+		r = find_id(state_metadata->end_ids[i]);
 
 		fprintf(f, "%s", r->rec); /* XXX: escape */
 
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
 		}
 	}
@@ -515,31 +505,41 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-comment_c(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
-	void *hook_opaque)
+accept_c(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *lang_opaque, void *hook_opaque)
 {
-	assert(f != NULL);
+	unsigned id;
+	const struct record *r;
 
-	(void) opt;
+	assert(f != NULL);
+	assert(state_metadata != NULL);
+	assert(state_metadata->end_id_count == 1);
+
+	(void) lang_opaque;
 	(void) hook_opaque;
 
-	fprintf(f, "/* ");
+	id = state_metadata->end_ids[0];
+	r = find_id(id);
 
-	for (size_t i = 0; i < count; i++) {
-		const struct record *r;
-
-		r = find_id(ids[i]);
-
-		fprintf(f, "%s", r->rec); /* XXX: escape */
-
-		if (i + 1 < count) {
-			fprintf(f, ", ");
-		}
+	fprintf(f, "return 0x%x;", id);
+	if (opt->comments) {
+		fprintf(f, " /* %s */", r->rec);
 	}
 
-	fprintf(f, " */\n");
+	return 0;
+}
 
+static int
+reject_c(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *lang_opaque, void *hook_opaque)
+{
+	if (state_metadata != NULL && state_metadata->end_id_count > 0) {
+		return accept_c(f, opt, state_metadata, lang_opaque, hook_opaque);
+	}
+
+	fprintf(f, "return -1;");
 	return 0;
 }
 
@@ -617,8 +617,9 @@ main(int argc, char **argv)
 		return -1;
 	}
 
+	unsigned noct = (ipv == IPV4) ? 3 : 15;
 	unsigned line = 0;
-	time_t tstart, tend;
+	time_t tstart = 0, tend;
 	if (progress) {
 		tstart = time(NULL);
 		fprintf(stderr, "Reading lines... ");
@@ -631,7 +632,7 @@ main(int argc, char **argv)
 
 	while (len = getline(&buf, &cap, fd), len > 0) {
 		char *start = buf;
-		char *end = memchr(start, VALUE_SEP, len);
+		char *end = memchr(start, VALUE_SEP, (size_t) len);
 
 		if (end == NULL) {
 			fprintf(stderr, "Invalid data: %s\n", buf);
@@ -641,24 +642,20 @@ main(int argc, char **argv)
 		end++;
 		len -= end - start;
 
-		char *rec = memchr(end, VALUE_SEP, len);
+		char *rec = memchr(end, VALUE_SEP, (size_t) len);
 		if (rec == NULL) {
 			fprintf(stderr, "Invalid data: %s\n", buf);
 			return -1;
-		};
+		}
 		*rec = '\0';
 		rec++;
-		len -= rec - end;
 
-		if (strrchr(rec, '\n')) {
-			*strrchr(rec, '\n') = '\0';
-		}
+		rec[strcspn(rec, "\r\n")] = '\0';
 
 		{
 			struct in6_addr s6, e6;
 			struct in_addr s4, e4;
-			unsigned char *socts, *eocts;
-			unsigned noct;
+			unsigned char *socts = NULL, *eocts = NULL;
 
 			switch (ipv) {
 			case IPV4:
@@ -670,7 +667,6 @@ main(int argc, char **argv)
 
 				socts = (unsigned char *) &s4.s_addr;
 				eocts = (unsigned char *) &e4.s_addr;
-				noct  = 3;
 				break;
 
 			case IPV6:
@@ -682,21 +678,25 @@ main(int argc, char **argv)
 
 				socts = (unsigned char *) &s6.s6_addr;
 				eocts = (unsigned char *) &e6.s6_addr;
-				noct  = 15;
 				break;
 			}
 
-			handle_line(socts, eocts, noct, rec, len);
+			handle_line(socts, eocts, noct, rec, strlen(rec));
 		}
 
 		if (progress) {
 			tend = time(NULL);
 			if (important(line)) {
-				fprintf(stderr, "l%d [%lus] ", line, tend - tstart);
+				fprintf(stderr, "l%u [%lds] ", line, (long) (tend - tstart));
 			}
 			tstart = tend;
 			line++;
 		}
+	}
+
+	free(buf);
+	if (fd != stdin) {
+		fclose(fd);
 	}
 
 	if (progress) {
@@ -713,7 +713,7 @@ main(int argc, char **argv)
 		fsm_state_t start;
 
 		if (!fsm_determinise(r->fsm)) {
-			perror("fsm_determinse");
+			perror("fsm_determinise");
 			exit(-1);
 		}
 
@@ -732,7 +732,8 @@ main(int argc, char **argv)
 			exit(-1);
 		}
 
-		(void) ci;
+		fsm_start += ci.base_a;
+		start     += ci.base_b;
 
 		if (!fsm_addedge_epsilon(fsm, fsm_start, start)) {
 			perror("fsm_addedge_epsilon");
@@ -742,7 +743,7 @@ main(int argc, char **argv)
 		if (progress) {
 			tend = time(NULL);
 			if (important(line)) {
-				fprintf(stderr, "r%d [%lds] ", line, tend - tstart);
+				fprintf(stderr, "r%u [%lds] ", line, (long) (tend - tstart));
 			}
 			tstart = tend;
 			line++;
@@ -753,7 +754,7 @@ main(int argc, char **argv)
 
 	if (progress) {
 		tend = time(NULL);
-		fprintf(stderr, " done [%lds]\n", tend - tstart);
+		fprintf(stderr, " done [%lds]\n", (long) (tend - tstart));
 		fprintf(stderr, "converting to DFA...");
 		fflush(stderr);
 		tstart = time(NULL);
@@ -764,19 +765,27 @@ main(int argc, char **argv)
 		exit(-1);
 	}
 
+	if (!fsm_minimise(fsm)) {
+		perror("fsm_minimise");
+		exit(-1);
+	}
+
 	if (progress) {
 		tend = time(NULL);
-		fprintf(stderr, " done [%lds]\n", tend - tstart);
+		fprintf(stderr, " done [%lds]\n", (long) (tend - tstart));
 	}
 
 	if (oc) {
 		opt.fragment = 1;
 		opt.comments = 1;
-		hooks.comment = comment_c;
+		hooks.accept = accept_c;
+		hooks.reject = reject_c;
 		fsm_print(stdout, fsm, &opt, &hooks, FSM_PRINT_C);
 	} else if (odot) {
 		hooks.accept = accept_dot;
 		fsm_print(stdout, fsm, &opt, &hooks, FSM_PRINT_DOT);
 	}
+
+	return 0;
 }
 
