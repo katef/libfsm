@@ -512,8 +512,13 @@ trie_dump(struct trie_graph *g, FILE *f)
 			fprintf(f, "</TR>");
 
 			fprintf(f, "\t\t\t<TR>");
-			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>fail</TD><TD ALIGN='LEFT'>S%u</TD>",
-				state_index(g->pool, ds[i].st->fail));
+			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>fail</TD><TD ALIGN='LEFT'>");
+			if (ds[i].st->fail == NULL) {
+				fprintf(f, "-");
+			} else {
+				fprintf(f, "S%u", state_index(g->pool, ds[i].st->fail));
+			}
+			fprintf(f, "</TD>");
 			fprintf(f, "</TR>\n");
 
 			fprintf(f, "\t\t\t<TR>");
