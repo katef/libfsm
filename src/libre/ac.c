@@ -235,6 +235,22 @@ trie_add_failure_edges(struct trie_graph *g) {
 			}
 
 			nx->output |= nx->fail->output;
+
+			{
+				struct state_iter it; /* borrowing state_set for endids */
+				fsm_state_t endid;
+
+				for (state_set_reset(nx->fail->endids, &it); state_set_next(&it, &endid); ) {
+					/*
+					 * TODO: Do we care about duplicates? maybe this is where we
+					 * implement AMBIG_? not sure
+					 * TODO: need to pass in alloc functions, none of ac.c does this
+					 */
+					if (!state_set_add(&nx->endids, NULL, (fsm_state_t) endid)) {
+						return -1;
+					}
+				}
+			}
 		}
 	}
 
