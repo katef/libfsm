@@ -20,6 +20,9 @@ trie_create(void);
 void
 trie_free(struct trie_graph *g);
 
+bool
+trie_has_endids(const struct trie_graph *g);
+
 struct trie_graph *
 trie_add_word(struct trie_graph *g, const char *w, size_t n,
 	const fsm_end_id_t *endid);

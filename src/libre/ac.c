@@ -44,6 +44,7 @@ struct trie_graph {
 	struct trie_pool *pool;
 	size_t nstates;
 	size_t depth;
+	unsigned int has_endids:1;
 };
 
 static struct trie_state *
@@ -125,6 +126,7 @@ trie_create(void)
 	g->pool = NULL;
 	g->nstates = 0;
 	g->depth = 0;
+	g->has_endids = 0;
 
 	g->root = newstate(g);
 	if (g->root == NULL) {
@@ -133,6 +135,14 @@ trie_create(void)
 	}
 
 	return g;
+}
+
+bool
+trie_has_endids(const struct trie_graph *g)
+{
+	assert(g != NULL);
+
+	return g->has_endids;
 }
 
 struct trie_graph *
@@ -170,8 +180,10 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n, const fsm_end_id_t 
 	}
 
 	if (endid != NULL) {
+		g->has_endids = 1;
 		state_set_add(&st->endids, NULL, (fsm_state_t)*endid);
 	}
+
 	return g;
 }
 

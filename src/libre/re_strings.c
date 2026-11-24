@@ -105,7 +105,15 @@ re_strings_build(struct re_strings *g,
 
 	have_end = 0;
 
-	if ((flags & RE_STRINGS_AC_AUTOMATON) == 0 && (flags & RE_STRINGS_ANCHOR_RIGHT) == 0) {
+	/*
+	 * We don't collapse down to a single end state when there are endids
+	 * because that would lose information, we need the tree structure to
+	 * keep endids distinct. This is very similar to not minimising a DFA
+	 * in order to keep endids distinct after unioning a set of patterns.
+	 */
+	if ((flags & RE_STRINGS_AC_AUTOMATON) == 0 && (flags & RE_STRINGS_ANCHOR_RIGHT) == 0
+	&& !trie_has_endids((const struct trie_graph *) g))
+	{
 		if (!fsm_addstate(fsm, &end)) {
 			goto error;
 		}
