@@ -20,7 +20,7 @@
 #include "walk2.h"
 
 static int
-ensure_minimal_dfa(const struct fsm *fsm, struct fsm **dfa)
+ensure_dfa(const struct fsm *fsm, struct fsm **dfa)
 {
 	struct fsm *q;
 
@@ -38,11 +38,6 @@ ensure_minimal_dfa(const struct fsm *fsm, struct fsm **dfa)
 	}
 
 	if (!fsm_determinise(q)) {
-		fsm_free(q);
-		return 0;
-	}
-
-	if (!fsm_minimise(q)) {
 		fsm_free(q);
 		return 0;
 	}
@@ -90,11 +85,11 @@ fsm_equal(const struct fsm *a, const struct fsm *b)
 		return 1;
 	}
 
-	if (!ensure_minimal_dfa(a, &pa)) {
+	if (!ensure_dfa(a, &pa)) {
 		return -1;
 	}
 
-	if (!ensure_minimal_dfa(b, &pb)) {
+	if (!ensure_dfa(b, &pb)) {
 		fsm_free(pa);
 		return -1;
 	}
