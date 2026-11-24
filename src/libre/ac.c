@@ -261,6 +261,7 @@ trie_add_failure_edges(struct trie_graph *g) {
 					 * TODO: need to pass in alloc functions, none of ac.c does this
 					 */
 					if (!state_set_add(&nx->endids, NULL, (fsm_state_t) endid)) {
+						free(q);
 						return -1;
 					}
 				}
