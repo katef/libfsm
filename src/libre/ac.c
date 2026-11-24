@@ -512,7 +512,7 @@ trie_dump(const struct trie_graph *g, FILE *f)
 			}
 
 			fprintf(f, "n%p", (const void *) ds[i].st);
-			if (i < g->nstates && ds[i + 1].rank == rank) {
+			if (i + 1 < g->nstates && ds[i + 1].rank == rank) {
 				/* cross-links for horizontal ordering within a rank */
 				fprintf(f, " -> ");
 			} else {
