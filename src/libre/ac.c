@@ -181,7 +181,9 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n, const fsm_end_id_t 
 
 	if (endid != NULL) {
 		g->has_endids = 1;
-		state_set_add(&st->endids, NULL, (fsm_state_t)*endid);
+		if (!state_set_add(&st->endids, NULL, (fsm_state_t)*endid)) {
+			return NULL;
+		}
 	}
 
 	return g;
