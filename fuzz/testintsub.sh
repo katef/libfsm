@@ -95,7 +95,7 @@ while [ ${i} -lt ${NSEED} ]; do
   ${FSM} -pt intersect $a $b | ./build/bin/fsm -pm > ${out}
 
   echo -ne "test ${s}\t\t"
-  ${FSM} -t equal ${out} ${ccuc}
+  ${FSM} -t equivalent ${out} ${ccuc}
   if [ $? -eq 0 ]; then
     echo -ne "[PASSED]\t"
   else
@@ -112,7 +112,7 @@ while [ ${i} -lt ${NSEED} ]; do
 
   ${FSM} -pt subtract $a $b | ./build/bin/fsm -pm > ${sout}
 
-  ${FSM} -t equal ${sout} ${cuc}
+  ${FSM} -t equivalent ${sout} ${cuc}
   if [ $? -eq 0 ]; then
     echo -e "[PASSED]"
   else

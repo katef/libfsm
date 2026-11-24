@@ -72,14 +72,15 @@ enum op {
 	OP_DETERMINISE = ( 4 << 1) | 1,
 	OP_MINIMISE    = ( 5 << 1) | 1,
 	OP_TRIM        = ( 6 << 1) | 1,
-	OP_RM_EPSILONS = (12 << 1) | 1,
+	OP_RM_EPSILONS = ( 7 << 1) | 1,
 
 	/* binary */
-	OP_CONCAT      = ( 7 << 1) | 0,
-	OP_UNION       = ( 8 << 1) | 0,
-	OP_INTERSECT   = ( 9 << 1) | 0,
-	OP_SUBTRACT    = (10 << 1) | 0,
-	OP_EQUAL       = (11 << 1) | 0
+	OP_CONCAT      = ( 8 << 1) | 0,
+	OP_UNION       = ( 9 << 1) | 0,
+	OP_INTERSECT   = (10 << 1) | 0,
+	OP_SUBTRACT    = (11 << 1) | 0,
+	OP_EQUAL       = (12 << 1) | 0,
+	OP_EQUIVALENT  = (13 << 1) | 0
 };
 
 static int
@@ -293,9 +294,10 @@ op_name(const char *name)
 		{ "intersect",       OP_INTERSECT   },
 		{ "subtract",        OP_SUBTRACT    },
 		{ "sub",             OP_SUBTRACT    },
-		{ "minus",           OP_SUBTRACT    },
 		{ "equals",          OP_EQUAL       },
-		{ "equal",           OP_EQUAL       }
+		{ "equal",           OP_EQUAL       },
+		{ "equivalent",      OP_EQUIVALENT  },
+		{ "minus",           OP_SUBTRACT    }
 	};
 
 	assert(name != NULL);
@@ -488,8 +490,8 @@ main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	if ((op == OP_EQUAL) + (lang != FSM_PRINT_NONE) > 1) {
-		fprintf(stderr, "-t equal and -p are mutually exclusive\n");
+	if ((op == OP_EQUAL || op == OP_EQUIVALENT) + (lang != FSM_PRINT_NONE) > 1) {
+		fprintf(stderr, "-t equal, -t equivalent and -p are mutually exclusive\n");
 		return EXIT_FAILURE;
 	}
 
@@ -577,6 +579,13 @@ main(int argc, char *argv[])
 			q = NULL;
 			break;
 
+		case OP_EQUIVALENT:
+			r = fsm_equivalent(a, b);
+			fsm_free(a);
+			fsm_free(b);
+			q = NULL;
+			break;
+
 		default:
 			fprintf(stderr, "unrecognised operation\n");
 			exit(EXIT_FAILURE);
@@ -626,7 +635,7 @@ main(int argc, char *argv[])
 			printf("%f ", ms);
 		}
 
-		if (op != OP_EQUAL && q == NULL) {
+		if (op != OP_EQUAL && op != OP_EQUIVALENT && q == NULL) {
 			perror("fsm_op");
 			exit(EXIT_FAILURE);
 		}
@@ -660,7 +669,7 @@ main(int argc, char *argv[])
 		return r;
 	}
 
-	/* TODO: OP_EQUAL ought to have the same CLI interface as a predicate */
+	/* TODO: OP_EQUAL/OP_EQUIVALENT ought to have the same CLI interface as a predicate */
 	if (query != NULL) {
 		/* TODO: benchmark */
 		/* XXX: this symbol is used like an enum here. It's a bit of a kludge */

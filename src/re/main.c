@@ -228,9 +228,9 @@ static int
 		const char *name;
 		int (*comparison)(const struct fsm *, const struct fsm *);
 	} a[] = {
-		{ "equal",    fsm_equal },
-		{ "isequal",  fsm_equal },
-		{ "areequal", fsm_equal }
+		{ "equal",    fsm_equivalent },
+		{ "isequal",  fsm_equivalent },
+		{ "areequal", fsm_equivalent }
 	};
 
 	assert(name != NULL);

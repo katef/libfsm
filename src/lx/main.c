@@ -282,7 +282,7 @@ zone_equal(const struct ast_zone *a, const struct ast_zone *b)
 		return 0;
 	}
 
-	r = fsm_equal(a->fsm, b->fsm);
+	r = fsm_equivalent(a->fsm, b->fsm);
 	if (r == -1) {
 		return -1;
 	}

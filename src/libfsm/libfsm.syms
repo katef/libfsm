@@ -124,6 +124,7 @@ fsm_subtract
 
 fsm_empty
 fsm_equal
+fsm_equivalent
 fsm_shortest
 fsm_example
 

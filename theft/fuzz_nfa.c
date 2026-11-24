@@ -489,7 +489,7 @@ prop_nfa_edge_order_should_not_matter(struct theft *t,
 		return THEFT_TRIAL_FAIL;
 	}
 
-	eq = fsm_equal(nfa, fan);
+	eq = fsm_equivalent(nfa, fan);
 	if (env->verbosity > 0) {
 		fprintf(stderr, "fsm_equal: %d\n", eq);
 	}

@@ -9,7 +9,7 @@ FSM=${BUILD}/bin/fsm
 .for n in ${TEST.tests/equals:T:R:C/^out//}
 
 ${TEST_OUTDIR.tests/equals}/got${n}.txt: ${TEST_SRCDIR.tests/equals}/in${n}a.fsm ${TEST_SRCDIR.tests/equals}/in${n}b.fsm
-	  ${FSM} -t equals  ${.ALLSRC:M*.fsm} 	\
+	  ${FSM} -t equal ${.ALLSRC:M*.fsm} 	\
 	; echo $$?				\
 	> $@
 

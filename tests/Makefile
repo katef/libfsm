@@ -7,7 +7,7 @@ FSM=${BUILD}/bin/fsm
 test:: ${res}
 
 ${res}:
-	${FSM} -t equal ${.ALLSRC:M*.fsm}; \
+	${FSM} -t equivalent ${.ALLSRC:M*.fsm}; \
 	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
 	> $@
 

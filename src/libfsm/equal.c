@@ -48,7 +48,7 @@ ensure_dfa(const struct fsm *fsm, struct fsm **dfa)
 }
 
 static int
-walk_is_empty(const struct fsm *pa, const struct fsm *pb, unsigned walk_mask)
+walk_is_empty(const struct fsm *pa, const struct fsm *pb, unsigned endmask)
 {
 	struct fsm *q;
 	int r;
@@ -56,7 +56,7 @@ walk_is_empty(const struct fsm *pa, const struct fsm *pb, unsigned walk_mask)
 	assert(pa != NULL);
 	assert(pb != NULL);
 
-	q = fsm_walk2(pa, pb, walk_mask | FSM_WALK2_BOTH, walk_mask);
+	q = fsm_walk2(pa, pb, FSM_WALK2_ONLYA | FSM_WALK2_ONLYB | FSM_WALK2_BOTH, endmask);
 	if (q == NULL) {
 		return -1;
 	}
@@ -68,8 +68,8 @@ walk_is_empty(const struct fsm *pa, const struct fsm *pb, unsigned walk_mask)
 	return r;
 }
 
-int
-fsm_equal(const struct fsm *a, const struct fsm *b)
+static int
+equal(const struct fsm *a, const struct fsm *b, unsigned endmask)
 {
 	struct fsm *pa, *pb;
 
@@ -94,7 +94,7 @@ fsm_equal(const struct fsm *a, const struct fsm *b)
 		return -1;
 	}
 
-	if (1 != walk_is_empty(pa ? pa : a, pb ? pb : b, FSM_WALK2_ONLYA | FSM_WALK2_ONLYB)) {
+	if (1 != walk_is_empty(pa ? pa : a, pb ? pb : b, endmask)) {
 		goto unequal;
 	}
 
@@ -117,5 +117,17 @@ unequal:
 	}
 
 	return 0;
+}
+
+int
+fsm_equal(const struct fsm *a, const struct fsm *b)
+{
+	return equal(a, b, FSM_WALK2_ONLYA | FSM_WALK2_ONLYB | FSM_WALK2_ENDIDS);
+}
+
+int
+fsm_equivalent(const struct fsm *a, const struct fsm *b)
+{
+	return equal(a, b, FSM_WALK2_ONLYA | FSM_WALK2_ONLYB);
 }
 

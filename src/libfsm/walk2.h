@@ -30,7 +30,8 @@ enum {
 	FSM_WALK2_NEITHER = 1 << 0x0,   /* To complete the four possible states */
 	FSM_WALK2_ONLYB   = 1 << 0x1,   /* Follow edges that B has and A does not */
 	FSM_WALK2_ONLYA   = 1 << 0x2,   /* Follow edges that A has and B does not */
-	FSM_WALK2_BOTH    = 1 << 0x3    /* Follow edges that both A and B have */
+	FSM_WALK2_BOTH    = 1 << 0x3,   /* Follow edges that both A and B have */
+	FSM_WALK2_ENDIDS  = 1 << 0x4    /* (endmask only) Consider endids too */
 };
 
 struct fsm *

@@ -529,9 +529,25 @@ fsm_empty(const struct fsm *fsm);
 /*
  * Return 1 if two fsm are equal, 0 if they're not,
  * or -1 on error.
+ *
+ * FSM are considered equal if they are language-equivalent
+ * (see fsm_equivalent), and also that each string in the language
+ * keys to matching sets of endids.
  */
 int
 fsm_equal(const struct fsm *a, const struct fsm *b);
+
+/*
+ * Return 1 if two fsm are language-equivalent.
+ *
+ * Formally this means the set of strings in L(a) matches
+ * the set of strings in L(b). This ignores endids.
+ *
+ * This is not an isomorphism; FSM with language-equivalence may have
+ * different physical structures for their states and edges.
+ */
+int
+fsm_equivalent(const struct fsm *a, const struct fsm *b);
 
 /*
  * Find the least-cost ("shortest") path between two states.
