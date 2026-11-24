@@ -99,14 +99,7 @@ fsm_equal(const struct fsm *a, const struct fsm *b)
 		return -1;
 	}
 
-	/* TODO: would be handy to have walk2 flags for exclusively A unioned with B,
-	 * meaning not both. then we'd only need one fsm_walk2 call here */
-
-	if (1 != walk_is_empty(pa ? pa : a , pb ? pb : b, FSM_WALK2_ONLYA)) {
-		goto unequal;
-	}
-
-	if (1 != walk_is_empty(pa ? pa : a, pb ? pb : b, FSM_WALK2_ONLYB)) {
+	if (1 != walk_is_empty(pa ? pa : a, pb ? pb : b, FSM_WALK2_ONLYA | FSM_WALK2_ONLYB)) {
 		goto unequal;
 	}
 
