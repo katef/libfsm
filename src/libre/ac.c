@@ -313,7 +313,7 @@ find_next_state(const struct trie_state *s, int sym)
 
 static int
 trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
-	int have_end, fsm_state_t single_end,
+	int have_end, fsm_state_t single_end, int distinct_endid_sinks,
 	fsm_state_t *q)
 {
 	fsm_state_t st;
@@ -347,7 +347,10 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 		if (nx != NULL) {
 			fsm_state_t dst;
 
-			if (!trie_to_fsm_state(nx, fsm, have_end, single_end, &dst)) {
+			if (!trie_to_fsm_state(nx, fsm,
+				have_end, single_end, distinct_endid_sinks,
+				&dst))
+			{
 				return 0;
 			}
 
@@ -358,14 +361,46 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 	}
 
 	if (ts->output) {
-		fsm_setend(fsm, st, 1);
+		fsm_state_t end = st;
 
-		struct state_iter si;
-		fsm_state_t state;
-		state_set_reset(ts->endids, &si);
-		while (state_set_next(&si, &state)) {
-			if (!fsm_endid_set(fsm, st, (fsm_end_id_t) state)) {
+		/*
+		 * distinct_endid_sinks means each trie .output state
+		 * has a self-loop for .*, but via an epsilon guard
+		 * so that the sink state can't interfere with the
+		 * structure for the trie proper.
+		 *
+		 * This way we can keep distinct sink states for each
+		 * endid (and after determinisation, those become for
+		 * each set of endids).
+		 *
+		 * This is as opposed to have_end, which is one shared
+		 * sink state, which would merge the endids.
+		 */
+		if (distinct_endid_sinks) {
+			if (!fsm_addstate(fsm, &end)) {
 				return 0;
+			}
+
+			if (!fsm_addedge_any(fsm, end, end)) {
+				return 0;
+			}
+
+			if (!fsm_addedge_epsilon(fsm, st, end)) {
+				return 0;
+			}
+		}
+
+		fsm_setend(fsm, end, 1);
+
+		{
+			struct state_iter si;
+			fsm_state_t state;
+
+			state_set_reset(ts->endids, &si);
+			while (state_set_next(&si, &state)) {
+				if (!fsm_endid_set(fsm, end, (fsm_end_id_t) state)) {
+					return 0;
+				}
 			}
 		}
 	}
@@ -375,11 +410,15 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 }
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, const struct trie_graph *g, int have_end, fsm_state_t end)
+trie_to_fsm(struct fsm *fsm, const struct trie_graph *g,
+	int have_end, fsm_state_t end, int distinct_endid_sinks)
 {
 	fsm_state_t start;
 
-	if (!trie_to_fsm_state(g->root, fsm, have_end, end, &start)) {
+	if (!trie_to_fsm_state(g->root, fsm,
+		have_end, end, distinct_endid_sinks,
+		&start))
+	{
 		return NULL;
 	}
 

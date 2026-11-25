@@ -87,7 +87,7 @@ re_strings_build(struct re_strings *g,
 {
 	struct fsm *fsm;
 	fsm_state_t end;
-	int have_end;
+	int have_end, distinct_endid_sinks;
 
 	fsm = NULL;
 
@@ -128,8 +128,34 @@ re_strings_build(struct re_strings *g,
 		end = (unsigned) -1; /* appease clang */
 	}
 
-	if (!trie_to_fsm(fsm, (struct trie_graph *) g, have_end, end)) {
+	/* TODO: consolidate distinct_endid_sinks into have_end,
+	 * we ought to be able to decide this in a single place */
+	if ((flags & RE_STRINGS_AC_AUTOMATON) == 0 && (flags & RE_STRINGS_ANCHOR_RIGHT) == 0) {
+		distinct_endid_sinks = trie_has_endids((const struct trie_graph *) g);
+	} else {
+		distinct_endid_sinks = 0;
+	}
+
+	if (!trie_to_fsm(fsm, (struct trie_graph *) g, have_end, end, distinct_endid_sinks)) {
 		goto error;
+	}
+
+	if (distinct_endid_sinks) {
+		/*
+		 * We're currently producing an NFA here because of the epsilons to
+		 * sink states.
+		 * I think we were producing one prior to introducing endids anyway,
+		 * because of the /./ edges on sink states.
+		 *
+		 * We could determinise and minimise here, but I prefer to leave that
+		 * to the caller; whether it's useful or not depends on what they're
+		 * doing with the FSM.
+		 * XXX: for the moment I'm doing this here because it's conditional
+		 * on distinct_endid_sinks, and that isn't clear to the caller.
+		 */
+		if (!fsm_determinise(fsm)) {
+			return NULL;
+		}
 	}
 
 	return fsm;
