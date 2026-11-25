@@ -204,7 +204,7 @@ walk2_comb_endids(const struct fsm *fsm_a, fsm_state_t a,
 	count_b = fsm_endid_count(fsm_b, b);
 
 	if (count_a + count_b == 0) {
-		*mask = FSM_WALK2_BOTH;
+		*mask &= ~FSM_WALK2_ENDIDS;
 		return 1;
 	}
 
