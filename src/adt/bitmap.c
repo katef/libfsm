@@ -4,9 +4,12 @@
  * See LICENCE for the full copyright terms.
  */
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <limits.h>
 #include <ctype.h>
 #include <stdint.h>
@@ -283,6 +286,8 @@ bm_snprint(const struct bm *bm, const struct fsm_options *opt,
 	escputc *escputc)
 {
 	FILE *f;
+	char *buf;
+	size_t len;
 	int r;
 
 	assert(bm != NULL);
@@ -300,54 +305,49 @@ bm_snprint(const struct bm *bm, const struct fsm_options *opt,
 	 * in order to keep just one kind of escputc.
 	 *
 	 * I also didn't want to duplicate the contents of bm_print(),
-	 * so here I'm opting to print to a temporary file, rewind,
-	 * and read it back for string output. This is not ideal.
+	 * so here I'm opting to print to a POSIX memstream instead. This is
+	 * maybe slightly less worse than tmpfile, rewind, and read it back
+	 * for string output. But still not great.
+	 *
+	 * It also feels bad to have the memstream dynamically allocate,
+	 * and then here we're copying out into a static buffer.
+	 * But that's our API.
 	 */
 
-	f = tmpfile();
+	f = open_memstream(&buf, &len);
 	if (f == NULL) {
 		return -1;
 	}
 
 	r = bm_print(f, opt, bm, boxed, escputc);
+
+	if (EOF == fclose(f)) {
+		free(buf);
+		return -1;
+	}
+
 	if (r == -1) {
 		goto error;
 	}
 
 	assert(r >= 0);
+	assert(buf != NULL);
+	assert(len == (size_t) r);
 
 	if (n > (size_t) r + 1) {
 		n = (size_t) r + 1;
 	}
 
-	rewind(f);
-
-	if (n - 1 != fread(s, 1, n - 1, f)) {
-		/* short read or unexpected zero */
-		goto error;
-	}
-	/* expected zero could also be an error, but we don't mind if it is
-	 * (although setting errno is bad form) */
-
-#ifndef NDEBUG
-	assert(fgetc(f) == EOF);
-	if (ferror(f)) {
-		goto error;
-	}
-	assert(feof(f));
-#endif
-
+	memcpy(s, buf, n - 1);
 	s[n - 1] = '\0';
 
-	if (EOF == fclose(f)) {
-		return -1;
-	}
+	free(buf);
 
 	return r;
 
 error:
 
-	(void) fclose(f);
+	free(buf);
 
 	return -1;
 }

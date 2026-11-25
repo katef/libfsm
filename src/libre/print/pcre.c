@@ -135,8 +135,8 @@ print_charset(FILE *f, const struct fsm_options *opt, enum re_flags fl,
 		 * bm_print().
 		 *
 		 * My solution here is to bm_snprint() and look at what happens.
-		 * This is hella expensive (it tmpfile()s), but I prefer it over
-		 * reproducing internal logic here and drifting later.
+		 * This is hella expensive (it prints to a memstream fd, but I prefer
+		 * it over reproducing internal logic here and drifting later.
 		 */
 		if (-1 == bm_snprint(bm, opt, s, sizeof s, 1, pcre_escputc_class)) {
 			return -1;
