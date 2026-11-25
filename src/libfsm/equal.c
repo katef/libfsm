@@ -47,59 +47,16 @@ ensure_dfa(const struct fsm *fsm, struct fsm **dfa)
 	return 1;
 }
 
-static struct fsm *
-subtract(const struct fsm *a, const struct fsm *b)
-{
-	struct fsm *pa, *pb;
-	struct fsm *q;
-
-	assert(a != NULL);
-	assert(b != NULL);
-	assert(a->alloc == b->alloc);
-
-	if (!ensure_dfa(a, &pa)) {
-		return NULL;
-	}
-
-	if (pa != NULL) {
-		a = pa;
-	}
-
-	if (!ensure_dfa(b, &pb)) {
-		if (pa != NULL) {
-			fsm_free(pa);
-		}
-		return NULL;
-	}
-
-	if (pb != NULL) {
-		b = pb;
-	}
-
-	/* see fsm_subtract() */
-	q = fsm_walk2(a, b, FSM_WALK2_ONLYA | FSM_WALK2_BOTH, FSM_WALK2_ONLYA);
-
-	if (pa != NULL) {
-		fsm_free(pa);
-	}
-
-	if (pb != NULL) {
-		fsm_free(pb);
-	}
-
-	return q;
-}
-
 static int
-subsetof(const struct fsm *a, const struct fsm *b)
+walk_is_empty(const struct fsm *pa, const struct fsm *pb, unsigned endmask)
 {
 	struct fsm *q;
 	int r;
 
-	assert(a != NULL);
-	assert(b != NULL);
+	assert(pa != NULL);
+	assert(pb != NULL);
 
-	q = subtract(b, a);
+	q = fsm_walk2(pa, pb, FSM_WALK2_ONLYA | FSM_WALK2_ONLYB | FSM_WALK2_BOTH, endmask);
 	if (q == NULL) {
 		return -1;
 	}
@@ -108,16 +65,14 @@ subsetof(const struct fsm *a, const struct fsm *b)
 
 	fsm_free(q);
 
-	if (r == -1) {
-		return -1;
-	}
-
 	return r;
 }
 
-int
-fsm_equal(const struct fsm *a, const struct fsm *b)
+static int
+equal(const struct fsm *a, const struct fsm *b, unsigned endmask)
 {
+	struct fsm *pa, *pb;
+
 	assert(a != NULL);
 	assert(b != NULL);
 
@@ -130,12 +85,49 @@ fsm_equal(const struct fsm *a, const struct fsm *b)
 		return 1;
 	}
 
-	/*
-	 * The subset operation is not commutative; sets are equal
-	 * when one set is a subset of the other and vice versa.
-	 * This is equivalent finding that (a \ b) \u (b \ a) is empty.
-	 */
+	if (!ensure_dfa(a, &pa)) {
+		return -1;
+	}
 
-	return subsetof(a, b) && subsetof(b, a);
+	if (!ensure_dfa(b, &pb)) {
+		fsm_free(pa);
+		return -1;
+	}
+
+	if (1 != walk_is_empty(pa ? pa : a, pb ? pb : b, endmask)) {
+		goto unequal;
+	}
+
+	if (pa != NULL) {
+		fsm_free(pa);
+	}
+	if (pb != NULL) {
+		fsm_free(pb);
+	}
+
+	return 1;
+
+unequal:
+
+	if (pa != NULL) {
+		fsm_free(pa);
+	}
+	if (pb != NULL) {
+		fsm_free(pb);
+	}
+
+	return 0;
+}
+
+int
+fsm_equal(const struct fsm *a, const struct fsm *b)
+{
+	return equal(a, b, FSM_WALK2_ONLYA | FSM_WALK2_ONLYB | FSM_WALK2_ENDIDS);
+}
+
+int
+fsm_equivalent(const struct fsm *a, const struct fsm *b)
+{
+	return equal(a, b, FSM_WALK2_ONLYA | FSM_WALK2_ONLYB);
 }
 

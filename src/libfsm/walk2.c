@@ -96,7 +96,7 @@ struct fsm_walk2_data {
 	 * subtract     first true, second false    0x4
 	 * union        either true                 0xE
 	 */
-	unsigned endmask :4; /* bit table for what states are end states in the combined graph */
+	unsigned endmask :5; /* bit table for what states are end states in the combined graph */
 	unsigned edgemask:4; /* bit table for which edges should be followed */
 };
 
@@ -189,10 +189,77 @@ walk2mask(int has_a, int has_b)
 }
 
 static int
+walk2_comb_endids(const struct fsm *fsm_a, fsm_state_t a,
+	const struct fsm *fsm_b, fsm_state_t b, unsigned *mask)
+{
+	size_t count_a, count_b;
+	fsm_end_id_t *ids, *ids_a, *ids_b;
+	size_t i, j;
+
+	assert(fsm_a != NULL);
+	assert(fsm_b != NULL);
+	assert(mask != NULL);
+
+	count_a = fsm_endid_count(fsm_a, a);
+	count_b = fsm_endid_count(fsm_b, b);
+
+	if (count_a + count_b == 0) {
+		*mask &= ~FSM_WALK2_ENDIDS;
+		return 1;
+	}
+
+	/* just saving on malloc calls here */
+	ids = f_malloc(fsm_a->alloc, (count_a + count_b) * sizeof *ids);
+	if (ids == NULL) {
+		return 0;
+	}
+
+	ids_a = ids;
+	ids_b = ids + count_a;
+
+	if (!fsm_endid_get(fsm_a, a, count_a, ids_a)) {
+		f_free(fsm_a->alloc, ids);
+		return 0;
+	}
+
+	if (!fsm_endid_get(fsm_b, b, count_b, ids_b)) {
+		f_free(fsm_a->alloc, ids);
+		return 0;
+	}
+
+	/* there's no need to sort ids_a/ids_b[] here,
+	 * fsm_endid_get() writes them in order */
+
+	*mask = 0U;
+
+	i = 0;
+	j = 0;
+	while (i < count_a || j < count_b) {
+		if (j == count_b || (i < count_a && ids_a[i] < ids_b[j])) {
+			*mask |= FSM_WALK2_ONLYA;
+			i++;
+		} else if (i == count_a || ids_a[i] > ids_b[j]) {
+			*mask |= FSM_WALK2_ONLYB;
+			j++;
+		} else {
+			i++;
+			j++;
+		}
+	}
+
+	if (*mask == 0) {
+		*mask = FSM_WALK2_BOTH;
+	}
+
+	f_free(fsm_a->alloc, ids);
+
+	return 1;
+}
+
+static int
 walk2_comb_state(struct fsm *dst_fsm, int is_end,
 	fsm_state_t *comb) 
 {
-
 	assert(dst_fsm != NULL);
 	assert(comb != NULL);
  
@@ -215,6 +282,7 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 	const struct fsm *fsm_b, fsm_state_t b)
 {
 	struct fsm_walk2_tuple *p;
+	unsigned mask;
 	int is_end;
 
 	assert(data->states);
@@ -244,9 +312,17 @@ fsm_walk2_tuple_new(struct fsm_walk2_data *data,
 		return NULL;
 	}
 
-	is_end = data->endmask & walk2mask(
+	mask = walk2mask(
 		fsm_a != NULL && fsm_isend(fsm_a, a),
 		fsm_b != NULL && fsm_isend(fsm_b, b));
+
+	if (mask == FSM_WALK2_BOTH && (data->endmask & FSM_WALK2_ENDIDS)) {
+		if (!walk2_comb_endids(fsm_a, a, fsm_b, b, &mask)) {
+			return NULL;
+		}
+	}
+
+	is_end = data->endmask & mask;
 
 	p->have_a = fsm_a != NULL;
 	p->have_b = fsm_b != NULL;
