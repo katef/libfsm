@@ -172,8 +172,10 @@ int main(int argc, char *argv[]) {
 		flags |= RE_STRINGS_ANCHOR_RIGHT;
 	}
 
-	/* this is re_strings(), but with support for endids */
-	{
+	if (!flag_use_endids && !flag_trie_dump) {
+		fsm = re_strings(NULL, (const char **) words.list, words.len, flags);
+	} else {
+		/* this is re_strings(), but with support for endids */
 		struct re_strings *g;
 		size_t i;
 
@@ -218,7 +220,7 @@ int main(int argc, char *argv[]) {
 
 usage:
 
-	fprintf(stderr, "usage: %s [-dMNte]\n", pname);
+	fprintf(stderr, "usage: %s [-dlrute]\n", pname);
 	fprintf(stderr, "       %s -h\n", pname);
 
 	return 1;
