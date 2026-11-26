@@ -1,0 +1,11 @@
+a: match, ids: 0
+za: match, ids: 0
+zax: nomatch
+axy: match, ids: 1
+zaxy: match, ids: 1
+zaxq: match, ids: 2
+zaxqa: match, ids: 0
+b: nomatch
+ba: match, ids: 0
+aa: match, ids: 0
+axyzaxq: match, ids: 2

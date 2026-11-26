@@ -1,0 +1,21 @@
+: match, ids: 0
+tiger: match, ids: 0 4 6
+tigers: match, ids: 0
+tige: nomatch
+moominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoomin: match, ids: 1 2 7
+moominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoominmoomin: match, ids: 2 7
+moo: match, ids: 2 7
+moomin: match, ids: 2 7
+moose: match, ids: 2 7
+mo: nomatch
+amoo: nomatch
+ant: match, ids: 3 8
+elephant: match, ids: 3 8
+ants: nomatch
+newt: match, ids: 3 5
+antiger: match, ids: 4
+gnu: match, ids: 5 9
+agnus: match, ids: 5 9
+gnat: nomatch
+gnnewt: match, ids: 3 5
+newts: match, ids: 5

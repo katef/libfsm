@@ -1,0 +1,7 @@
+: match, ids: 0
+a: match, ids: 0
+b: match, ids: 0
+ab: match, ids: 0 1
+aab: match, ids: 0 1
+abb: match, ids: 0
+xyz: match, ids: 0

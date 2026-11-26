@@ -124,9 +124,8 @@ xgetline(FILE *f)
 		exit(EXIT_FAILURE);
 	}
 
-	/* n == 0 for an empty line */
-	if (n > 0) {
-		assert(buf[n - 1] == '\n');
+	/* n == 0 for an empty line, and it needn't end in a newline */
+	if (n > 0 && buf[n - 1] == '\n') {
 		buf[n - 1] = '\0';
 	}
 
@@ -313,16 +312,15 @@ categorize(enum re_dialect dialect, enum re_flags flags,
 		return CATEGORY_ERROR;
 	}
 
+	if (r == 1 && category == RE_LITERAL_UNSATISFIABLE) {
+		assert(lit_s == NULL);
+		return CATEGORY_UNSATISFIABLE;
+	}
+
 	/* empty string */
 	if (r == 1 && lit_n == 0) {
 		assert(lit_s == NULL);
 		return CATEGORY_EMPTY;
-	}
-
-	/* unsatisfiable */
-	if (r == 1 && category == RE_LITERAL_UNSATISFIABLE) {
-		assert(lit_s == NULL);
-		return CATEGORY_UNSATISFIABLE;
 	}
 
 	/* is a literal */
@@ -621,10 +619,10 @@ conflict(FILE *f, const struct fsm_options *opt,
 
 		for (size_t j = 0; j < env->general->count; j++) {
 			// TODO: delimiters per dialect, centralise with libre's re_perror()
-			if (env->general->a[i].id == state_metadata->end_ids[i]) {
+			if (env->general->a[j].id == state_metadata->end_ids[i]) {
 				fprintf(stderr, "#%u: /%s/\n",
 					state_metadata->end_ids[i],
-					env->general->a[i].s);
+					env->general->a[j].s);
 				goto next;
 			}
 		}
