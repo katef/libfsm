@@ -20,6 +20,56 @@
 
 #include "ac.h"
 
+/*
+ * This is an implementation of Aho-Corasick trie construction
+ * for building a FSM matching a set of literal strings.
+ *
+ *   Aho, Alfred V.; Corasick, Margaret J. (June 1975).
+ *   "Efficient string matching: An aid to bibliographic search".
+ *   Communications of the ACM. 18 (6): 333–340.
+ *   doi:10.1145/360825.360855. MR 0371172. S2CID 207735784.
+ *
+ * This implementation follows the paper closely, with the following additions:
+ *
+ * - libfsm allows optional "end ids" attached to accepting states in an FSM.
+ *   We allow them here too. These must be kept distinct, which prevents
+ *   combining all output states to a single sink (see re_strings).
+ *   We keep endids distinct with epsilon guards to sink states.
+ *
+ *   When endids are not present, we do fold these together to a "single end".
+ *
+ * - The paper builds unanchored strings only. We make anchoring optional:
+ *
+ *   Unanchored construction for left comes from the root looping to itself,
+ *   down through the trie structure and back up through the .fail edges,
+ *   per the construction in the paper.
+ *   ANCHOR_LEFT skips adding the .fail edges.
+ *
+ *   Unanchored construction for the right in the paper is provided by
+ *   signalling when an accepting state is reached (like an FST) and then
+ *   continuing. Remaining input text then has no effect for that match.
+ *   This would be RE_STRINGS_AC_AUTOMATON for us, which is not currently
+ *   implemented.
+ *
+ *   Instead we provide unanchored construction for the right by a self-loop
+ *   on the accepting state (either on the "single end" or per-sink for endids).
+ *   ANCHOR_RIGHT skips adding this self-loop.
+ *
+ * - Empty strings are permitted. These make no sense for unanchored strings
+ *   (they always match), which is the only configuration the paper considers.
+ *   We allow empty strings here because of our optional left/right anchors.
+ *
+ * And one caveat: endids and the self-loop for the unanchored right have
+ * the unfortunate side effect of producing an NFA, and we call fsm_determinise
+ * in re_strings to address that. This is expensive and can give a large state
+ * machine, and this partially defeats the benefit of Aho-Corasick in the first
+ * place.
+ *
+ * The anchors are partly handled in the caller (see re_strings), but we
+ * keep endid distinct here.
+ * It's not really clear what responsibility is within this API or outside it.
+ */
+
 enum { POOL_BLOCK_SIZE = 256 };
 
 struct trie_state {
