@@ -154,7 +154,7 @@ re_strings_build(struct re_strings *g,
 		 * on distinct_endid_sinks, and that isn't clear to the caller.
 		 */
 		if (!fsm_determinise(fsm)) {
-			return NULL;
+			goto error;
 		}
 	}
 
