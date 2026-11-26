@@ -67,8 +67,11 @@ ${TEST_OUTDIR.tests/aho_corasick}/res${n}r: ${TEST_OUTDIR.tests/aho_corasick}/go
 
 
 # unanchored
+# xargs drops empty lines, we're substituting () for the empty pattern
+# and this isn't a capturing group because -r native doesn't have captures
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
 	cat ${.ALLSRC:M*.txt} \
+	| sed 's/^$$/()/' \
 	| xargs ${RE} -zu -r native -p \
 	> $@
 

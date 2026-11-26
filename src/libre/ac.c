@@ -222,6 +222,30 @@ trie_add_failure_edges(struct trie_graph *g) {
 
 		st = q[bot++];
 
+		/*
+		 * st->fail is always closer to the root than st.
+		 * so it has already been dequeued and its .fail was handled
+		 * by the time we're looking at it here.
+		 */
+		st->output |= st->fail->output;
+
+		{
+			struct state_iter it; /* borrowing state_set for endids */
+			fsm_state_t endid;
+
+			for (state_set_reset(st->fail->endids, &it); state_set_next(&it, &endid); ) {
+				/*
+				 * TODO: Do we care about duplicates? maybe this is where we
+				 * implement AMBIG_? not sure
+				 * TODO: need to pass in alloc functions, none of ac.c does this
+				 */
+				if (!state_set_add(&st->endids, NULL, (fsm_state_t) endid)) {
+					free(q);
+					return -1;
+				}
+			}
+		}
+
 		for (sym=0; sym < 256; sym++) {
 			struct trie_state *fs, *nx;
 
@@ -246,25 +270,6 @@ trie_add_failure_edges(struct trie_graph *g) {
 			if (nx->fail == NULL) {
 				assert(fs == g->root);
 				nx->fail = fs;
-			}
-
-			nx->output |= nx->fail->output;
-
-			{
-				struct state_iter it; /* borrowing state_set for endids */
-				fsm_state_t endid;
-
-				for (state_set_reset(nx->fail->endids, &it); state_set_next(&it, &endid); ) {
-					/*
-					 * TODO: Do we care about duplicates? maybe this is where we
-					 * implement AMBIG_? not sure
-					 * TODO: need to pass in alloc functions, none of ac.c does this
-					 */
-					if (!state_set_add(&nx->endids, NULL, (fsm_state_t) endid)) {
-						free(q);
-						return -1;
-					}
-				}
 			}
 		}
 	}
