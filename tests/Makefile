@@ -6,8 +6,23 @@ FSM=${BUILD}/bin/fsm
 
 test:: ${res}
 
+# language equivalence
 ${res}:
 	${FSM} -t equivalent ${.ALLSRC:M*.fsm}; \
+	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
+	> $@
+
+.endfor
+
+.for res in ${FSMTEST_EQUAL}
+
+test:: ${res}
+
+# language equivalence + endid comparison
+# This is not a structural comparison,
+# FSM may be non-minimal and compare equal still.
+${res}:
+	${FSM} -t equal ${.ALLSRC:M*.fsm}; \
 	if [ $$? -eq 0 ]; then echo PASS; else echo FAIL; fi \
 	> $@
 

@@ -24,74 +24,96 @@ ${AC_TEST}:
 test:: ${AC_TEST}
 
 
-# build dependencies for the test data
+# xargs drops empty lines, we're substituting () for the empty pattern
+# and this isn't a capturing group because -r native doesn't have captures
+
 .for n in ${TEST.tests/aho_corasick:T:R:C/^in//}
 
 # fully anchored
-${TEST_OUTDIR.tests/aho_corasick}/out${n}a.re: ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
-	awk 'BEGIN { ORS="" ; print "^(" } { if (NR > 1) { print "|" } print $0 } END {print ")$$"}' \
-	< ${.ALLSRC:M*.txt} > $@
-
-${TEST_OUTDIR.tests/aho_corasick}/out${n}a.fsm: ${RE} ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+${TEST_OUTDIR.tests/aho_corasick}/out${n}a.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	cat ${.ALLSRC:M*.txt} \
+	| sed 's/^/\^/; s/$$/\$$/' \
+	| sed 's/^$$/()/' \
+	| xargs ${RE} -zu -r native -p \
 	> $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/got${n}a.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
-	${AC_TEST} < ${.ALLSRC:M*.txt} > $@
+	${AC_TEST} -e < ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/res${n}a: ${TEST_OUTDIR.tests/aho_corasick}/got${n}a.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.fsm
 
+${TEST_OUTDIR.tests/aho_corasick}/got${n}an.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	${AC_TEST} < ${.ALLSRC:M*.txt} > $@
+
+${TEST_OUTDIR.tests/aho_corasick}/res${n}an: ${TEST_OUTDIR.tests/aho_corasick}/got${n}an.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.fsm
+
 
 # left-anchored
-${TEST_OUTDIR.tests/aho_corasick}/out${n}l.re: ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
-	awk 'BEGIN { ORS="" ; print "^(" } { if (NR > 1) { print "|" } print $0 } END {print ").*"}' \
-	< ${.ALLSRC:M*.txt} > $@
-
-${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm: ${RE} ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	cat ${.ALLSRC:M*.txt} \
+	| sed 's/^/\^/;' \
+	| sed 's/^$$/()/' \
+	| xargs ${RE} -zu -r native -p \
 	> $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/got${n}l.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
-	${AC_TEST} -ul < ${.ALLSRC:M*.txt} > $@
+	${AC_TEST} -e -ul < ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/res${n}l: ${TEST_OUTDIR.tests/aho_corasick}/got${n}l.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm
 
+${TEST_OUTDIR.tests/aho_corasick}/got${n}ln.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	${AC_TEST} -ul < ${.ALLSRC:M*.txt} > $@
+
+${TEST_OUTDIR.tests/aho_corasick}/res${n}ln: ${TEST_OUTDIR.tests/aho_corasick}/got${n}ln.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm
+
 
 # right-anchored
-${TEST_OUTDIR.tests/aho_corasick}/out${n}r.re: ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
-	awk 'BEGIN { ORS="" ; print ".*(" } { if (NR > 1) { print "|" } print $0 } END {print ")$$"}' \
-	< ${.ALLSRC:M*.txt} > $@
-
-${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm: ${RE} ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	cat ${.ALLSRC:M*.txt} \
+	| sed 's/$$/\$$/' \
+	| sed 's/^$$/()/' \
+	| xargs ${RE} -zu -r native -p \
 	> $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/got${n}r.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
-	${AC_TEST} -ur < ${.ALLSRC:M*.txt} > $@
+	${AC_TEST} -e -ur < ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/res${n}r: ${TEST_OUTDIR.tests/aho_corasick}/got${n}r.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm
 
+${TEST_OUTDIR.tests/aho_corasick}/got${n}rn.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	${AC_TEST} -ur < ${.ALLSRC:M*.txt} > $@
+
+${TEST_OUTDIR.tests/aho_corasick}/res${n}rn: ${TEST_OUTDIR.tests/aho_corasick}/got${n}rn.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm
+
 
 # unanchored
-
-${TEST_OUTDIR.tests/aho_corasick}/out${n}u.re: ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
-	awk 'BEGIN { ORS="" ; print ".*(" } { if (NR > 1) { print "|" } print $0 } END {print ").*"}' \
-	< ${.ALLSRC:M*.txt} > $@
-
-${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm: ${RE} ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.re
-	${RE} -r native -py ${.ALLSRC:M*.re} \
+${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	cat ${.ALLSRC:M*.txt} \
+	| sed 's/^$$/()/' \
+	| xargs ${RE} -zu -r native -p \
 	> $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/got${n}u.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
-	${AC_TEST} -u < ${.ALLSRC:M*.txt} > $@
+	${AC_TEST} -e -u < ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/res${n}u: ${TEST_OUTDIR.tests/aho_corasick}/got${n}u.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm
 
+${TEST_OUTDIR.tests/aho_corasick}/got${n}un.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	${AC_TEST} -u < ${.ALLSRC:M*.txt} > $@
 
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}a
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}l
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}r
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}u
+${TEST_OUTDIR.tests/aho_corasick}/res${n}un: ${TEST_OUTDIR.tests/aho_corasick}/got${n}un.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm
+
+# testing for keeping endids distinct
+FSMTEST_EQUAL  += ${TEST_OUTDIR.tests/aho_corasick}/res${n}a
+FSMTEST_EQUAL  += ${TEST_OUTDIR.tests/aho_corasick}/res${n}l
+FSMTEST_EQUAL  += ${TEST_OUTDIR.tests/aho_corasick}/res${n}r
+FSMTEST_EQUAL  += ${TEST_OUTDIR.tests/aho_corasick}/res${n}u
+
+# language equivalence only, ignoring endids. this includes coverage for single_end.
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}an
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}ln
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}rn
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}un
 
 .endfor
 

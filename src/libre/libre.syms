@@ -23,3 +23,5 @@ re_strings_add_raw
 re_strings_add_str
 re_strings_build
 
+# XXX: for actest
+trie_dump

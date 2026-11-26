@@ -22,7 +22,10 @@
 #include <re/re.h>
 #include <re/strings.h>
 
-/* This is a heavily customized version of examples/words */
+// XXX
+struct trie_graph;
+void
+trie_dump(const struct trie_graph *g, FILE *f);
 
 static struct fsm_options opt;
 
@@ -106,8 +109,10 @@ int main(int argc, char *argv[]) {
 
 	const char *pname = argv[0];
 
-	int anchored_left  = 1;
-	int anchored_right = 1;
+	int anchored_left   = 1;
+	int anchored_right  = 1;
+	int flag_trie_dump  = 0;
+	int flag_use_endids = 0;
 
 	enum re_strings_flags flags;
 
@@ -121,7 +126,7 @@ int main(int argc, char *argv[]) {
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "h" "d" "lru"), c != -1) {
+		while (c = getopt(argc, argv, "h" "d" "lrute"), c != -1) {
 			switch (c) {
 			case 'u': anchored_left  = 0;
 				  anchored_right = 0;  break;
@@ -130,6 +135,9 @@ int main(int argc, char *argv[]) {
 			case 'r': anchored_right = 1;  break;
 
 			case 'd': lang = FSM_PRINT_DOT; break;
+
+			case 't': flag_trie_dump  = 1; break;
+			case 'e': flag_use_endids = 1; break;
 
 			case 'h':
 			case '?':
@@ -164,7 +172,38 @@ int main(int argc, char *argv[]) {
 		flags |= RE_STRINGS_ANCHOR_RIGHT;
 	}
 
-	fsm = re_strings(NULL, (const char **)words.list, words.len, flags);
+	if (!flag_use_endids && !flag_trie_dump) {
+		fsm = re_strings(NULL, (const char **) words.list, words.len, flags);
+	} else {
+		/* this is re_strings(), but with support for endids */
+		struct re_strings *g;
+		size_t i;
+
+		g = re_strings_new();
+		if (g == NULL) {
+			perror("re_strings_new");
+			abort();
+		}
+
+		for (i = 0; i < words.len; i++) {
+			fsm_end_id_t endid = i;
+
+			if (!re_strings_add_str(g, words.list[i], flag_use_endids ? &endid : NULL)) {
+				perror("re_strings_add_str");
+				abort();
+			}
+		}
+
+		fsm = re_strings_build(g, NULL, flags);
+
+		if (flag_trie_dump) {
+			trie_dump((void *) g, stderr);
+		}
+
+		re_strings_free(g);
+
+	}
+
 	wordlist_finalize(&words);
 
 	if (fsm == NULL) {
@@ -181,7 +220,7 @@ int main(int argc, char *argv[]) {
 
 usage:
 
-	fprintf(stderr, "usage: %s [-dMN]\n", pname);
+	fprintf(stderr, "usage: %s [-dlrute]\n", pname);
 	fprintf(stderr, "       %s -h\n", pname);
 
 	return 1;

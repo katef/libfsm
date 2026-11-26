@@ -12,10 +12,63 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#include <print/esc.h>
+#include <fsm/options.h>
+
 #include <fsm/fsm.h>
 #include <adt/stateset.h>
 
 #include "ac.h"
+
+/*
+ * This is an implementation of Aho-Corasick trie construction
+ * for building a FSM matching a set of literal strings.
+ *
+ *   Aho, Alfred V.; Corasick, Margaret J. (June 1975).
+ *   "Efficient string matching: An aid to bibliographic search".
+ *   Communications of the ACM. 18 (6): 333–340.
+ *   doi:10.1145/360825.360855. MR 0371172. S2CID 207735784.
+ *
+ * This implementation follows the paper closely, with the following additions:
+ *
+ * - libfsm allows optional "end ids" attached to accepting states in an FSM.
+ *   We allow them here too. These must be kept distinct, which prevents
+ *   combining all output states to a single sink (see re_strings).
+ *   We keep endids distinct with epsilon guards to sink states.
+ *
+ *   When endids are not present, we do fold these together to a "single end".
+ *
+ * - The paper builds unanchored strings only. We make anchoring optional:
+ *
+ *   Unanchored construction for left comes from the root looping to itself,
+ *   down through the trie structure and back up through the .fail edges,
+ *   per the construction in the paper.
+ *   ANCHOR_LEFT skips adding the .fail edges.
+ *
+ *   Unanchored construction for the right in the paper is provided by
+ *   signalling when an accepting state is reached (like an FST) and then
+ *   continuing. Remaining input text then has no effect for that match.
+ *   This would be RE_STRINGS_AC_AUTOMATON for us, which is not currently
+ *   implemented.
+ *
+ *   Instead we provide unanchored construction for the right by a self-loop
+ *   on the accepting state (either on the "single end" or per-sink for endids).
+ *   ANCHOR_RIGHT skips adding this self-loop.
+ *
+ * - Empty strings are permitted. These make no sense for unanchored strings
+ *   (they always match), which is the only configuration the paper considers.
+ *   We allow empty strings here because of our optional left/right anchors.
+ *
+ * And one caveat: endids and the self-loop for the unanchored right have
+ * the unfortunate side effect of producing an NFA, and we call fsm_determinise
+ * in re_strings to address that. This is expensive and can give a large state
+ * machine, and this partially defeats the benefit of Aho-Corasick in the first
+ * place.
+ *
+ * The anchors are partly handled in the caller (see re_strings), but we
+ * keep endid distinct here.
+ * It's not really clear what responsibility is within this API or outside it.
+ */
 
 enum { POOL_BLOCK_SIZE = 256 };
 
@@ -26,7 +79,6 @@ struct trie_state {
 	struct state_set *endids;
 
 	fsm_state_t st;
-	unsigned int index;
 	unsigned int output:1;
 	unsigned int have_st:1;
 };
@@ -42,6 +94,7 @@ struct trie_graph {
 	struct trie_pool *pool;
 	size_t nstates;
 	size_t depth;
+	unsigned int has_endids:1;
 };
 
 static struct trie_state *
@@ -68,13 +121,12 @@ newstate(struct trie_graph *g)
 	}
 
 	st = &g->pool->states[g->pool->n++];
+	g->nstates++;
 
 	memset(st->children,0,sizeof st->children);
 
 	st->fail    = NULL;
 	st->have_st = 0;
-
-	st->index   = ++g->nstates;
 
 	st->output  = 0;
 	st->endids  = NULL;
@@ -124,6 +176,7 @@ trie_create(void)
 	g->pool = NULL;
 	g->nstates = 0;
 	g->depth = 0;
+	g->has_endids = 0;
 
 	g->root = newstate(g);
 	if (g->root == NULL) {
@@ -132,6 +185,14 @@ trie_create(void)
 	}
 
 	return g;
+}
+
+bool
+trie_has_endids(const struct trie_graph *g)
+{
+	assert(g != NULL);
+
+	return g->has_endids;
 }
 
 struct trie_graph *
@@ -169,8 +230,12 @@ trie_add_word(struct trie_graph *g, const char *w, size_t n, const fsm_end_id_t 
 	}
 
 	if (endid != NULL) {
-		state_set_add(&st->endids, NULL, (fsm_state_t)*endid);
+		g->has_endids = 1;
+		if (!state_set_add(&st->endids, NULL, (fsm_state_t)*endid)) {
+			return NULL;
+		}
 	}
+
 	return g;
 }
 
@@ -207,6 +272,30 @@ trie_add_failure_edges(struct trie_graph *g) {
 
 		st = q[bot++];
 
+		/*
+		 * st->fail is always closer to the root than st.
+		 * so it has already been dequeued and its .fail was handled
+		 * by the time we're looking at it here.
+		 */
+		st->output |= st->fail->output;
+
+		{
+			struct state_iter it; /* borrowing state_set for endids */
+			fsm_state_t endid;
+
+			for (state_set_reset(st->fail->endids, &it); state_set_next(&it, &endid); ) {
+				/*
+				 * TODO: Do we care about duplicates? maybe this is where we
+				 * implement AMBIG_? not sure
+				 * TODO: need to pass in alloc functions, none of ac.c does this
+				 */
+				if (!state_set_add(&st->endids, NULL, (fsm_state_t) endid)) {
+					free(q);
+					return -1;
+				}
+			}
+		}
+
 		for (sym=0; sym < 256; sym++) {
 			struct trie_state *fs, *nx;
 
@@ -232,8 +321,6 @@ trie_add_failure_edges(struct trie_graph *g) {
 				assert(fs == g->root);
 				nx->fail = fs;
 			}
-
-			nx->output = nx->output | fs->output;
 		}
 	}
 
@@ -245,7 +332,7 @@ trie_add_failure_edges(struct trie_graph *g) {
 }
 
 static struct trie_state *
-find_next_state(struct trie_state *s, int sym)
+find_next_state(const struct trie_state *s, int sym)
 {
 	struct trie_state *nx, *fail;
 
@@ -281,7 +368,7 @@ find_next_state(struct trie_state *s, int sym)
 
 static int
 trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
-	int have_end, fsm_state_t single_end,
+	int have_end, fsm_state_t single_end, int distinct_endid_sinks,
 	fsm_state_t *q)
 {
 	fsm_state_t st;
@@ -315,7 +402,10 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 		if (nx != NULL) {
 			fsm_state_t dst;
 
-			if (!trie_to_fsm_state(nx, fsm, have_end, single_end, &dst)) {
+			if (!trie_to_fsm_state(nx, fsm,
+				have_end, single_end, distinct_endid_sinks,
+				&dst))
+			{
 				return 0;
 			}
 
@@ -326,14 +416,46 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 	}
 
 	if (ts->output) {
-		fsm_setend(fsm, st, 1);
+		fsm_state_t end = st;
 
-		struct state_iter si;
-		fsm_state_t state;
-		state_set_reset(ts->endids, &si);
-		while (state_set_next(&si, &state)) {
-			if (!fsm_endid_set(fsm, st, (fsm_end_id_t) state)) {
+		/*
+		 * distinct_endid_sinks means each trie .output state
+		 * has a self-loop for .*, but via an epsilon guard
+		 * so that the sink state can't interfere with the
+		 * structure for the trie proper.
+		 *
+		 * This way we can keep distinct sink states for each
+		 * endid (and after determinisation, those become for
+		 * each set of endids).
+		 *
+		 * This is as opposed to have_end, which is one shared
+		 * sink state, which would merge the endids.
+		 */
+		if (distinct_endid_sinks) {
+			if (!fsm_addstate(fsm, &end)) {
 				return 0;
+			}
+
+			if (!fsm_addedge_any(fsm, end, end)) {
+				return 0;
+			}
+
+			if (!fsm_addedge_epsilon(fsm, st, end)) {
+				return 0;
+			}
+		}
+
+		fsm_setend(fsm, end, 1);
+
+		{
+			struct state_iter si;
+			fsm_state_t state;
+
+			state_set_reset(ts->endids, &si);
+			while (state_set_next(&si, &state)) {
+				if (!fsm_endid_set(fsm, end, (fsm_end_id_t) state)) {
+					return 0;
+				}
 			}
 		}
 	}
@@ -343,11 +465,15 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 }
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, struct trie_graph *g, int have_end, fsm_state_t end)
+trie_to_fsm(struct fsm *fsm, const struct trie_graph *g,
+	int have_end, fsm_state_t end, int distinct_endid_sinks)
 {
 	fsm_state_t start;
 
-	if (!trie_to_fsm_state(g->root, fsm, have_end, end, &start)) {
+	if (!trie_to_fsm_state(g->root, fsm,
+		have_end, end, distinct_endid_sinks,
+		&start))
+	{
 		return NULL;
 	}
 
@@ -356,45 +482,235 @@ trie_to_fsm(struct fsm *fsm, struct trie_graph *g, int have_end, fsm_state_t end
 	return fsm;
 }
 
+struct dump_state {
+	const struct trie_state *st;
+	unsigned rank;
+};
+
 static void
-dump_state(struct trie_state *st, FILE *f, int indent, char* buf)
+dump_rank(struct dump_state *ds, const struct trie_state *st, unsigned int rank, FILE *f, size_t *index)
 {
-	int i;
+	unsigned i;
+
+	assert(ds != NULL);
+	assert(st != NULL);
+	assert(index != NULL);
+
+	ds[*index].st   = st;
+	ds[*index].rank = rank;
+	(*index)++;
 
 	for (i = 0; i < 256; i++) {
-		int sp;
-
 		if (st->children[i] != NULL) {
-			fprintf(f, "%5d|", indent);
-			for (sp=0; sp < indent; sp++) {
-				fprintf(f, "  ");
-			}
-			fprintf(f, "<%5u> --[%3d %c]-- <%5u>\n", st->index, i, isprint(i) ? i : ' ', st->children[i]->index);
-
-			buf[indent] = isprint(i) ? i : ' ';
-			dump_state(st->children[i],f,indent+1, buf);
+			dump_rank(ds, st->children[i], rank + 1, f, index);
 		}
-	}
-
-	if (st->output) {
-		buf[indent] = '\0';
-		fprintf(f, "W:%s\n", buf);
 	}
 }
 
-void
-trie_dump(struct trie_graph *g, FILE *f)
+static int
+ds_rank_cmp(const void *a, const void *b)
 {
-	char *buf;
+	const struct dump_state *da = a;
+	const struct dump_state *db = b;
 
-	buf = malloc(g->depth+1);
-	if (buf == NULL) {
-		perror("allocating buffer");
-		return;
+	/* these can only happen when there are bugs,
+	 * but this code is for debugging... */
+	if (da == NULL) { return +1; }
+	if (db == NULL) { return -1; }
+
+	if (da->rank < db->rank) { return -1; }
+	if (da->rank > db->rank) { return +1; }
+
+	return 0;
+}
+
+/*
+ * Picking up a state index from the allocator pool means we don't need to
+ * store the index inside struct trie_state. This way we can match the
+ * numbering from the academic paper (using the same numbering helps for
+ * debugging!) and keep the memory footprint svelte.
+ *
+ * The downside of course is that this search is slow. Which is fine for
+ * our purposes debugging.
+ *
+ * This is based on the assumption that the allocations are tracked in
+ * the order that they're made within a pool.
+ */
+static unsigned
+state_index(const struct trie_pool *pool, const struct trie_state *state)
+{
+	size_t i;
+
+	assert(pool != NULL);
+
+	do {
+		for (i = 0; i < pool->n; i++) {
+			if (&pool->states[i] == state) {
+				/*
+				 * Each pool is pushed to the head of the pool list,
+				 * to find the index we then also count to the tail.
+				 */
+				while (pool = pool->next, pool != NULL) {
+					i += pool->n;
+				}
+				return i;
+			}
+		}
+	} while (pool = pool->next, pool != NULL);
+
+	assert(!"unreached");
+	abort();
+}
+
+void
+trie_dump(const struct trie_graph *g, FILE *f)
+{
+	struct dump_state *ds;
+
+	assert(g != NULL);
+	assert(g->root != NULL);
+	assert(f != NULL);
+
+	fprintf(f, "digraph G {\n");
+	fprintf(f, "\tnode [ ordering = out, shape = box, style = rounded, width = 0.3, label = \"\" ];\n");
+	fprintf(f, "\tedge [ dir = none, style = invis ];\n");
+	fprintf(f, "\tranksep = 0;\n");
+	fprintf(f, "\tTBbalance = min;\n");
+	fprintf(f, "\troot = n%p;\n", (const void *) g->root);
+	fprintf(f, "\n");
+
+	ds = malloc(g->nstates * sizeof *ds);
+	if (ds == NULL) {
+		perror("malloc");
+		abort();
 	}
 
-	dump_state(g->root,f,0, buf);
+	{
+		size_t count = 0;
+		dump_rank(ds, g->root, 0, f, &count);
+		assert(count == g->nstates);
+	}
 
-	free(buf);
+	qsort(ds, g->nstates, sizeof *ds, ds_rank_cmp);
+
+	{
+		size_t i;
+		unsigned rank;
+
+		rank = 0;
+
+		fprintf(f, "\tsubgraph { rank = same; ");
+		for (i = 0; i < g->nstates; i++) {
+			if (ds[i].rank != rank) {
+				fprintf(f, "}\n");
+				fprintf(f, "\tsubgraph { rank = same; ");
+				rank = ds[i].rank;
+			}
+
+			fprintf(f, "n%p", (const void *) ds[i].st);
+			if (i + 1 < g->nstates && ds[i + 1].rank == rank) {
+				/* cross-links for horizontal ordering within a rank */
+				fprintf(f, " -> ");
+			} else {
+				fprintf(f, "; ");
+			}
+		}
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	/* nodes */
+	{
+		unsigned i;
+
+		for (i = 0; i < g->nstates; i++) {
+			fprintf(f, "\tn%p [ ",
+				(const void *) ds[i].st);
+
+			if (ds[i].st->output) {
+				fprintf(f, "peripheries = 2, ");
+			}
+
+			fprintf(f, "label = \n");
+			fprintf(f, "\t\t<<TABLE BORDER='0' CELLPADDING='2' CELLSPACING='0'>\n");
+
+			fprintf(f, "\t\t<TR>");
+			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>S%u</TD>", state_index(g->pool, ds[i].st));
+			fprintf(f, "</TR>\n");
+
+			fprintf(f, "\t\t<TR>");
+			fprintf(f, "<TD ALIGN='LEFT'>fail</TD><TD ALIGN='LEFT'>");
+			if (ds[i].st->fail == NULL) {
+				fprintf(f, "-");
+			} else {
+				fprintf(f, "S%u", state_index(g->pool, ds[i].st->fail));
+			}
+			fprintf(f, "</TD>");
+			fprintf(f, "</TR>\n");
+
+			fprintf(f, "\t\t<TR>");
+			fprintf(f, "<TD ALIGN='LEFT'>endids</TD>");
+			fprintf(f, "<TD ALIGN='LEFT'>");
+			if (!ds[i].st->output) {
+				fprintf(f, "-");
+			} else if (state_set_count(ds[i].st->endids) == 0) {
+				fprintf(f, "∅");
+			} else {
+				struct state_iter it;
+				fsm_state_t endid;
+				int j;
+
+				for (j = 0, state_set_reset(ds[i].st->endids, &it); state_set_next(&it, &endid); j = 1) {
+					if (j != 0) {
+						fprintf(f, ", ");
+					}
+					fprintf(f, "#%u", endid);
+				}
+			}
+			fprintf(f, "</TD>");
+			fprintf(f, "</TR>\n");
+
+			fprintf(f, "\t\t</TABLE>> ];\n");
+		}
+
+		fprintf(f, "\n");
+	}
+
+	/* trie edges */
+	{
+		unsigned i;
+
+		for (i = 0; i < g->nstates; i++) {
+			int sym;
+
+			for (sym = 0; sym < 256; sym++) {
+				if (ds[i].st->children[sym] != NULL) {
+					static const struct fsm_options opt;
+					fprintf(f, "\tn%p -> n%p [ style = solid; label = <",
+						(const void *) ds[i].st, (const void *) ds[i].st->children[sym]);
+					dot_escputc_html(f, &opt, (char) sym);
+					fprintf(f, "> ];\n");
+				}
+			}
+		}
+
+		fprintf(f, "\n");
+	}
+
+	/* fail edges */
+	{
+		unsigned i;
+
+		for (i = 0; i < g->nstates; i++) {
+			if (ds[i].st->fail) {
+				fprintf(f, "\tn%p -> n%p [ dir = back, style = dashed ];\n",
+					(const void *) ds[i].st->fail, (const void *) ds[i].st);
+			}
+		}
+	}
+
+	free(ds);
+
+	fprintf(f, "}\n");
 }
 

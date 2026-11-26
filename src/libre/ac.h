@@ -20,6 +20,9 @@ trie_create(void);
 void
 trie_free(struct trie_graph *g);
 
+bool
+trie_has_endids(const struct trie_graph *g);
+
 struct trie_graph *
 trie_add_word(struct trie_graph *g, const char *w, size_t n,
 	const fsm_end_id_t *endid);
@@ -28,11 +31,11 @@ int
 trie_add_failure_edges(struct trie_graph *g);
 
 struct fsm *
-trie_to_fsm(struct fsm *fsm, struct trie_graph *g,
-	int have_end, fsm_state_t end);
+trie_to_fsm(struct fsm *fsm, const struct trie_graph *g,
+	int have_end, fsm_state_t end, int distinct_endid_sinks);
 
 void
-trie_dump(struct trie_graph *g, FILE *f);
+trie_dump(const struct trie_graph *g, FILE *f);
 
 #endif
 
