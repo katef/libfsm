@@ -534,25 +534,27 @@ ds_rank_cmp(const void *a, const void *b)
  * our purposes debugging.
  *
  * This is based on the assumption that the allocations are tracked in
- * the order that they're made.
+ * the order that they're made within a pool.
  */
 static unsigned
 state_index(const struct trie_pool *pool, const struct trie_state *state)
 {
-	unsigned index;
 	size_t i;
 
 	assert(pool != NULL);
 
-	index = 0;
-
 	do {
 		for (i = 0; i < pool->n; i++) {
 			if (&pool->states[i] == state) {
-				return index;
+				/*
+				 * Each pool is pushed to the head of the pool list,
+				 * to find the index we then also count to the tail.
+				 */
+				while (pool = pool->next, pool != NULL) {
+					i += pool->n;
+				}
+				return i;
 			}
-
-			index++;
 		}
 	} while (pool = pool->next, pool != NULL);
 
