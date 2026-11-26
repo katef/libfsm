@@ -637,7 +637,7 @@ trie_dump(const struct trie_graph *g, FILE *f)
 			fprintf(f, "</TR>\n");
 
 			fprintf(f, "\t\t<TR>");
-			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>fail</TD><TD ALIGN='LEFT'>");
+			fprintf(f, "<TD ALIGN='LEFT'>fail</TD><TD ALIGN='LEFT'>");
 			if (ds[i].st->fail == NULL) {
 				fprintf(f, "-");
 			} else {
@@ -647,7 +647,7 @@ trie_dump(const struct trie_graph *g, FILE *f)
 			fprintf(f, "</TR>\n");
 
 			fprintf(f, "\t\t<TR>");
-			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>endids</TD>");
+			fprintf(f, "<TD ALIGN='LEFT'>endids</TD>");
 			fprintf(f, "<TD ALIGN='LEFT'>");
 			if (!ds[i].st->output) {
 				fprintf(f, "-");
