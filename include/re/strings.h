@@ -20,7 +20,7 @@ enum re_strings_flags {
 	/*
 	 * This signals that the automaton should be a standard Aho-Corasick
 	 * automaton. An Aho-Corasick automaton graph is equivalent
-	 * to RE_STIRNGS_ANCHOR_RIGHT, but the execution is slightly different.
+	 * to RE_STRINGS_ANCHOR_RIGHT, but the execution is slightly different.
 	 *
 	 * With standard FSM automatons, a match is only reported when the FSM
 	 * ends on an end state.
