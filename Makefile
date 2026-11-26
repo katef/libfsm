@@ -141,6 +141,7 @@ SUBDIR += tests/regressions
 SUBDIR += tests/reverse
 SUBDIR += tests/trim
 SUBDIR += tests/union
+SUBDIR += tests/iprange
 SUBDIR += tests/set
 SUBDIR += tests/stateset
 SUBDIR += tests/internedstateset

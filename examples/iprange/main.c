@@ -27,11 +27,12 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define _GNU_SOURCE
+#if !defined(__APPLE__) && !defined(__MACH__)
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include <arpa/inet.h>
 
 #include <assert.h>
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,389 +40,24 @@
 #include <unistd.h>
 
 #include <fsm/fsm.h>
-#include <fsm/bool.h>
 #include <fsm/options.h>
-#include <fsm/pred.h>
 #include <fsm/print.h>
 
-#include "tree.h"
+#include "iprange.h"
 
 #define VALUE_SEP ','
-
-static struct fsm *fsm;
-static fsm_state_t fsm_start;
-static fsm_state_t fsm_none = (fsm_state_t) -1;
-
-static unsigned char zeroes[16];
-static unsigned char ones[16];
-
-struct record {
-	const char *rec;
-	size_t len;
-	RB_ENTRY(record) entry;
-	unsigned id;
-
-	struct fsm *fsm;
-	fsm_state_t start;
-	fsm_state_t end;
-	struct {
-		fsm_state_t s;
-		unsigned char c;
-	} regs[16];
-};
-
-static RB_HEAD(recmap, record) recmap = RB_INITIALIZER(recmap);
-static struct record **byid = NULL;
-static size_t rec_cap = 1000000;
-
-static int
-recmap_cmp(const struct record *a, const struct record *b)
-{
-	long dlen = a->len - b->len;
-
-	if (dlen) return (dlen > 0) - (dlen < 0);
-	return strcmp(a->rec, b->rec);
-}
-
-RB_GENERATE_STATIC(recmap, record, entry, recmap_cmp)
-
-static unsigned nrecords;
-
-static struct fsm_options opt;
-static struct fsm_hooks hooks;
-
-static struct record *
-find_id(unsigned id)
-{
-	struct record *r;
-
-	/* XXX: this is a crime, we have a tree.
-	 * we should be able to RB_FIND() */
-	RB_FOREACH(r, recmap, &recmap) {
-		if (r->id == id) {
-			return r;
-		}
-	}
-
-	assert(!"unreached");
-	abort();
-}
-
-static struct record *
-get_id(char *rec, size_t reclen)
-{
-	struct record *r, s;
-
-	s.rec = rec;
-	s.len = reclen;
-	r = RB_FIND(recmap, &recmap, &s);
-	if (r != NULL) {
-		return r;
-	}
-
-	r = malloc(sizeof *r);
-	if (r == NULL) {
-		perror("malloc");
-		exit(-1);
-	}
-
-	r->rec = strdup(rec);
-	if (r->rec == NULL) {
-		perror("strdup");
-		exit(-1);
-	}
-
-	r->len = reclen;
-	r->id  = nrecords++;
-	r->fsm = fsm_new(NULL);
-	if (r->fsm == NULL) {
-		perror("fsm_new");
-		exit(-1);
-	}
-
-	if (!fsm_addstate(r->fsm, &r->start)) {
-		perror("fsm_addstate");
-		exit(-1);
-	}
-	fsm_setstart(r->fsm, r->start);
-
-	if (!fsm_addstate(r->fsm, &r->end)) {
-		perror("fsm_addstate");
-		exit(-1);
-	}
-	fsm_setend(r->fsm, r->end, 1);
-
-	for (size_t i = 0; i < sizeof r->regs / sizeof *r->regs; i++) {
-		r->regs[i].c = '\0';
-		r->regs[i].s = fsm_none;
-	}
-
-	RB_INSERT(recmap, &recmap, r);
-
-	if (byid == NULL) {
-		byid = malloc(rec_cap * sizeof (*byid));
-		if (byid == NULL) {
-			perror("malloc");
-			exit(-1);
-		}
-
-		byid[r->id] = r;
-	} else if (r->id == rec_cap) {
-		rec_cap *= 2;
-		void *f = realloc(byid, rec_cap * sizeof (*byid));
-		if (f == NULL) {
-			perror("realloc");
-			exit(-1);
-		}
-		byid = f;
-	}
-
-	return r;
-}
 
 static void
 usage(void)
 {
-	fprintf(stderr, "iprange -[46] [-f <file>] -l fmt\n"
+	fprintf(stderr, "iprange -[46] [-s] [-m <mode>] [-f <file>] -l fmt\n"
 	    "\t-4\t\tIPv4\n"
 	    "\t-6\t\tIPv6\n"
-	    "\t-f <file>\tuse <file> as input\n"
-	    "\t-l fmt\t\tOutput format (c, dot)\n");
-	exit(-1);
-}
-
-static fsm_state_t
-get_from(struct record *r, unsigned oct)
-{
-	if (oct == 0) {
-		return r->start;
-	}
-
-	return r->regs[oct - 1].s;
-}
-
-static fsm_state_t
-get_to(struct record *r, unsigned oct, unsigned noct, const unsigned char *octs)
-{
-	fsm_state_t to;
-
-	if (r->regs[oct].s != fsm_none && r->regs[oct].c == octs[oct]) {
-		return r->regs[oct].s;
-	}
-
-	if (!fsm_addstate(r->fsm, &to)) {
-		perror("fsm_addstate");
-		exit(-1);
-	}
-
-	r->regs[oct].s = to;
-	r->regs[oct].c = octs[oct];
-
-	for (unsigned i = oct + 1; i < noct; i++) {
-		r->regs[i].s = fsm_none;
-	}
-
-	return to;
-}
-
-static void
-gen_edge_range(struct record *r, unsigned oct, const unsigned char *octs,
-    unsigned range_start, unsigned range_end, unsigned noct, unsigned final)
-{
-	fsm_state_t from, to;
-
-	from = get_from(r, oct);
-	if (oct > 0) {
-		assert(r->regs[oct - 1].c == octs[oct - 1]);
-	} else {
-		assert(from == r->start);
-	}
-
-	if (final) {
-		to = r->end;
-	} else {
-		to = get_to(r, oct, noct, octs);
-		assert(r->regs[oct].c == octs[oct]);
-	}
-
-	if (!fsm_addedge_range(r->fsm, from, to, range_start, range_end)) {
-		perror("fsm_addedge_range");
-		exit(-1);
-	}
-}
-
-static void
-gen_range(struct record *r, unsigned noct, int prefix_octs, unsigned char range_start,
-    unsigned char range_end, unsigned char *octets)
-{
-	if (prefix_octs < 0) {
-		gen_edge_range(r, 0, octets, range_start, range_end, noct + 1, 1);
-		return;
-	}
-
-	for (unsigned i = 0; (int) i <= prefix_octs; i++) {
-		int final = 0;
-
-		if (((int) i == prefix_octs && range_start == 0 && range_end == 255) ||
-		    (i == noct)) {
-			final = 1;
-		}
-		gen_edge_range(r, i, octets, octets[i], octets[i], noct + 1, final);
-
-		if (final) {
-			return;
-		}
-	}
-
-	if (prefix_octs != (int) noct) {
-		gen_edge_range(r, prefix_octs + 1, octets, range_start, range_end, noct, 1);
-	}
-}
-
-static void
-handle_line(unsigned char *socts, unsigned char *eocts, unsigned noct,
-	char *rec, size_t reclen)
-{
-	struct record *r;
-	unsigned dbyte;
-
-	assert(socts != NULL);
-	assert(eocts != NULL);
-
-	r = get_id(rec, reclen);
-
-	/*
-	 * If we have a /32 or a /128, the shortest path is the whole address.
-	 */
-	if (memcmp(socts, eocts, noct + 1) == 0) {
-		gen_range(r, noct, noct, 0, 0, socts);
-		return;
-	}
-
-	/*
-	 * Find the first differing byte in the address.
-	 */
-	dbyte = 0;
-	for (unsigned i = 0; i <= noct; i++) {
-		if (socts[i] != eocts[i]) {
-			dbyte = i;
-			break;
-		}
-	}
-
-	while (dbyte <= noct) {
-		int szeroes, eones;
-		int tzeroes, tones;
-
-		szeroes = eones = -1;
-		if (dbyte < noct) {
-			szeroes = memcmp(&socts[dbyte], &zeroes, (noct - dbyte) + 1);
-			eones   = memcmp(&eocts[dbyte], &ones,   (noct - dbyte) + 1);
-		}
-
-		if (szeroes == 0 && eones == 0) {
-			/*
-			 * If the final differing bytes are all zeroes in the starting
-			 * range, and the final differing bytes are all ones, we complete
-			 * the entire range.
-			 */
-			gen_range(r, noct, dbyte - 1, 0, 255, socts);
-			return;
-		}
-
-		tzeroes = tones = -1;
-		if (dbyte + 1 < noct) {
-			tzeroes = memcmp(&socts[dbyte + 1], &zeroes, noct - dbyte);
-			tones   = memcmp(&eocts[dbyte + 1], &ones,   noct - dbyte);
-		}
-
-		if (tzeroes == 0 && tones == 0) {
-			gen_range(r, noct, dbyte - 1, socts[dbyte], eocts[dbyte], socts);
-			return;
-		}
-
-		if (szeroes == 0) {
-			/*
-			 * our start position is all zeroes, but our end position doesn't
-			 * consist of ones. this case is complicated, because it includes
-			 * things like 1.0.0.0 - 1.2.255.254, 1.0.0.0 - 1.1.1.1.
-			 */
-			gen_range(r, noct, dbyte - 1, socts[dbyte], eocts[dbyte] - 1, socts);
-			socts[dbyte] = eocts[dbyte];
-			dbyte++;
-			for (unsigned i = dbyte; i <= noct; i++) {
-				if (socts[i] != eocts[i]) {
-					dbyte = i;
-					break;
-				}
-			}
-
-			continue;
-		}
-
-		/*
-		 * Here we have some byte position _after_ the differing
-		 * byte in the start range that is non-zero, or we have some
-		 * differing byte end the end range that is not 255. We want to
-		 * reduce our starting range first, because this guarantees us
-		 * shortest matches later.
-		 */
-
-		unsigned spos = noct;
-
-		/*
-		 * When our start position isn't all zeroes, we need to
-		 * finish a starting range, and we need to finish the longest
-		 * range. For example 1.0.1.0 - 1.2.255.255 must first
-		 * generate `1.0.[1-255]`.
-		 */
-		for (unsigned i = noct; i >= dbyte; i--) {
-			if (socts[i] != 0) {
-				spos = i;
-				break;
-			}
-		}
-
-		/*
-		 * We complete this range. If we complete a range starting at
-		 * the initial octet, this is special because we need to move
-		 * our range forward only to the ending octet (instead of 255).
-		 */
-		if (spos == dbyte) {
-			gen_range(r, noct, spos - 1, socts[spos], eocts[spos] - 1, socts);
-			for (unsigned i = spos + 1; i <= noct; i++) {
-				socts[i] = 0;
-			}
-
-			socts[spos] = eocts[spos];
-
-			// XXX: not sure about this
-			break;
-		} else {
-			gen_range(r, noct, spos - 1, socts[spos], 255, socts);
-
-			for (unsigned i = spos; i <= noct; i++) {
-				socts[i] = 0;
-			}
-
-			socts[spos - 1]++;
-		}
-
-		/*
-		 * Now, if we had e.g. 1.0.1.0, we have generated a range of
-		 * `1.0.[1-255]` and updated socts to be `1.1.0.0`. Our range
-		 * in our example would now be 1.1.0.0 - 1.2.255.255. We reset
-		 * our dbyte calculation, since the differing byte could now
-		 * be elsewhere. But it can't be before the original differing
-		 * byte, so we start there.
-		 */
-		for (unsigned i = 0; i <= noct; i++) {
-			if (socts[i] != eocts[i]) {
-				dbyte = i;
-				break;
-			}
-		}
-	}
+	    "\t-s\t\tStream pre-sorted, conflict-free input\n"
+	    "\t-m <mode>\tOverlap mode: error (default), specific, first, last\n"
+	    "\t-f <file>\tUse <file> as input\n"
+	    "\t-l fmt\t\tOutput format (c, dot, fsm)\n");
+	exit(EXIT_FAILURE);
 }
 
 static int
@@ -440,50 +76,46 @@ important(unsigned n)
 	}
 }
 
-static int
-conflict(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
-	const char *example, void *hook_opaque)
+static void
+report_conflict(const char * const *labels, const unsigned *ids,
+	size_t count, const unsigned char *example_ip, void *opaque)
 {
-	size_t i;
+	const struct iprange *ipr = opaque;
+	char ipbuf[INET6_ADDRSTRLEN];
+	int af;
 
-	(void) f;
-	(void) hook_opaque;
-	(void) opt;
+	(void) ids;
 
 	fprintf(stderr, "ambiguous matches for ");
 
-	for (i = 0; i < count; i++) {
-		const struct record *r;
-
-		r = (const void *) (intptr_t) ids[i]; /* XXX */
-
-		fprintf(stderr, "%s", r->rec);
-
+	for (size_t i = 0; i < count; i++) {
+		fprintf(stderr, "%s", labels[i] != NULL ? labels[i] : "?");
 		if (i + 1 < count) {
 			fprintf(stderr, ", ");
 		}
 	}
 
-	if (example != NULL) {
-		fprintf(stderr, "; for example on input '%s'", example);
+	if (example_ip != NULL && ipr != NULL) {
+		af = (iprange_get_family(ipr) == IPRANGE_IPV4)
+			? AF_INET : AF_INET6;
+		if (inet_ntop(af, example_ip, ipbuf, sizeof ipbuf) != NULL) {
+			fprintf(stderr, "; for example on input '%s'", ipbuf);
+		}
 	}
 
 	fprintf(stderr, "\n");
-
-	return 0;
 }
 
 static int
 accept_dot(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
+	const struct fsm_state_metadata *state_metadata,
 	void *lang_opaque, void *hook_opaque)
 {
+	const struct iprange *ipr = hook_opaque;
 	fsm_state_t s;
 
 	assert(f != NULL);
-
-	(void) hook_opaque;
+	assert(state_metadata != NULL);
 
 	s = * (fsm_state_t *) lang_opaque;
 
@@ -492,19 +124,17 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 	if (!opt->anonymous_states) {
 		fprintf(f, "%u", s);
 
-		if (count > 0) {
+		if (state_metadata->end_id_count > 0) {
 			fprintf(f, "<BR/>");
 		}
 	}
 
-	for (size_t i = 0; i < count; i++) {
-		const struct record *r;
+	for (size_t i = 0; i < state_metadata->end_id_count; i++) {
+		const char *label = iprange_label(ipr, state_metadata->end_ids[i]);
 
-		r = find_id(ids[i]);
+		fprintf(f, "%s", label != NULL ? label : "?"); /* XXX: escape */
 
-		fprintf(f, "%s", r->rec); /* XXX: escape */
-
-		if (i + 1 < count) {
+		if (i + 1 < state_metadata->end_id_count) {
 			fprintf(f, ", ");
 		}
 	}
@@ -515,43 +145,65 @@ accept_dot(FILE *f, const struct fsm_options *opt,
 }
 
 static int
-comment_c(FILE *f, const struct fsm_options *opt,
-	const fsm_end_id_t *ids, size_t count,
-	void *hook_opaque)
+accept_c(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *lang_opaque, void *hook_opaque)
 {
+	const struct iprange *ipr = hook_opaque;
+	unsigned id;
+	const char *label;
+
 	assert(f != NULL);
+	assert(state_metadata != NULL);
+	assert(state_metadata->end_id_count == 1);
 
-	(void) opt;
-	(void) hook_opaque;
+	(void) lang_opaque;
 
-	fprintf(f, "/* ");
+	id = state_metadata->end_ids[0];
+	label = iprange_label(ipr, id);
 
-	for (size_t i = 0; i < count; i++) {
-		const struct record *r;
-
-		r = find_id(ids[i]);
-
-		fprintf(f, "%s", r->rec); /* XXX: escape */
-
-		if (i + 1 < count) {
-			fprintf(f, ", ");
-		}
+	fprintf(f, "return 0x%x;", id);
+	if (opt->comments && label != NULL) {
+		fprintf(f, " /* %s */", label);
 	}
 
-	fprintf(f, " */\n");
+	return 0;
+}
 
+static int
+reject_c(FILE *f, const struct fsm_options *opt,
+	const struct fsm_state_metadata *state_metadata,
+	void *lang_opaque, void *hook_opaque)
+{
+	if (state_metadata != NULL && state_metadata->end_id_count > 0) {
+		return accept_c(f, opt, state_metadata, lang_opaque, hook_opaque);
+	}
+
+	fprintf(f, "return -1;");
 	return 0;
 }
 
 int
 main(int argc, char **argv)
 {
-	static enum { IPV4, IPV6 } ipv;
+	enum iprange_family family = IPRANGE_IPV4;
+	enum iprange_overlap_mode overlap_mode = IPRANGE_OVERLAP_ERROR;
+	enum fsm_print_lang lang = FSM_PRINT_NONE;
+	struct fsm_options opt;
+	struct fsm_hooks hooks;
+	struct iprange *ipr;
+	struct fsm *fsm = NULL;
+	char *buf = NULL;
+	size_t cap = 0;
+	ssize_t len;
+	int streaming = 0;
 	int progress = 0;
 	FILE *fd = NULL;
-	int odot = 0;
-	int oc = 0;
 	int c;
+	enum iprange_err err;
+
+	memset(&opt, 0, sizeof opt);
+	memset(&hooks, 0, sizeof hooks);
 
 	opt.ambig             = AMBIG_ERROR;
 	opt.prefix            = NULL;
@@ -560,20 +212,36 @@ main(int argc, char **argv)
 	opt.consolidate_edges = 1;
 	opt.case_ranges       = 1;
 
-	hooks.conflict = conflict;
-
-	while (c = getopt(argc, argv, "46f:l:Q"), c != -1) {
+	while (c = getopt(argc, argv, "46f:l:m:sQ"), c != -1) {
 		switch (c) {
-		case '4': ipv = IPV4; break;
-		case '6': ipv = IPV6; break;
+		case '4': family = IPRANGE_IPV4; break;
+		case '6': family = IPRANGE_IPV6; break;
+		case 's': streaming = 1; break;
+
+		case 'm':
+			if (strcmp(optarg, "error") == 0) {
+				overlap_mode = IPRANGE_OVERLAP_ERROR;
+			} else if (strcmp(optarg, "specific") == 0) {
+				overlap_mode = IPRANGE_OVERLAP_MOST_SPECIFIC;
+			} else if (strcmp(optarg, "first") == 0) {
+				overlap_mode = IPRANGE_OVERLAP_FIRST;
+			} else if (strcmp(optarg, "last") == 0) {
+				overlap_mode = IPRANGE_OVERLAP_LAST;
+			} else {
+				fprintf(stderr, "Invalid overlap mode '%s'\n", optarg);
+				usage();
+			}
+			break;
 
 		case 'l':
 			if (strcmp(optarg, "dot") == 0) {
-				odot = 1;
+				lang = FSM_PRINT_DOT;
 			} else if (strcmp(optarg, "c") == 0) {
-				oc = 1;
+				lang = FSM_PRINT_C;
+			} else if (strcmp(optarg, "fsm") == 0) {
+				lang = FSM_PRINT_FSM;
 			} else {
-				fprintf(stderr, "Invalid language '%s'", optarg);
+				fprintf(stderr, "Invalid language '%s'\n", optarg);
 				usage();
 			}
 
@@ -596,187 +264,151 @@ main(int argc, char **argv)
 		}
 	}
 
+	if (lang == FSM_PRINT_NONE) {
+		usage();
+	}
+
+	if (streaming && overlap_mode != IPRANGE_OVERLAP_ERROR) {
+		fprintf(stderr, "-s requires -m error\n");
+		if (fd != NULL && fd != stdin) {
+			fclose(fd);
+		}
+		usage();
+	}
+
 	if (fd == NULL) {
 		fd = stdin;
 	}
 
-	if (oc == 0 && odot == 0) {
-		usage();
+	ipr = iprange_new(family);
+	if (ipr == NULL) {
+		perror("iprange_new");
+		if (fd != stdin) {
+			fclose(fd);
+		}
+		return EXIT_FAILURE;
 	}
 
-	memset(ones, 0xff, sizeof ones);
-
-	fsm = fsm_new(NULL);
-	if (fsm == NULL) {
-		perror("fsm_new");
-		return -1;
+	err = iprange_set_overlap_mode(ipr, overlap_mode);
+	if (err != IPRANGE_OK) {
+		fprintf(stderr, "iprange_set_overlap_mode: %s\n",
+			iprange_strerror(err));
+		goto fail;
 	}
 
-	if (!fsm_addstate(fsm, &fsm_start)) {
-		perror("fsm_addstate");
-		return -1;
+	if (streaming) {
+		err = iprange_enable_streaming(ipr);
+		if (err != IPRANGE_OK) {
+			fprintf(stderr, "iprange_enable_streaming: %s\n",
+				iprange_strerror(err));
+			goto fail;
+		}
 	}
 
 	unsigned line = 0;
-	time_t tstart, tend;
+	time_t tstart = 0, tend;
 	if (progress) {
 		tstart = time(NULL);
 		fprintf(stderr, "Reading lines... ");
 		fflush(stderr);
 	}
 
-	char *buf = NULL;
-	size_t cap = 0;
-	ssize_t len;
-
 	while (len = getline(&buf, &cap, fd), len > 0) {
 		char *start = buf;
-		char *end = memchr(start, VALUE_SEP, len);
+		char *end = memchr(start, VALUE_SEP, (size_t) len);
 
 		if (end == NULL) {
 			fprintf(stderr, "Invalid data: %s\n", buf);
-			return -1;
+			goto fail;
 		}
 		*end = '\0';
 		end++;
 		len -= end - start;
 
-		char *rec = memchr(end, VALUE_SEP, len);
+		char *rec = memchr(end, VALUE_SEP, (size_t) len);
 		if (rec == NULL) {
 			fprintf(stderr, "Invalid data: %s\n", buf);
-			return -1;
-		};
+			goto fail;
+		}
 		*rec = '\0';
 		rec++;
-		len -= rec - end;
 
-		if (strrchr(rec, '\n')) {
-			*strrchr(rec, '\n') = '\0';
-		}
+		rec[strcspn(rec, "\r\n")] = '\0';
 
-		{
-			struct in6_addr s6, e6;
-			struct in_addr s4, e4;
-			unsigned char *socts, *eocts;
-			unsigned noct;
-
-			switch (ipv) {
-			case IPV4:
-				if (inet_pton(AF_INET, start, &s4) != 1 ||
-					inet_pton(AF_INET, end,   &e4) != 1) {
-					perror("inet_pton");
-					exit(-1);
-				}
-
-				socts = (unsigned char *) &s4.s_addr;
-				eocts = (unsigned char *) &e4.s_addr;
-				noct  = 3;
-				break;
-
-			case IPV6:
-				if (inet_pton(AF_INET6, start, &s6) != 1 ||
-					inet_pton(AF_INET6, end,   &e6) != 1) {
-					perror("inet_pton");
-					exit(-1);
-				}
-
-				socts = (unsigned char *) &s6.s6_addr;
-				eocts = (unsigned char *) &e6.s6_addr;
-				noct  = 15;
-				break;
-			}
-
-			handle_line(socts, eocts, noct, rec, len);
+		err = iprange_add_str(ipr, start, end, rec, NULL);
+		if (err != IPRANGE_OK) {
+			fprintf(stderr, "Line %u (%s-%s): %s\n",
+				line + 1, start, end, iprange_strerror(err));
+			goto fail;
 		}
 
 		if (progress) {
 			tend = time(NULL);
 			if (important(line)) {
-				fprintf(stderr, "l%d [%lus] ", line, tend - tstart);
+				fprintf(stderr, "l%u [%lds] ", line,
+					(long) (tend - tstart));
 			}
 			tstart = tend;
-			line++;
 		}
+		line++;
+	}
+
+	free(buf);
+	buf = NULL;
+	if (fd != stdin) {
+		fclose(fd);
+		fd = NULL;
 	}
 
 	if (progress) {
-		fprintf(stderr, "\nminimizing/unioning %u records...", nrecords);
-		fflush(stderr);
-
-		tstart = time(NULL);
-		line = 0;
-	}
-
-	struct record *r;
-	RB_FOREACH(r, recmap, &recmap) {
-		struct fsm_combine_info ci;
-		fsm_state_t start;
-
-		if (!fsm_determinise(r->fsm)) {
-			perror("fsm_determinse");
-			exit(-1);
-		}
-
-		if (!fsm_minimise(r->fsm)) {
-			perror("fsm_minimise");
-			exit(-1);
-		}
-
-		fsm_setendid(r->fsm, r->id);
-
-		(void) fsm_getstart(r->fsm, &start);
-
-		fsm = fsm_merge(fsm, r->fsm, &ci);
-		if (fsm == NULL) {
-			perror("fsm_merge");
-			exit(-1);
-		}
-
-		(void) ci;
-
-		if (!fsm_addedge_epsilon(fsm, fsm_start, start)) {
-			perror("fsm_addedge_epsilon");
-			exit(-1);
-		}
-
-		if (progress) {
-			tend = time(NULL);
-			if (important(line)) {
-				fprintf(stderr, "r%d [%lds] ", line, tend - tstart);
-			}
-			tstart = tend;
-			line++;
-		}
-	}
-
-	fsm_setstart(fsm, fsm_start);
-
-	if (progress) {
-		tend = time(NULL);
-		fprintf(stderr, " done [%lds]\n", tend - tstart);
-		fprintf(stderr, "converting to DFA...");
+		fprintf(stderr, "\ncompiling %u records...",
+			iprange_record_count(ipr));
 		fflush(stderr);
 		tstart = time(NULL);
 	}
 
-	if (!fsm_determinise(fsm)) {
-		perror("fsm_determinise");
-		exit(-1);
+	err = iprange_compile(ipr, &fsm, report_conflict, ipr);
+	if (err != IPRANGE_OK) {
+		if (err != IPRANGE_ERR_CONFLICT) {
+			fprintf(stderr, "iprange_compile: %s\n",
+				iprange_strerror(err));
+		}
+		goto fail;
 	}
 
 	if (progress) {
 		tend = time(NULL);
-		fprintf(stderr, " done [%lds]\n", tend - tstart);
+		fprintf(stderr, " done [%lds]\n", (long) (tend - tstart));
 	}
 
-	if (oc) {
+	hooks.hook_opaque = ipr;
+
+	if (lang == FSM_PRINT_C) {
 		opt.fragment = 1;
 		opt.comments = 1;
-		hooks.comment = comment_c;
-		fsm_print(stdout, fsm, &opt, &hooks, FSM_PRINT_C);
-	} else if (odot) {
+		hooks.accept = accept_c;
+		hooks.reject = reject_c;
+	} else if (lang == FSM_PRINT_DOT) {
 		hooks.accept = accept_dot;
-		fsm_print(stdout, fsm, &opt, &hooks, FSM_PRINT_DOT);
 	}
-}
 
+	if (fsm_print(stdout, fsm, &opt, &hooks, lang) != 0) {
+		perror("fsm_print");
+		goto fail;
+	}
+
+	fsm_free(fsm);
+	iprange_free(ipr);
+	return EXIT_SUCCESS;
+
+fail:
+	free(buf);
+	if (fd != NULL && fd != stdin) {
+		fclose(fd);
+	}
+	if (fsm != NULL) {
+		fsm_free(fsm);
+	}
+	iprange_free(ipr);
+	return EXIT_FAILURE;
+}
