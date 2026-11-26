@@ -44,18 +44,49 @@ bm_unset(struct bm *bm, size_t i)
 	u64bitset_clear(bm->map, i);
 }
 
+/*
+ * Suffix masks in .rodata: entry b has bits b..255 set (and entry 256 is
+ * all zeros), so the inclusive range x..y is bm_range_lo[x] & ~bm_range_lo[y + 1].
+ * Keeping the table const lets compilers prove non-aliasing against *bm and
+ * emit wide vector loads and stores without runtime initialization.
+ */
+#define BM_LO_WORD(b, w) \
+	((b) <= (w) * 64 ? ~UINT64_C(0) : \
+	((b) >= ((w) + 1) * 64 ? UINT64_C(0) : \
+	(~UINT64_C(0) << (((b) - (w) * 64) & 63))))
+
+#define BM_LO_ENTRY(b) { \
+	BM_LO_WORD(b, 0), BM_LO_WORD(b, 1), \
+	BM_LO_WORD(b, 2), BM_LO_WORD(b, 3)  \
+}
+
+#define BM_LUT4(F, b)  F(b), F((b) + 1), F((b) + 2), F((b) + 3)
+#define BM_LUT16(F, b) BM_LUT4(F, b), BM_LUT4(F, (b) + 4), BM_LUT4(F, (b) + 8), BM_LUT4(F, (b) + 12)
+#define BM_LUT64(F, b) BM_LUT16(F, b), BM_LUT16(F, (b) + 16), BM_LUT16(F, (b) + 32), BM_LUT16(F, (b) + 48)
+#define BM_LUT256(F)   BM_LUT64(F, 0), BM_LUT64(F, 64), BM_LUT64(F, 128), BM_LUT64(F, 192)
+
+static const uint64_t bm_range_lo[UCHAR_MAX + 2][4] = {
+	BM_LUT256(BM_LO_ENTRY),
+	{ 0, 0, 0, 0 }
+};
+
+#undef BM_LUT256
+#undef BM_LUT64
+#undef BM_LUT16
+#undef BM_LUT4
+#undef BM_LO_ENTRY
+#undef BM_LO_WORD
+
 void
 bm_range(struct bm *bm, size_t x, size_t y)
 {
-	size_t i;
-
 	assert(bm != NULL);
 	assert(x <= y);
 	assert(y <= UCHAR_MAX);
+	assert(sizeof bm->map / sizeof *bm->map == 4);
 
-	// TODO: consider some kind of bitmap homunculus to set a range of bits within a bitmap
-	for (i = x; i <= y; i++) {
-		bm_set(bm, i);
+	for (size_t i = 0; i < sizeof bm->map / sizeof *bm->map; i++) {
+		bm->map[i] |= bm_range_lo[x][i] & ~bm_range_lo[y + 1][i];
 	}
 }
 

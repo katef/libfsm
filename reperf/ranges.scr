@@ -1,0 +1,42 @@
+# character-class range benchmarks
+
+- ascii_ident_classes
+D pcre
+M ^[A-Za-z_][A-Za-z0-9_.-]{63}$
+S alpha_ident_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ.abcdef-7890123
+N 5000
+R 1
+X
+
+- printable_span
+D pcre
+M ^[\x20-\x7e]{64}$
+S !"#%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`a
+N 5000
+R 1
+X
+
+- negated_newline
+D pcre
+M ^[^\x0a\x0d]{64}$
+S 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-
+N 5000
+R 1
+X
+
+- full_byte_range
+D pcre
+M ^[\x00-\xff]{64}$
+S 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-
+N 5000
+R 1
+X
+
+- disjoint_multibyte_bands
+D pcre
+M ^(?:[\x01-\x1f]|[\x21-\x5f]|[\x61-\x7e]|[\x80-\xbf]|[\xc2-\xf4]){64}$
+S ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz!0123456789
+N 5000
+R 1
+X
+Q
