@@ -24,13 +24,16 @@ ${AC_TEST}:
 test:: ${AC_TEST}
 
 
-# build dependencies for the test data
+# xargs drops empty lines, we're substituting () for the empty pattern
+# and this isn't a capturing group because -r native doesn't have captures
+
 .for n in ${TEST.tests/aho_corasick:T:R:C/^in//}
 
 # fully anchored
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
 	cat ${.ALLSRC:M*.txt} \
 	| sed 's/^/\^/; s/$$/\$$/' \
+	| sed 's/^$$/()/' \
 	| xargs ${RE} -zu -r native -p \
 	> $@
 
@@ -49,6 +52,7 @@ ${TEST_OUTDIR.tests/aho_corasick}/res${n}an: ${TEST_OUTDIR.tests/aho_corasick}/g
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
 	cat ${.ALLSRC:M*.txt} \
 	| sed 's/^/\^/;' \
+	| sed 's/^$$/()/' \
 	| xargs ${RE} -zu -r native -p \
 	> $@
 
@@ -67,6 +71,7 @@ ${TEST_OUTDIR.tests/aho_corasick}/res${n}ln: ${TEST_OUTDIR.tests/aho_corasick}/g
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
 	cat ${.ALLSRC:M*.txt} \
 	| sed 's/$$/\$$/' \
+	| sed 's/^$$/()/' \
 	| xargs ${RE} -zu -r native -p \
 	> $@
 
@@ -82,8 +87,6 @@ ${TEST_OUTDIR.tests/aho_corasick}/res${n}rn: ${TEST_OUTDIR.tests/aho_corasick}/g
 
 
 # unanchored
-# xargs drops empty lines, we're substituting () for the empty pattern
-# and this isn't a capturing group because -r native doesn't have captures
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
 	cat ${.ALLSRC:M*.txt} \
 	| sed 's/^$$/()/' \
