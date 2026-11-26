@@ -632,11 +632,11 @@ trie_dump(const struct trie_graph *g, FILE *f)
 			fprintf(f, "label = \n");
 			fprintf(f, "\t\t<<TABLE BORDER='0' CELLPADDING='2' CELLSPACING='0'>\n");
 
-			fprintf(f, "\t\t\t<TR>");
+			fprintf(f, "\t\t<TR>");
 			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>S%u</TD>", state_index(g->pool, ds[i].st));
-			fprintf(f, "</TR>");
+			fprintf(f, "</TR>\n");
 
-			fprintf(f, "\t\t\t<TR>");
+			fprintf(f, "\t\t<TR>");
 			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>fail</TD><TD ALIGN='LEFT'>");
 			if (ds[i].st->fail == NULL) {
 				fprintf(f, "-");
@@ -646,7 +646,7 @@ trie_dump(const struct trie_graph *g, FILE *f)
 			fprintf(f, "</TD>");
 			fprintf(f, "</TR>\n");
 
-			fprintf(f, "\t\t\t<TR>");
+			fprintf(f, "\t\t<TR>");
 			fprintf(f, "<TD COLSPAN='2' ALIGN='LEFT'>endids</TD>");
 			fprintf(f, "<TD ALIGN='LEFT'>");
 			if (!ds[i].st->output) {
@@ -668,7 +668,7 @@ trie_dump(const struct trie_graph *g, FILE *f)
 			fprintf(f, "</TD>");
 			fprintf(f, "</TR>\n");
 
-			fprintf(f, "</TABLE>> ];\n");
+			fprintf(f, "\t\t</TABLE>> ];\n");
 		}
 
 		fprintf(f, "\n");
