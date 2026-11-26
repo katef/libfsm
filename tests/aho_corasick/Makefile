@@ -39,6 +39,11 @@ ${TEST_OUTDIR.tests/aho_corasick}/got${n}a.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/a
 
 ${TEST_OUTDIR.tests/aho_corasick}/res${n}a: ${TEST_OUTDIR.tests/aho_corasick}/got${n}a.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.fsm
 
+${TEST_OUTDIR.tests/aho_corasick}/got${n}an.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	${AC_TEST} < ${.ALLSRC:M*.txt} > $@
+
+${TEST_OUTDIR.tests/aho_corasick}/res${n}an: ${TEST_OUTDIR.tests/aho_corasick}/got${n}an.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}a.fsm
+
 
 # left-anchored
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
@@ -52,6 +57,11 @@ ${TEST_OUTDIR.tests/aho_corasick}/got${n}l.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/a
 
 ${TEST_OUTDIR.tests/aho_corasick}/res${n}l: ${TEST_OUTDIR.tests/aho_corasick}/got${n}l.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm
 
+${TEST_OUTDIR.tests/aho_corasick}/got${n}ln.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	${AC_TEST} -ul < ${.ALLSRC:M*.txt} > $@
+
+${TEST_OUTDIR.tests/aho_corasick}/res${n}ln: ${TEST_OUTDIR.tests/aho_corasick}/got${n}ln.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}l.fsm
+
 
 # right-anchored
 ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm: ${RE} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
@@ -64,6 +74,11 @@ ${TEST_OUTDIR.tests/aho_corasick}/got${n}r.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/a
 	${AC_TEST} -e -ur < ${.ALLSRC:M*.txt} > $@
 
 ${TEST_OUTDIR.tests/aho_corasick}/res${n}r: ${TEST_OUTDIR.tests/aho_corasick}/got${n}r.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm
+
+${TEST_OUTDIR.tests/aho_corasick}/got${n}rn.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	${AC_TEST} -ur < ${.ALLSRC:M*.txt} > $@
+
+${TEST_OUTDIR.tests/aho_corasick}/res${n}rn: ${TEST_OUTDIR.tests/aho_corasick}/got${n}rn.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}r.fsm
 
 
 # unanchored
@@ -80,11 +95,22 @@ ${TEST_OUTDIR.tests/aho_corasick}/got${n}u.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/a
 
 ${TEST_OUTDIR.tests/aho_corasick}/res${n}u: ${TEST_OUTDIR.tests/aho_corasick}/got${n}u.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm
 
+${TEST_OUTDIR.tests/aho_corasick}/got${n}un.fsm: ${AC_TEST} ${TEST_SRCDIR.tests/aho_corasick}/in${n}.txt
+	${AC_TEST} -u < ${.ALLSRC:M*.txt} > $@
 
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}a
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}l
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}r
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}u
+${TEST_OUTDIR.tests/aho_corasick}/res${n}un: ${TEST_OUTDIR.tests/aho_corasick}/got${n}un.fsm ${TEST_OUTDIR.tests/aho_corasick}/out${n}u.fsm
+
+# testing for keeping endids distinct
+FSMTEST_EQUAL  += ${TEST_OUTDIR.tests/aho_corasick}/res${n}a
+FSMTEST_EQUAL  += ${TEST_OUTDIR.tests/aho_corasick}/res${n}l
+FSMTEST_EQUAL  += ${TEST_OUTDIR.tests/aho_corasick}/res${n}r
+FSMTEST_EQUAL  += ${TEST_OUTDIR.tests/aho_corasick}/res${n}u
+
+# language equivalence only, ignoring endids. this includes coverage for single_end.
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}an
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}ln
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}rn
+FSMTEST_RESULT += ${TEST_OUTDIR.tests/aho_corasick}/res${n}un
 
 .endfor
 
