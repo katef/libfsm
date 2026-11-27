@@ -40,13 +40,7 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 int
 fsm_addstate_bulk(struct fsm *fsm, size_t n)
 {
-	/*
-	 * (fsm_state_t) -1 is reserved for NO_STATE for use internally.
-	 * We also pack fsm_state_t into :24 bits for some struct fields.
-	 * So that's our limit for the total number of states.
-	 * This is of course not portable, we assume size_t is over 24 bits.
-	 */
-	const size_t max_state = 0xFFFFFFU; /* UINT24_MAX */
+	const size_t max_state = FSM_STATECOUNT_MAX;
 
 	assert(fsm != NULL);
 	assert(fsm->statecount <= max_state);

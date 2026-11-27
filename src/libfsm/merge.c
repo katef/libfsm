@@ -52,6 +52,15 @@ merge(struct fsm *dst, struct fsm *src,
 	assert(src != NULL);
 	assert(base_src != NULL);
 	assert(base_dst != NULL);
+	assert(dst->statecount <= FSM_STATECOUNT_MAX);
+	assert(src->statecount <= FSM_STATECOUNT_MAX);
+
+	if (src->statecount > FSM_STATECOUNT_MAX - dst->statecount) {
+		fsm_free(dst);
+		fsm_free(src);
+		errno = ENOMEM;
+		return NULL;
+	}
 
 	if (dst->statealloc < src->statecount + dst->statecount) {
 		void *tmp;
