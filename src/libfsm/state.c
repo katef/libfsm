@@ -51,8 +51,6 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 int
 fsm_addstate_bulk(struct fsm *fsm, size_t n)
 {
-	size_t i;
-
 	/*
 	 * (fsm_state_t) -1 is reserved for NO_STATE for use internally.
 	 * We also pack fsm_state_t into :24 bits for some struct fields.
@@ -97,18 +95,8 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 		fsm->states = tmp;
 	}
 
-	/* TODO: memset? */
-	for (i = 0; i < n; i++) {
-		struct fsm_state *new;
-
-		new = &fsm->states[fsm->statecount + i];
-
-		new->end      = 0;
-		new->visited  = 0;
-		new->epsilons = NULL;
-		new->edges    = NULL;
-		new->has_eager_outputs = 0;
-	}
+	/* not portable */
+	memset(fsm->states + fsm->statecount, '\0', n * sizeof *fsm->states);
 
 	fsm->statecount += n;
 
