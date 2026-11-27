@@ -424,56 +424,70 @@ find_next_state(const struct trie_state *s, int sym)
 }
 
 static int
-trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
-	int have_end, fsm_state_t single_end, int distinct_endid_sinks,
-	fsm_state_t *q)
+is_single_end(const struct trie_state *ts, int have_end)
 {
-	fsm_state_t st;
+	return ts->output && have_end && state_set_empty(ts->endids);
+}
+
+static void
+trie_number_states(struct trie_state *ts,
+	int have_end, int distinct_endid_sinks,
+	size_t *n)
+{
 	int sym;
 
-	assert(fsm != NULL);
-	assert(q != NULL);
+	assert(n != NULL);
 
-	if (ts->output && have_end && state_set_empty(ts->endids)) {
-		*q = single_end;
-		return 1;
+	if (is_single_end(ts, have_end) || ts->have_st) {
+		return;
 	}
 
-	if (ts->have_st) {
-		*q = ts->st;
-		return 1;
-	}
-
-	/* TODO: bulk add states in advance */
-	if (!fsm_addstate(fsm, &st)) {
-		return 0;
-	}
-
-	ts->st = st;
+	ts->st = (fsm_state_t) *n;
 	ts->have_st = 1;
+	(*n)++;
+
+	/* the sink state for distinct_endid_sinks is numbered ts->st + 1 */
+	if (ts->output && distinct_endid_sinks) {
+		(*n)++;
+	}
 
 	for (sym = 0; sym < 256; sym++) {
 		struct trie_state *nx;
 
-		nx = find_next_state(ts,sym);
+		nx = find_next_state(ts, sym);
 		if (nx != NULL) {
-			fsm_state_t dst;
+			trie_number_states(nx, have_end, distinct_endid_sinks, n);
+		}
+	}
+}
 
-			if (!trie_to_fsm_state(nx, fsm,
-				have_end, single_end, distinct_endid_sinks,
-				&dst))
-			{
-				return 0;
-			}
+static int
+trie_to_fsm_state(const struct trie_state *ts, struct fsm *fsm,
+	int have_end, fsm_state_t single_end, int distinct_endid_sinks)
+{
+	int sym;
 
-			if (!fsm_addedge_literal(fsm, st, dst, (char)sym)) {
-				return 0;
-			}
+	assert(fsm != NULL);
+	assert(ts->have_st);
+
+	for (sym = 0; sym < 256; sym++) {
+		const struct trie_state *nx;
+		fsm_state_t dst;
+
+		nx = find_next_state(ts, sym);
+		if (nx == NULL) {
+			continue;
+		}
+
+		dst = is_single_end(nx, have_end) ? single_end : nx->st;
+
+		if (!fsm_addedge_literal(fsm, ts->st, dst, (char) sym)) {
+			return 0;
 		}
 	}
 
 	if (ts->output) {
-		fsm_state_t end = st;
+		fsm_state_t end = ts->st;
 
 		/*
 		 * distinct_endid_sinks means each trie .output state
@@ -489,15 +503,13 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 		 * sink state, which would merge the endids.
 		 */
 		if (distinct_endid_sinks) {
-			if (!fsm_addstate(fsm, &end)) {
-				return 0;
-			}
+			end = ts->st + 1;
 
 			if (!fsm_addedge_any(fsm, end, end)) {
 				return 0;
 			}
 
-			if (!fsm_addedge_epsilon(fsm, st, end)) {
+			if (!fsm_addedge_epsilon(fsm, ts->st, end)) {
 				return 0;
 			}
 		}
@@ -517,7 +529,6 @@ trie_to_fsm_state(struct trie_state *ts, struct fsm *fsm,
 		}
 	}
 
-	*q = st;
 	return 1;
 }
 
@@ -525,16 +536,35 @@ struct fsm *
 trie_to_fsm(struct fsm *fsm, const struct trie_graph *g,
 	int have_end, fsm_state_t end, int distinct_endid_sinks)
 {
-	fsm_state_t start;
+	const struct trie_pool *p;
+	size_t base, n;
 
-	if (!trie_to_fsm_state(g->root, fsm,
-		have_end, end, distinct_endid_sinks,
-		&start))
-	{
+	base = fsm_countstates(fsm);
+	n = base;
+
+	trie_number_states(g->root, have_end, distinct_endid_sinks, &n);
+
+	if (!fsm_addstate_bulk(fsm, n - base)) {
 		return NULL;
 	}
 
-	fsm_setstart(fsm, start);
+	for (p = g->pool; p != NULL; p = p->next) {
+		size_t i;
+
+		for (i = 0; i < p->n; i++) {
+			if (!p->states[i].have_st) {
+				continue;
+			}
+
+			if (!trie_to_fsm_state(&p->states[i], fsm,
+				have_end, end, distinct_endid_sinks))
+			{
+				return NULL;
+			}
+		}
+	}
+
+	fsm_setstart(fsm, is_single_end(g->root, have_end) ? end : g->root->st);
 
 	return fsm;
 }
