@@ -93,11 +93,6 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 			return 0;
 		}
 
-		for (i = fsm->statealloc; i < count; i++) {
-			tmp[i].has_capture_actions = 0;
-			tmp[i].has_eager_outputs = 0;
-		}
-
 		fsm->statealloc = count;
 		fsm->states = tmp;
 	}
