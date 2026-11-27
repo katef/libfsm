@@ -21,17 +21,6 @@
 #include "endids.h"
 #include "eager_output.h"
 
-#if defined(__has_builtin) && __has_builtin(__builtin_mul_overflow)
-#define mul_overflow __builtin_mul_overflow
-#else
-static int
-mul_overflow(size_t x, size_t y, size_t *res)
-{
-	*res = x * y;
-	return y != 0 && x != *res / y;
-}
-#endif
-
 int
 fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 {
@@ -55,6 +44,7 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 	 * (fsm_state_t) -1 is reserved for NO_STATE for use internally.
 	 * We also pack fsm_state_t into :24 bits for some struct fields.
 	 * So that's our limit for the total number of states.
+	 * This is of course not portable, we assume size_t is over 24 bits.
 	 */
 	const size_t max_state = 0xFFFFFFU; /* UINT24_MAX */
 
@@ -62,11 +52,16 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 	const size_t min_count = 1;
 
 	assert(fsm != NULL);
+	assert(fsm->statecount <= max_state);
+	assert(max_state <= SIZE_MAX / 2);
+	assert(2 * (max_state - 1) <= SIZE_MAX / sizeof *fsm->states);
 
 	if (n > max_state - fsm->statecount) {
 		errno = ENOMEM;
 		return 0;
 	}
+
+	assert(fsm->statecount + n <= max_state);
 
 	if (fsm->statecount + n > fsm->statealloc) {
 		struct fsm_state *tmp;
@@ -74,16 +69,16 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 
 		count = fsm->statealloc > 0 ? fsm->statealloc : min_count;
 		do {
-			if (mul_overflow(count, 2, &count)) {
-				errno = ENOMEM;
-				return 0;
-			}
+			assert(count < fsm->statecount + n || count == min_count);
+			assert(count <= max_state - 1);
+			assert(count <= SIZE_MAX / 2); /* because max_state * 2 < SIZE_MAX */
+
+			count *= 2;
 		} while (count < fsm->statecount + n);
 
-		if (mul_overflow(count, sizeof *fsm->states, &new)) {
-			errno = ENOMEM;
-			return 0;
-		}
+		assert(count <= 2 * (max_state - 1));
+		assert(count <= SIZE_MAX / sizeof *fsm->states);
+		new = count * sizeof *fsm->states;
 
 		/* TODO: something better than one contigious realloc */
 		tmp = f_realloc(fsm->alloc, fsm->states, new);
