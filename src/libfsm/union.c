@@ -763,6 +763,12 @@ fsm_union_repeated_pattern_group(size_t nfa_count,
 
 	est_total_states += 5;	/* new start and end, new unanchored start and end loops */
 
+	/* Since this is an estimate, silently capping is fine.
+	 * If the limit is actually reached when adding states, we error about it then. */
+	if (est_total_states > FSM_STATECOUNT_MAX) {
+		est_total_states = FSM_STATECOUNT_MAX;
+	}
+
 	struct fsm *res = fsm_new_statealloc(alloc, est_total_states);
 	if (res == NULL) {
 		goto ainfos_fail;
