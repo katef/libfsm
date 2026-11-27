@@ -58,11 +58,14 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 	 * We also pack fsm_state_t into :24 bits for some struct fields.
 	 * So that's our limit for the total number of states.
 	 */
-	const size_t max = 0xFFFFFFU; /* UINT24_MAX */
+	const size_t max_state = 0xFFFFFFU; /* UINT24_MAX */
+
+	/* TODO: starting from 1 is probably silly */
+	const size_t min_count = 1;
 
 	assert(fsm != NULL);
 
-	if (n > max - fsm->statecount) {
+	if (n > max_state - fsm->statecount) {
 		errno = ENOMEM;
 		return 0;
 	}
@@ -71,15 +74,13 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 		struct fsm_state *tmp;
 		size_t count, new;
 
-		if (mul_overflow(fsm->statealloc, 2, &count)) {
-			errno = ENOMEM;
-			return 0;
-		}
-
-		if (count < fsm->statecount + n) {
-			/* TODO: bump to power of 2 anyway? */
-			count = fsm->statecount + n;
-		}
+		count = fsm->statealloc > 0 ? fsm->statealloc : min_count;
+		do {
+			if (mul_overflow(count, 2, &count)) {
+				errno = ENOMEM;
+				return 0;
+			}
+		} while (count < fsm->statecount + n);
 
 		if (mul_overflow(count, sizeof *fsm->states, &new)) {
 			errno = ENOMEM;
