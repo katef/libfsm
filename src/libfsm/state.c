@@ -65,7 +65,7 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 
 	if (fsm->statecount + n > fsm->statealloc) {
 		struct fsm_state *tmp;
-		size_t count, new;
+		size_t count;
 
 		count = fsm->statealloc > 0 ? fsm->statealloc : min_count;
 		do {
@@ -78,10 +78,9 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 
 		assert(count <= 2 * (max_state - 1));
 		assert(count <= SIZE_MAX / sizeof *fsm->states);
-		new = count * sizeof *fsm->states;
 
 		/* TODO: something better than one contigious realloc */
-		tmp = f_realloc(fsm->alloc, fsm->states, new);
+		tmp = f_realloc(fsm->alloc, fsm->states, count * sizeof *fsm->states);
 		if (tmp == NULL) {
 			return 0;
 		}
