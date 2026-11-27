@@ -48,9 +48,6 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 	 */
 	const size_t max_state = 0xFFFFFFU; /* UINT24_MAX */
 
-	/* TODO: starting from 1 is probably silly */
-	const size_t min_count = 1;
-
 	assert(fsm != NULL);
 	assert(fsm->statecount <= max_state);
 	assert(max_state <= SIZE_MAX / 2);
@@ -67,9 +64,10 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 		struct fsm_state *tmp;
 		size_t count;
 
-		count = fsm->statealloc > 0 ? fsm->statealloc : min_count;
+		assert(fsm->statealloc > 0);
+		count = fsm->statealloc;
 		do {
-			assert(count < fsm->statecount + n || count == min_count);
+			assert(count < fsm->statecount + n);
 			assert(count <= max_state - 1);
 			assert(count <= SIZE_MAX / 2); /* because max_state * 2 < SIZE_MAX */
 
