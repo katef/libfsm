@@ -26,40 +26,61 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 {
 	assert(fsm != NULL);
 
-	if (fsm->statecount == (fsm_state_t) -1) {
+	if (!fsm_addstate_bulk(fsm, 1)) {
+		return 0;
+	}
+
+	if (state != NULL) {
+		*state = fsm->statecount - 1;
+	}
+
+	return 1;
+}
+
+int
+fsm_addstate_bulk(struct fsm *fsm, size_t n)
+{
+	const size_t max = (fsm_state_t) -1; /* -1 is reserved because NO_STATE */
+	size_t i;
+
+	assert(fsm != NULL);
+
+	/* written as a subtraction because statecount + n can wrap */
+	if (n > max - fsm->statecount) {
 		errno = ENOMEM;
 		return 0;
 	}
 
 	/* TODO: something better than one contigious realloc */
-	if (fsm->statecount == fsm->statealloc) {
-		const size_t factor = 2; /* a guess */
-		const size_t n = fsm->statealloc * factor;
+	if (fsm->statecount + n > fsm->statealloc) {
+		size_t alloc;
 		struct fsm_state *tmp;
-		size_t i;
 
-		tmp = f_realloc(fsm->alloc, fsm->states, n * sizeof *fsm->states);
+		alloc = fsm->statealloc * 2;
+		if (alloc < fsm->statecount + n) {
+			alloc = fsm->statecount + n;
+		}
+
+// TODO: base = fsm->statecount
+
+		tmp = f_realloc(fsm->alloc, fsm->states, alloc * sizeof *fsm->states);
 		if (tmp == NULL) {
 			return 0;
 		}
 
-		for (i = fsm->statealloc; i < n; i++) {
+		for (i = fsm->statealloc; i < alloc; i++) {
 			tmp[i].has_capture_actions = 0;
 			tmp[i].has_eager_outputs = 0;
 		}
 
-		fsm->statealloc = n;
+		fsm->statealloc = alloc;
 		fsm->states = tmp;
 	}
 
-	if (state != NULL) {
-		*state = fsm->statecount;
-	}
-
-	{
+	for (i = 0; i < n; i++) {
 		struct fsm_state *new;
 
-		new = &fsm->states[fsm->statecount];
+		new = &fsm->states[fsm->statecount + i];
 
 		new->end      = 0;
 		new->visited  = 0;
@@ -68,49 +89,7 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 		new->has_eager_outputs = 0;
 	}
 
-	fsm->statecount++;
-
-	return 1;
-}
-
-int
-fsm_addstate_bulk(struct fsm *fsm, size_t n)
-{
-	size_t i;
-
-	assert(fsm != NULL);
-
-	if (fsm->statecount + n <= fsm->statealloc) {
-		for (i = 0; i < n; i++) {
-			struct fsm_state *new;
-
-			new = &fsm->states[fsm->statecount + i];
-
-			new->end      = 0;
-			new->visited  = 0;
-			new->epsilons = NULL;
-			new->edges    = NULL;
-			new->has_eager_outputs = 0;
-		}
-
-		fsm->statecount += n;
-
-		return 1;
-	}
-
-/*
-TODO: bulk add
-if there's space already, just increment statecount
-otherwise realloc to += twice as much more
-*/
-
-	for (i = 0; i < n; i++) {
-		fsm_state_t dummy;
-
-		if (!fsm_addstate(fsm, &dummy)) {
-			return 0;
-		}
-	}
+	fsm->statecount += n;
 
 	return 1;
 }
