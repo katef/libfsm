@@ -1271,6 +1271,12 @@ try_partition(struct min_env *env, unsigned char label,
 		/* not found: set to the EC for the dead state */
 		first_dst_state = env->dead_state;
 		first_ec = dead_state_ec;
+
+		/* There is no edge for this label, so the label set is empty.
+		 * Without this, the set is uninitialized stack memory, and
+		 * label_sets_match() below compares whichever values happen to
+		 * be there; on partial DFAs that suppresses valid merges. */
+		memset(first_dst_label_set, 0x00, sizeof(first_dst_label_set));
 	}
 #if LOG_PARTITIONS > 1
 		fprintf(stderr, "# --- try_partition: label '%c' -> EC %d\n", label, first_ec);
@@ -1300,6 +1306,7 @@ try_partition(struct min_env *env, unsigned char label,
 			/* not found: set to the EC for the dead state */
 			cur_dst_state = env->dead_state;
 			to_ec = dead_state_ec;
+			memset(cur_label_set, 0x00, sizeof(cur_label_set));
 		}
 
 #if LOG_PARTITIONS > 1
