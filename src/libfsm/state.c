@@ -21,6 +21,17 @@
 #include "endids.h"
 #include "eager_output.h"
 
+#if defined(__has_builtin) && __has_builtin(__builtin_mul_overflow)
+#define mul_overflow __builtin_mul_overflow
+#else
+static int
+mul_overflow(size_t x, size_t y, size_t *res)
+{
+	*res = x * y;
+	return y != 0 && x != *res / y;
+}
+#endif
+
 int
 fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 {
@@ -58,17 +69,25 @@ fsm_addstate_bulk(struct fsm *fsm, size_t n)
 
 	if (fsm->statecount + n > fsm->statealloc) {
 		struct fsm_state *tmp;
-		size_t count;
+		size_t count, new;
 
-		/* TODO: mul overflow */
-		count = fsm->statealloc * 2;
+		if (mul_overflow(fsm->statealloc, 2, &count)) {
+			errno = ENOMEM;
+			return 0;
+		}
+
 		if (count < fsm->statecount + n) {
 			/* TODO: bump to power of 2 anyway? */
 			count = fsm->statecount + n;
 		}
 
+		if (mul_overflow(count, sizeof *fsm->states, &new)) {
+			errno = ENOMEM;
+			return 0;
+		}
+
 		/* TODO: something better than one contigious realloc */
-		tmp = f_realloc(fsm->alloc, fsm->states, count * sizeof *fsm->states);
+		tmp = f_realloc(fsm->alloc, fsm->states, new);
 		if (tmp == NULL) {
 			return 0;
 		}
