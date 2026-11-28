@@ -258,7 +258,7 @@
 
 		errno = 0;
 
-		u = strtoul(lex_state->buf.a, &e, 16);
+		u = strtoul(lex_state->buf.a, &e, 10);
 
 		if ((u == ULONG_MAX && errno == ERANGE) || u > FSM_END_ID_MAX) {
 			err(lex_state, "end id %s out of range: expected 0..%u inclusive",
