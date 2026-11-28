@@ -110,7 +110,7 @@ fsm_print_api(FILE *f,
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\t\tif (!fsm_addstate(fsm, &s[i]) {\n");
+	fprintf(f, "\t\tif (!fsm_addstate(fsm, &s[i])) {\n");
 	fprintf(f, "\t\t\treturn 0;\n");
 	fprintf(f, "\t\t}\n");
 
@@ -194,15 +194,15 @@ fsm_print_api(FILE *f,
 						from, to);
 					fprintf(f, " { return 0; }\n");
 				} else if (lo == hi - 1) {
-					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], ",
+					fprintf(f, "\tif (!fsm_addedge_literal(fsm, s[%u], s[%u], (char) ",
 						from, to);
 					c_escputcharlit(f, opt, lo);
 					fprintf(f, ")) { return 0; }\n");
 				} else {
-					fprintf(f, "\tif (!fsm_addedge_range(fsm, s[%u], s[%u], ",
+					fprintf(f, "\tif (!fsm_addedge_range(fsm, s[%u], s[%u], (char) ",
 						from, to);
 					c_escputcharlit(f, opt, lo);
-					fprintf(f, ", ");
+					fprintf(f, ", (char) ");
 					c_escputcharlit(f, opt, hi - 1);
 					fprintf(f, ")) { return 0; }\n");
 				}
