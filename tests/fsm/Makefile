@@ -16,7 +16,7 @@ ${TEST_OUTDIR.tests/fsm}/res${n}: \
 	${TEST_SRCDIR.tests/fsm}/out${n}.fsm \
 	${TEST_OUTDIR.tests/fsm}/got${n}.fsm
 
-FSMTEST_RESULT += ${TEST_OUTDIR.tests/fsm}/res${n}
+FSMTEST_EQUAL += ${TEST_OUTDIR.tests/fsm}/res${n}
 
 .endfor
 
