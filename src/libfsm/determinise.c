@@ -913,7 +913,9 @@ analyze_closures__pairwise_grouping(struct analyze_closures_env *env,
 	fprintf(stderr, "%s: iss_id %lu\n", __func__, iss_id);
 #endif
 
-	analyze_closures__init_groups(env);
+	if (!analyze_closures__init_groups(env)) {
+		return 0;
+	}
 
 	INIT_TIMERS();
 	TIME(&pre);
@@ -1086,7 +1088,9 @@ cache_single_state_analysis(struct analyze_closures_env *env, fsm_state_t state_
 	struct edge_group_iter iter;
 	struct edge_group_iter_info info;
 
-	analyze_closures__init_groups(env);
+	if (!analyze_closures__init_groups(env)) {
+		return 0;
+	}
 	assert(env->group_count == 0);
 
 	/* collect groups */
