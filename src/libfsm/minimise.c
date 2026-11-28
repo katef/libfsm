@@ -827,7 +827,6 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 			for (size_t b_i = 0; b_i < bucket_count; b_i++) {
 				fsm_state_t *b = &htab[(b_i + hash) & mask];
 				const fsm_state_t other = *b;
-				const struct end_metadata *other_md = &end_md[other];
 
 				if (other == NO_ID) { /* empty hash bucket */
 					*b = s;
@@ -852,7 +851,7 @@ split_ecs_by_end_metadata(struct min_env *env, const struct fsm *fsm)
 						env->ec_count++;
 					}
 					break;
-				} else if (same_end_metadata(s_md, other_md)) {
+				} else if (same_end_metadata(s_md, &end_md[other])) {
 					if (env->state_ecs[other] == ec_i) {
 						/* keep in the current EC -- no-op */
 #if LOG_ECS
