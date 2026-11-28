@@ -1,0 +1,17 @@
+#
+# Copyright 2026 Katherine Flavel
+#
+# See LICENCE for the full copyright terms.
+#
+
+0 -> 1 'a';
+
+1 -> 2 'b';
+1 -> 3 'c';
+1 -> 2 'd';
+
+2 -> 4 "\x00" .. "\xff";
+3 -> 4 "\x00" .. "\xbf";
+
+start: 0;
+end: 4;
