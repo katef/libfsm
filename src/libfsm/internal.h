@@ -44,6 +44,14 @@ struct linkage_info;
 
 #define FSM_CAPTURE_MAX INT_MAX
 
+/*
+ * (fsm_state_t) -1 is reserved for NO_STATE for use internally.
+ * We also pack fsm_state_t into :24 bits for some struct fields.
+ * So that's our limit for the total number of states.
+ * This is of course not portable, we assume size_t is over 24 bits.
+ */
+#define FSM_STATECOUNT_MAX 0xFFFFFFU /* UINT24_MAX */
+
 struct fsm_edge {
 	fsm_state_t state:24; /* destination. :24 for packing */
 	unsigned char symbol;

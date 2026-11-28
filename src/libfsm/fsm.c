@@ -66,6 +66,11 @@ fsm_new_statealloc(const struct fsm_alloc *alloc, size_t statealloc)
 		return fsm_new(alloc);
 	}
 
+	if (statealloc > FSM_STATECOUNT_MAX) {
+		errno = ENOMEM;
+		return NULL;
+	}
+
 	new = f_malloc(alloc, sizeof *new);
 	if (new == NULL) {
 		return NULL;

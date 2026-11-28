@@ -26,49 +26,13 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 {
 	assert(fsm != NULL);
 
-	if (fsm->statecount == (fsm_state_t) -1) {
-		errno = ENOMEM;
+	if (!fsm_addstate_bulk(fsm, 1)) {
 		return 0;
 	}
 
-	/* TODO: something better than one contigious realloc */
-	if (fsm->statecount == fsm->statealloc) {
-		const size_t factor = 2; /* a guess */
-		const size_t n = fsm->statealloc * factor;
-		struct fsm_state *tmp;
-		size_t i;
-
-		tmp = f_realloc(fsm->alloc, fsm->states, n * sizeof *fsm->states);
-		if (tmp == NULL) {
-			return 0;
-		}
-
-		for (i = fsm->statealloc; i < n; i++) {
-			tmp[i].has_capture_actions = 0;
-			tmp[i].has_eager_outputs = 0;
-		}
-
-		fsm->statealloc = n;
-		fsm->states = tmp;
-	}
-
 	if (state != NULL) {
-		*state = fsm->statecount;
+		*state = fsm->statecount - 1;
 	}
-
-	{
-		struct fsm_state *new;
-
-		new = &fsm->states[fsm->statecount];
-
-		new->end      = 0;
-		new->visited  = 0;
-		new->epsilons = NULL;
-		new->edges    = NULL;
-		new->has_eager_outputs = 0;
-	}
-
-	fsm->statecount++;
 
 	return 1;
 }
@@ -76,41 +40,51 @@ fsm_addstate(struct fsm *fsm, fsm_state_t *state)
 int
 fsm_addstate_bulk(struct fsm *fsm, size_t n)
 {
-	size_t i;
+	const size_t max_state = FSM_STATECOUNT_MAX;
 
 	assert(fsm != NULL);
+	assert(fsm->statecount <= max_state);
+	assert(max_state <= SIZE_MAX / 2);
+	assert(2 * (max_state - 1) <= SIZE_MAX / sizeof *fsm->states);
 
-	if (fsm->statecount + n <= fsm->statealloc) {
-		for (i = 0; i < n; i++) {
-			struct fsm_state *new;
-
-			new = &fsm->states[fsm->statecount + i];
-
-			new->end      = 0;
-			new->visited  = 0;
-			new->epsilons = NULL;
-			new->edges    = NULL;
-			new->has_eager_outputs = 0;
-		}
-
-		fsm->statecount += n;
-
-		return 1;
+	if (n > max_state - fsm->statecount) {
+		errno = ENOMEM;
+		return 0;
 	}
 
-/*
-TODO: bulk add
-if there's space already, just increment statecount
-otherwise realloc to += twice as much more
-*/
+	assert(fsm->statecount + n <= max_state);
 
-	for (i = 0; i < n; i++) {
-		fsm_state_t dummy;
+	if (fsm->statecount + n > fsm->statealloc) {
+		struct fsm_state *tmp;
+		size_t count;
 
-		if (!fsm_addstate(fsm, &dummy)) {
+		assert(fsm->statealloc > 0);
+		count = fsm->statealloc;
+		do {
+			assert(count < fsm->statecount + n);
+			assert(count <= max_state - 1);
+			assert(count <= SIZE_MAX / 2); /* because max_state * 2 < SIZE_MAX */
+
+			count *= 2;
+		} while (count < fsm->statecount + n);
+
+		assert(count <= 2 * (max_state - 1));
+		assert(count <= SIZE_MAX / sizeof *fsm->states);
+
+		/* TODO: something better than one contigious realloc */
+		tmp = f_realloc(fsm->alloc, fsm->states, count * sizeof *fsm->states);
+		if (tmp == NULL) {
 			return 0;
 		}
+
+		fsm->statealloc = count;
+		fsm->states = tmp;
 	}
+
+	/* not portable */
+	memset(fsm->states + fsm->statecount, '\0', n * sizeof *fsm->states);
+
+	fsm->statecount += n;
 
 	return 1;
 }
