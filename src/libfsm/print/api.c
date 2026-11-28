@@ -110,7 +110,7 @@ fsm_print_api(FILE *f,
 	fprintf(f, "\t\t}\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "\t\tif (!fsm_addstate(fsm, &s[i]) {\n");
+	fprintf(f, "\t\tif (!fsm_addstate(fsm, &s[i])) {\n");
 	fprintf(f, "\t\t\treturn 0;\n");
 	fprintf(f, "\t\t}\n");
 
